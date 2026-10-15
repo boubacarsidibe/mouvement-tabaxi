@@ -1358,187 +1358,95 @@ p {
   display: grid;
 }
 .news-row strong {
-  font-size: 10px;
+  font-size: 13px;
 }
 .news-row small {
-  color: #88938d;
-  font-size: 9px;
+  color: #636b67;
+  font-size: 13px;
 }
 
-/* Member card */
+/* Member card : modèle officiel du mouvement (1080 x 720), informations placées dessus */
 .membership-card {
-  min-height: 245px;
   position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  container-type: inline-size;
   overflow: hidden;
-  padding: 14px;
-  border: 2px solid #e4bd34;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #fff 0 52%, #f4f2e8);
+  border-radius: 3%;
+  background: #fff;
   box-shadow: 0 6px 18px rgba(27, 54, 37, 0.12);
 }
-.membership-card::before,
-.membership-card::after {
+.membership-card.large {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  box-shadow: 0 14px 36px rgba(32, 54, 42, 0.14);
+}
+.card-template {
   position: absolute;
-  width: 230px;
-  height: 34px;
-  background: var(--green-800);
-  content: '';
-  transform: rotate(-22deg);
-}
-.membership-card::before {
-  top: -12px;
-  left: -80px;
-  border-bottom: 5px solid var(--gold);
-}
-.membership-card::after {
-  right: -80px;
-  bottom: -10px;
-  border-top: 5px solid var(--gold);
-}
-.card-brand {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-.card-brand img {
-  width: 158px;
-  height: 58px;
-  object-fit: contain;
-}
-.card-brand > span {
-  padding: 7px 10px;
-  background: var(--green-900);
-  color: #fff;
-  font-size: 7px;
-  line-height: 1.25;
-  text-transform: uppercase;
-}
-.membership-card > h3 {
-  width: 62%;
-  margin: -2px 0 0 auto;
-  padding: 3px 8px;
-  border-radius: 99px;
-  background: linear-gradient(#ffd963, #eab92d);
-  color: #102a1c;
-  font-size: 18px;
-  line-height: 1;
-  text-align: center;
-  text-transform: uppercase;
-}
-.card-type {
-  width: 48%;
-  margin: 3px 7% 7px auto;
-  border-radius: 99px;
-  background: var(--green-900);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  text-align: center;
-  text-transform: uppercase;
-}
-.card-body {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 34% 1fr;
-  gap: 10px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
 }
 .card-portrait {
-  width: 100%;
-  aspect-ratio: 0.84;
-  border: 2px solid #e5b935;
-  border-radius: 7px;
+  position: absolute;
+  top: 29.6%;
+  left: 4.6%;
+  width: 27.6%;
+  height: 45.1%;
+  border-radius: 6%;
   object-fit: cover;
 }
-.card-body dl {
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  margin: 0;
-}
-.card-body dl > div {
+.card-value {
+  position: absolute;
+  left: 43.8%;
+  width: 52%;
+  height: 4.6%;
   display: flex;
   align-items: center;
-  gap: 6px;
+  box-sizing: border-box;
+  padding: 0 1.1%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #fff;
+  color: #293d30;
+  font-size: 2.4cqw;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.card-body dl ui-icon {
-  width: 20px;
-  height: 20px;
-  padding: 4px;
-  border-radius: 50%;
-  background: var(--green-900);
-  color: #fff;
+.card-name {
+  top: 50.8%;
 }
-.card-body dl span {
-  display: grid;
-  line-height: 1.1;
+.card-number {
+  top: 61.9%;
 }
-.card-body dt {
-  color: var(--green-900);
-  font-size: 7px;
-  font-weight: 800;
-  text-transform: uppercase;
+.card-locality {
+  top: 73.3%;
 }
-.card-body dd {
-  margin: 0;
-  font-size: 9px;
-}
-.membership-card.large {
-  width: min(640px, 100%);
-  min-height: 390px;
-  margin: 0 auto;
-  padding: 22px;
-}
-.membership-card.large .card-brand img {
-  width: 240px;
-  height: 82px;
-}
-.membership-card.large .card-brand > span {
-  font-size: 10px;
-}
-.membership-card.large > h3 {
-  font-size: 29px;
-}
-.membership-card.large .card-type {
-  font-size: 15px;
-}
-.membership-card.large .card-body {
-  gap: 18px;
-}
-.membership-card.large .card-body dl {
-  gap: 10px;
-}
-.membership-card.large .card-body dl ui-icon {
-  width: 30px;
-  height: 30px;
-}
-.membership-card.large .card-body dt {
-  font-size: 10px;
-}
-.membership-card.large .card-body dd {
-  font-size: 13px;
+.card-date {
+  top: 84.7%;
+  width: 44.6%;
 }
 .card-view {
   max-width: 900px;
 }
 .card-actions {
-  width: min(640px, 100%);
+  width: min(900px, 100%);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin: 14px auto 12px;
 }
 .info-note {
-  width: min(760px, 100%);
+  width: min(900px, 100%);
   margin: 0 auto;
   padding: 12px;
   border: 1px solid #b9d7e9;
   border-radius: 6px;
   background: #eef8ff;
   color: #536d7b;
-  font-size: 11px;
+  font-size: 13px;
   text-align: center;
 }
 
@@ -2413,22 +2321,6 @@ table input {
   .member-grid,
   .mini-programs {
     grid-template-columns: 1fr;
-  }
-  .membership-card.large {
-    min-height: 310px;
-  }
-  .membership-card.large .card-brand img {
-    width: 180px;
-    height: 60px;
-  }
-  .membership-card.large > h3 {
-    font-size: 20px;
-  }
-  .membership-card.large .card-body dt {
-    font-size: 8px;
-  }
-  .membership-card.large .card-body dd {
-    font-size: 10px;
   }
   .card-actions {
     grid-template-columns: 1fr;
