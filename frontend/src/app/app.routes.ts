@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, bureauGuard, founderGuard, guestGuard } from './core/auth.guards';
 import { AdminPage } from './pages/admin-page';
 import { AuthPage } from './pages/auth-page';
 import { JoinPage } from './pages/join-page';
@@ -6,6 +7,22 @@ import { MemberPage } from './pages/member-page';
 import { PrivacyPage } from './pages/privacy-page';
 import { PublicPage } from './pages/public-page';
 import { RequestStatusPage } from './pages/request-status-page';
+
+/** Espace membre : toute personne connectée. */
+function member(path: string, view: string, title: string) {
+  return { path, component: MemberPage, canActivate: [authGuard], data: { view }, title };
+}
+
+/** Interface du bureau exécutif : coordonnateurs et fondateurs (ou fondateurs seuls). */
+function bureau(path: string, view: string, title: string, foundersOnly = false) {
+  return {
+    path,
+    component: AdminPage,
+    canActivate: [foundersOnly ? founderGuard : bureauGuard],
+    data: { view },
+    title,
+  };
+}
 
 export const routes: Routes = [
   { path: '', component: PublicPage, title: 'TABAXI — La voix de nos territoires' },
@@ -22,7 +39,13 @@ export const routes: Routes = [
     title: 'Finaliser mon adhésion — TABAXI',
   },
   { path: 'adherer/confirmation', component: RequestStatusPage, title: 'Demande reçue — TABAXI' },
-  { path: 'connexion', component: AuthPage, data: { mode: 'login' }, title: 'Connexion — TABAXI' },
+  {
+    path: 'connexion',
+    component: AuthPage,
+    canActivate: [guestGuard],
+    data: { mode: 'login' },
+    title: 'Connexion — TABAXI',
+  },
   {
     path: 'mot-de-passe-oublie',
     component: AuthPage,
@@ -30,132 +53,29 @@ export const routes: Routes = [
     title: 'Mot de passe oublié — TABAXI',
   },
   { path: 'confidentialite', component: PrivacyPage, title: 'Confidentialité — TABAXI' },
-  { path: 'membre', component: MemberPage, data: { view: 'home' }, title: 'Mon espace — TABAXI' },
-  {
-    path: 'membre/programmes',
-    component: MemberPage,
-    data: { view: 'programs' },
-    title: 'Programmes — TABAXI',
-  },
-  {
-    path: 'membre/carte',
-    component: MemberPage,
-    data: { view: 'card' },
-    title: 'Ma carte — TABAXI',
-  },
-  {
-    path: 'membre/profil',
-    component: MemberPage,
-    data: { view: 'profile' },
-    title: 'Mon profil — TABAXI',
-  },
-  {
-    path: 'membre/securite',
-    component: MemberPage,
-    data: { view: 'security' },
-    title: 'Sécurité du compte — TABAXI',
-  },
-  {
-    path: 'membre/activites/brigades-citoyennes',
-    component: MemberPage,
-    data: { view: 'activity' },
-    title: 'Brigades citoyennes — TABAXI',
-  },
-  {
-    path: 'bureau',
-    component: AdminPage,
-    data: { view: 'dashboard' },
-    title: 'Tableau de bord — TABAXI',
-  },
-  {
-    path: 'bureau/demandes',
-    component: AdminPage,
-    data: { view: 'requests' },
-    title: 'Demandes d’adhésion — TABAXI',
-  },
-  {
-    path: 'bureau/membres',
-    component: AdminPage,
-    data: { view: 'members' },
-    title: 'Base des membres — TABAXI',
-  },
-  {
-    path: 'bureau/programmes',
-    component: AdminPage,
-    data: { view: 'programs' },
-    title: 'Programmes — TABAXI',
-  },
-  {
-    path: 'bureau/territoires',
-    component: AdminPage,
-    data: { view: 'territories' },
-    title: 'Localités — TABAXI',
-  },
-  {
-    path: 'bureau/comptes',
-    component: AdminPage,
-    data: { view: 'accounts' },
-    title: 'Comptes d’accès — TABAXI',
-  },
-  {
-    path: 'bureau/comptes/inviter',
-    component: AdminPage,
-    data: { view: 'invite' },
-    title: 'Inviter un coordonnateur — TABAXI',
-  },
-  {
-    path: 'bureau/coordonnateurs',
-    component: AdminPage,
-    data: { view: 'coordinators' },
-    title: 'Coordonnateurs — TABAXI',
-  },
-  {
-    path: 'bureau/journal',
-    component: AdminPage,
-    data: { view: 'audit' },
-    title: 'Journal des actions — TABAXI',
-  },
-  {
-    path: 'bureau/demandes/awa-ndiaye',
-    component: AdminPage,
-    data: { view: 'request-detail' },
-    title: 'Examiner la demande — TABAXI',
-  },
-  {
-    path: 'bureau/membres/aminata-ndiaye',
-    component: AdminPage,
-    data: { view: 'member-detail' },
-    title: 'Fiche membre — TABAXI',
-  },
-  {
-    path: 'bureau/programmes/nouveau',
-    component: AdminPage,
-    data: { view: 'program-new' },
-    title: 'Nouveau programme — TABAXI',
-  },
-  {
-    path: 'bureau/programmes/brigades-citoyennes',
-    component: AdminPage,
-    data: { view: 'program-detail' },
-    title: 'Brigades citoyennes — TABAXI',
-  },
-  {
-    path: 'bureau/activites/nouvelle',
-    component: AdminPage,
-    data: { view: 'activity-new' },
-    title: 'Planifier une activité — TABAXI',
-  },
-  {
-    path: 'bureau/activites/brigade-dakar/compte-rendu',
-    component: AdminPage,
-    data: { view: 'report' },
-    title: 'Compte rendu — TABAXI',
-  },
-  {
-    path: 'bureau/activites/brigade-dakar/presences',
-    component: AdminPage,
-    data: { view: 'attendance' },
-    title: 'Présences — TABAXI',
-  },
+
+  member('membre', 'home', 'Mon espace — TABAXI'),
+  member('membre/programmes', 'programs', 'Programmes — TABAXI'),
+  member('membre/carte', 'card', 'Ma carte — TABAXI'),
+  member('membre/profil', 'profile', 'Mon profil — TABAXI'),
+  member('membre/securite', 'security', 'Sécurité du compte — TABAXI'),
+  member('membre/activites/brigades-citoyennes', 'activity', 'Brigades citoyennes — TABAXI'),
+
+  bureau('bureau', 'dashboard', 'Tableau de bord — TABAXI'),
+  bureau('bureau/demandes', 'requests', 'Demandes d’adhésion — TABAXI', true),
+  bureau('bureau/demandes/awa-ndiaye', 'request-detail', 'Examiner la demande — TABAXI', true),
+  bureau('bureau/membres', 'members', 'Base des membres — TABAXI'),
+  bureau('bureau/membres/aminata-ndiaye', 'member-detail', 'Fiche membre — TABAXI'),
+  bureau('bureau/programmes', 'programs', 'Programmes — TABAXI'),
+  bureau('bureau/programmes/nouveau', 'program-new', 'Nouveau programme — TABAXI'),
+  bureau('bureau/programmes/brigades-citoyennes', 'program-detail', 'Brigades citoyennes — TABAXI'),
+  bureau('bureau/territoires', 'territories', 'Localités — TABAXI'),
+  bureau('bureau/comptes', 'accounts', 'Comptes d’accès — TABAXI', true),
+  bureau('bureau/comptes/inviter', 'invite', 'Inviter un coordonnateur — TABAXI', true),
+  bureau('bureau/coordonnateurs', 'coordinators', 'Coordonnateurs — TABAXI'),
+  bureau('bureau/journal', 'audit', 'Journal des actions — TABAXI'),
+  bureau('bureau/activites/nouvelle', 'activity-new', 'Planifier une activité — TABAXI'),
+  bureau('bureau/activites/brigade-dakar/compte-rendu', 'report', 'Compte rendu — TABAXI'),
+  bureau('bureau/activites/brigade-dakar/presences', 'attendance', 'Présences — TABAXI'),
   { path: '**', redirectTo: '' },
 ];

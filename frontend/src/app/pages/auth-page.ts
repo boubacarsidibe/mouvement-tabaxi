@@ -1,5 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { readProblem } from '../core/api-problem';
+import { AuthService } from '../core/auth.service';
 import { PublicHeader } from '../shared/public-header';
 import { UiIcon } from '../shared/ui-icon';
 
@@ -32,25 +34,12 @@ import { UiIcon } from '../shared/ui-icon';
           </aside>
 
           <section class="auth-panel">
-            @if (submitted()) {
+            @if (isForgot && submitted()) {
               <div class="submit-success" role="status">
                 <span>✓</span>
-                <h2>{{ isForgot ? 'Vérifiez votre messagerie' : 'Connexion vérifiée' }}</h2>
-                <p>
-                  {{
-                    isForgot
-                      ? 'Si un compte correspond à cette adresse, un courriel vient d’être envoyé.'
-                      : 'Choisissez l’espace de démonstration à ouvrir.'
-                  }}
-                </p>
-                @if (isForgot) {
-                  <a class="btn btn-green" routerLink="/connexion">Retour à la connexion</a>
-                } @else {
-                  <div class="auth-destinations">
-                    <a class="btn btn-green" routerLink="/membre">Espace membre</a>
-                    <a class="btn btn-outline" routerLink="/bureau">Bureau exécutif</a>
-                  </div>
-                }
+                <h2>Vérifiez votre messagerie</h2>
+                <p>Si un compte correspond à cette adresse, un courriel vient d’être envoyé.</p>
+                <a class="btn btn-green" routerLink="/connexion">Retour à la connexion</a>
               </div>
             } @else {
               <form class="auth-form" (submit)="submit($event)">
@@ -63,6 +52,12 @@ import { UiIcon } from '../shared/ui-icon';
                       : 'Utilisez les identifiants transmis lors de votre adhésion.'
                   }}
                 </p>
+                @if (notice) {
+                  <p class="form-notice" role="status">{{ notice }}</p>
+                }
+                @if (error()) {
+                  <p class="form-alert" role="alert">{{ error() }}</p>
+                }
                 <label>
                   Adresse courriel
                   <span class="input-with-icon"
@@ -80,20 +75,20 @@ import { UiIcon } from '../shared/ui-icon';
                       ><ui-icon name="key" /><input
                         type="password"
                         name="password"
+                        autocomplete="current-password"
                         placeholder="Votre mot de passe"
                         required
-                        minlength="10"
                     /></span>
                   </label>
                   <div class="form-inline">
                     <label class="check-row"
-                      ><input type="checkbox" /><span>Rester connecté</span></label
+                      ><input type="checkbox" name="remember" /><span>Rester connecté</span></label
                     >
                     <a routerLink="/mot-de-passe-oublie">Mot de passe oublié ?</a>
                   </div>
                 }
-                <button class="btn btn-green btn-wide" type="submit">
-                  {{ isForgot ? 'Envoyer le lien' : 'Se connecter' }}
+                <button class="btn btn-green btn-wide" type="submit" [disabled]="busy()">
+                  {{ isForgot ? 'Envoyer le lien' : busy() ? 'Connexion…' : 'Se connecter' }}
                 </button>
                 @if (!isForgot) {
                   <p class="auth-help">
@@ -110,12 +105,47 @@ import { UiIcon } from '../shared/ui-icon';
 })
 export class AuthPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
   protected readonly isForgot = this.route.snapshot.data['mode'] === 'forgot';
   protected readonly submitted = signal(false);
+  protected readonly busy = signal(false);
+  protected readonly error = signal('');
+  protected readonly notice =
+    this.route.snapshot.queryParamMap.get('motif') === 'inactivite'
+      ? 'Votre session a été fermée après 30 minutes sans activité. Reconnectez-vous.'
+      : '';
 
-  protected submit(event: SubmitEvent): void {
+  protected async submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
-    if (form.reportValidity()) this.submitted.set(true);
+    if (!form.reportValidity()) return;
+    if (this.isForgot) {
+      this.submitted.set(true);
+      return;
+    }
+    const data = new FormData(form);
+    this.error.set('');
+    this.busy.set(true);
+    try {
+      const user = await this.auth.login(
+        String(data.get('email') ?? '').trim(),
+        String(data.get('password') ?? ''),
+        data.get('remember') === 'on',
+      );
+      await this.router.navigateByUrl(this.nextUrl() ?? this.auth.homeFor(user));
+    } catch (error) {
+      this.error.set(readProblem(error).message);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Page demandée avant la connexion, seulement si elle appartient au site. */
+  private nextUrl(): string | null {
+    const next = this.route.snapshot.queryParamMap.get('suivant');
+    return next && next.startsWith('/') && !next.startsWith('//') && next !== '/connexion'
+      ? next
+      : null;
   }
 }

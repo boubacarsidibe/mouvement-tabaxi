@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../core/auth.service';
 import { MemberCard } from '../shared/member-card';
 import { DEMO_MEMBER, drawMemberCard } from '../shared/member-card-image';
 import { UiIcon } from '../shared/ui-icon';
@@ -29,12 +30,22 @@ import { UiIcon } from '../shared/ui-icon';
           >
         </nav>
         <div class="side-profile">
-          <img src="member-aminata.jpg" alt="" />
-          <span><strong>Aminata Ndiaye</strong><small>Dakar</small></span>
+          <div class="side-user">
+            <span>{{ auth.initials() }}</span>
+            <p>
+              <strong>{{ auth.displayName() }}</strong
+              ><small>{{ auth.user()?.territory?.name ?? auth.user()?.role_label }}</small>
+            </p>
+          </div>
           <a routerLink="/membre/securite" [class.active]="view === 'security'"
             ><ui-icon name="key" />Sécurité du compte</a
           >
-          <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
+          @if (auth.user()?.is_bureau) {
+            <a routerLink="/bureau"><ui-icon name="users" />Interface du bureau</a>
+          }
+          <button class="side-logout" type="button" (click)="logout()">
+            <ui-icon name="logout" />Se déconnecter
+          </button>
         </div>
       </aside>
 
@@ -48,7 +59,7 @@ import { UiIcon } from '../shared/ui-icon';
           <button class="icon-button" aria-label="Notifications">
             <ui-icon name="bell" /><i></i>
           </button>
-          <button class="profile-chip" aria-label="Menu du profil">AA</button
+          <button class="profile-chip" aria-label="Menu du profil">{{ auth.initials() }}</button
           ><span class="chevron" aria-hidden="true">⌄</span>
         </header>
 
@@ -412,6 +423,8 @@ import { UiIcon } from '../shared/ui-icon';
 })
 export class MemberPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   protected readonly joined = signal(false);
@@ -431,6 +444,11 @@ export class MemberPage {
     } catch {
       this.cardError.set('La carte n’a pas pu être téléchargée. Réessayez dans un instant.');
     }
+  }
+
+  protected async logout(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/connexion');
   }
 
   /** La boîte d'impression du navigateur propose « Enregistrer au format PDF ». */
