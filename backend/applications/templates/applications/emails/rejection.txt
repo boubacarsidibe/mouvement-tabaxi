@@ -1,0 +1,12 @@
+{% autoescape off %}Bonjour {{ application.first_name }},
+
+Merci de l'intérêt que vous portez au Mouvement TABAXI.
+
+Après examen, votre demande d'adhésion {{ application.reference }} n'a pas été retenue, pour le motif suivant :
+
+{{ application.rejection_reason }}
+
+Si votre situation évolue, vous pourrez déposer une nouvelle demande.
+
+Le bureau exécutif du Mouvement TABAXI
+{% endautoescape %}

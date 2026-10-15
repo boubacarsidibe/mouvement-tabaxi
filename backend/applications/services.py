@@ -1,0 +1,51 @@
+"""Décisions des fondateurs sur les demandes d'adhésion.
+
+Une décision n'est enregistrée que si le courriel qui l'annonce est parti : en cas
+d'échec de l'envoi, la transaction est annulée, la demande reste « À examiner » et
+``EmailNotSent`` remonte jusqu'au fondateur.
+"""
+
+from django.db import transaction
+from django.template.loader import render_to_string
+from django.utils import timezone
+
+from core.mail import send_email
+
+from .models import Application
+
+DECISION_SUBJECT = "Votre demande d'adhésion au Mouvement TABAXI"
+
+
+class AlreadyDecided(Exception):
+    """La demande n'est plus « À examiner » : une décision a déjà été prise."""
+
+    def __init__(self, application):
+        self.application = application
+        super().__init__(f'Cette demande a déjà été traitée (statut : {application.get_status_display()}).')
+
+
+def _lock_pending(application):
+    """Verrouille la demande pour la durée de la décision et vérifie qu'elle attend encore."""
+    locked = Application.objects.select_for_update().get(pk=application.pk)
+    if locked.status != Application.Status.A_EXAMINER:
+        raise AlreadyDecided(locked)
+    return locked
+
+
+def _record_decision(application, status, by, note):
+    application.status = status
+    application.decided_by = by
+    application.decided_at = timezone.now()
+    application.internal_note = note
+    application.save()
+
+
+def reject(application, *, by, reason, note=''):
+    """Refuse la demande et envoie le motif à la personne."""
+    with transaction.atomic():
+        application = _lock_pending(application)
+        application.rejection_reason = reason
+        _record_decision(application, Application.Status.REJETEE, by, note)
+        body = render_to_string('applications/emails/rejection.txt', {'application': application})
+        send_email(to=application.email, subject=DECISION_SUBJECT, body=body)
+    return application

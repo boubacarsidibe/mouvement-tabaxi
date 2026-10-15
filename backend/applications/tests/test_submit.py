@@ -9,19 +9,12 @@ from django.utils import timezone
 from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.models import User
+from applications.models import Application
 from territories.models import Territory
 
-from .models import Application
+from .helpers import make_application
 
 URL = '/api/applications/'
-
-
-def make_application(territory, email='awa.ndiaye@example.org', **extra):
-    fields = {
-        'first_name': 'Awa', 'last_name': 'Ndiaye', 'email': email, 'territory': territory,
-        'profession': 'Enseignante', 'motivation': 'Agir pour ma commune.', 'consent_at': timezone.now(),
-    }
-    return Application.objects.create(**{**fields, **extra})
 
 
 class SubmitTestCase(TestCase):

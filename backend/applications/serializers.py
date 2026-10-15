@@ -68,3 +68,54 @@ class ApplicationSubmitSerializer(serializers.ModelSerializer):
         # La réponse confirme la demande sans renvoyer les informations personnelles.
         data = super().to_representation(instance)
         return {key: data[key] for key in ('reference', 'status', 'status_label', 'created_at')}
+
+
+class TerritorySummarySerializer(serializers.ModelSerializer):
+    kind_label = serializers.CharField(source='get_kind_display', read_only=True)
+    path = serializers.SerializerMethodField(help_text='Exemple : « Sénégal › Saint-Louis › Podor ».')
+
+    class Meta:
+        model = Territory
+        fields = ('id', 'name', 'kind', 'kind_label', 'path')
+
+    def get_path(self, territory):
+        names = []
+        while territory is not None:
+            names.append(territory.name)
+            territory = territory.parent
+        return ' › '.join(reversed(names))
+
+
+class DeciderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'first_name', 'last_name', 'email')
+
+
+class ApplicationSerializer(serializers.ModelSerializer):
+    """Demande complète, telle que les fondateurs l'examinent."""
+
+    territory = TerritorySummarySerializer(read_only=True)
+    status_label = serializers.CharField(source='get_status_display', read_only=True)
+    decided_by = DeciderSerializer(read_only=True)
+
+    class Meta:
+        model = Application
+        fields = (
+            'id', 'reference', 'first_name', 'last_name', 'email', 'territory', 'profession', 'motivation',
+            'status', 'status_label', 'created_at', 'consent_at',
+            'decided_by', 'decided_at', 'rejection_reason', 'internal_note',
+        )
+        read_only_fields = fields
+
+
+REJECTION_REASON_REQUIRED = 'Le motif du refus est obligatoire.'
+
+
+class RejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(
+        label='motif du refus',
+        max_length=2000,
+        error_messages={'required': REJECTION_REASON_REQUIRED, 'blank': REJECTION_REASON_REQUIRED, 'null': REJECTION_REASON_REQUIRED},
+    )
+    internal_note = serializers.CharField(label='note interne', max_length=2000, required=False, allow_blank=True, default='')

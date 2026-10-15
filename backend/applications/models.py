@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -29,6 +30,19 @@ class Application(models.Model):
     status = models.CharField('statut', max_length=20, choices=Status.choices, default=Status.A_EXAMINER, db_index=True)
     created_at = models.DateTimeField('déposée le', auto_now_add=True)
     updated_at = models.DateTimeField('modifiée le', auto_now=True)
+
+    # Décision du fondateur : qui, quand, et pourquoi en cas de refus.
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='décision prise par',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='decided_applications',
+    )
+    decided_at = models.DateTimeField('décision prise le', null=True, blank=True)
+    rejection_reason = models.TextField('motif du refus', blank=True)
+    internal_note = models.TextField('note interne', blank=True, help_text='Visible par les fondateurs seulement.')
 
     class Meta:
         verbose_name = "demande d'adhésion"
