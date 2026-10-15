@@ -7,126 +7,119 @@ import { UiIcon } from '../shared/ui-icon';
   selector: 'app-join-page',
   imports: [PublicHeader, RouterLink, UiIcon],
   template: `
-    <main class="public-canvas join-canvas">
+    <main class="public-canvas join-canvas join-v2">
       <section class="public-frame join-frame">
         <app-public-header />
 
-        <div class="join-layout">
-          <aside class="join-story">
-            <p class="overline light">
-              <span></span
-              >{{ isFinalize ? 'Finalisation de votre adhésion' : 'Demande d’adhésion' }}
-            </p>
-            <h1>
-              {{
-                isFinalize
-                  ? 'Bienvenue bientôt chez TABAXI, Aminata.'
-                  : 'Faisons avancer les choses, ensemble.'
-              }}
-            </h1>
-            <p>
-              {{
-                isFinalize
-                  ? 'Complétez les informations ci-dessous pour finaliser votre adhésion et accéder à votre espace membre.'
-                  : 'Rejoignez le Mouvement TABAXI et contribuez à des actions concrètes pour des communautés plus fortes, plus solidaires et un avenir meilleur.'
-              }}
-            </p>
+        <div class="enrollment-shell">
+          <aside class="enrollment-aside">
+            <a class="enrollment-back" routerLink="/">← Retour à l’accueil</a>
+            <div class="enrollment-copy">
+              <p class="overline light">
+                <span></span>{{ isFinalize ? 'Dernière étape' : 'Rejoindre TABAXI' }}
+              </p>
+              <h1>
+                {{
+                  isFinalize ? 'Votre place est presque prête.' : 'Votre engagement commence ici.'
+                }}
+              </h1>
+              <p>
+                {{
+                  isFinalize
+                    ? 'Complétez votre profil pour recevoir votre carte numérique et accéder aux activités de votre territoire.'
+                    : 'Parlez-nous simplement de vous. Le bureau étudiera votre demande et vous répondra personnellement.'
+                }}
+              </p>
 
-            @if (isFinalize) {
-              <div class="secure-link">
-                <ui-icon name="key" /><span
-                  ><strong>Lien sécurisé</strong>Ce lien est personnel et valable pendant 7
-                  jours.</span
-                >
-              </div>
-            }
+              <dl class="enrollment-facts">
+                <div>
+                  <dt><ui-icon name="calendar" /></dt>
+                  <dd>
+                    <strong>{{ isFinalize ? '7 jours' : '5 jours ouvrés' }}</strong
+                    ><span>{{
+                      isFinalize ? 'pour utiliser votre lien' : 'pour recevoir une réponse'
+                    }}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt><ui-icon [name]="isFinalize ? 'card' : 'location'" /></dt>
+                  <dd>
+                    <strong>{{ isFinalize ? 'Carte numérique' : 'Ancrage local' }}</strong
+                    ><span>{{
+                      isFinalize
+                        ? 'disponible dès l’activation'
+                        : 'un rattachement à votre territoire'
+                    }}</span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
 
-            <ul class="join-benefits">
-              <li>
-                <ui-icon [name]="isFinalize ? 'key' : 'users'" /><span
-                  ><strong>{{
-                    isFinalize ? 'Vos données sont protégées' : 'Des citoyens engagés'
-                  }}</strong
-                  >{{
-                    isFinalize
-                      ? 'Sécurisées et confidentielles.'
-                      : 'Une communauté active dans toutes les localités.'
-                  }}</span
-                >
-              </li>
-              <li>
-                <ui-icon [name]="isFinalize ? 'users' : 'leaf'" /><span
-                  ><strong>{{
-                    isFinalize ? 'Finalisez votre profil' : 'Des actions concrètes'
-                  }}</strong
-                  >{{
-                    isFinalize
-                      ? 'Accédez à tous les programmes et activités.'
-                      : 'Éducation, santé, environnement et développement local.'
-                  }}</span
-                >
-              </li>
-              <li>
-                <ui-icon [name]="isFinalize ? 'plus' : 'location'" /><span
-                  ><strong>{{
-                    isFinalize ? 'Rejoignez une communauté active' : 'Un impact durable'
-                  }}</strong
-                  >{{
-                    isFinalize
-                      ? 'Des citoyens engagés dans toutes les régions.'
-                      : 'Des territoires plus forts pour les générations futures.'
-                  }}</span
-                >
-              </li>
-            </ul>
-            <div class="join-line-art" aria-hidden="true"></div>
+            <figure class="enrollment-visual">
+              <img src="hero-tabaxi.jpg" alt="Citoyens réunis autour du Mouvement TABAXI" />
+              <figcaption>
+                <strong>Une communauté, territoire par territoire.</strong>
+                <span>1 248 membres engagés dans 12 localités.</span>
+              </figcaption>
+            </figure>
           </aside>
 
-          <section class="join-form-panel">
-            @if (isFinalize) {
-              <div class="join-progress" aria-label="Étapes de l’adhésion">
-                <span class="done"
-                  ><b>✓</b><strong>Demande</strong><small>Votre demande est envoyée</small></span
-                >
-                <i></i>
-                <span class="active"
-                  ><b>2</b><strong>Validation</strong><small>Traitement en cours</small></span
-                >
-                <i></i>
-                <span
-                  ><b>3</b><strong>Adhésion</strong
-                  ><small>Finalisation de votre profil</small></span
-                >
-              </div>
-            }
+          <section class="enrollment-main">
+            <nav class="enrollment-steps" aria-label="Étapes de l’adhésion">
+              <span [class.done]="isFinalize" [class.active]="!isFinalize"
+                ><b>{{ isFinalize ? '✓' : '1' }}</b
+                ><small>Demande</small></span
+              >
+              <i></i>
+              <span [class.done]="isFinalize"
+                ><b>{{ isFinalize ? '✓' : '2' }}</b
+                ><small>Examen</small></span
+              >
+              <i></i>
+              <span [class.active]="isFinalize"><b>3</b><small>Adhésion</small></span>
+            </nav>
 
             @if (submitted()) {
-              <div class="submit-success" role="status">
+              <div class="submit-success enrollment-success" role="status">
                 <span>✓</span>
-                <h2>{{ isFinalize ? 'Votre profil est prêt.' : 'Votre demande est prête.' }}</h2>
-                <p>Le parcours visuel est validé. Le raccordement à l’API activera l’envoi réel.</p>
+                <p class="eyebrow">{{ isFinalize ? 'Adhésion finalisée' : 'Demande envoyée' }}</p>
+                <h2>{{ isFinalize ? 'Bienvenue chez TABAXI.' : 'Merci pour votre confiance.' }}</h2>
+                <p>
+                  {{
+                    isFinalize
+                      ? 'Votre espace membre et votre carte numérique sont maintenant prêts.'
+                      : 'Votre référence est TAB-2026-00418. Le bureau vous répondra par courriel.'
+                  }}
+                </p>
                 <a
                   class="btn btn-green"
                   [routerLink]="isFinalize ? '/membre' : '/adherer/confirmation'"
-                  >{{ isFinalize ? 'Voir mon espace' : 'Suivre ma demande' }}</a
+                  >{{ isFinalize ? 'Ouvrir mon espace' : 'Suivre ma demande' }}</a
                 >
               </div>
             } @else {
-              <form class="join-form" (submit)="submit($event)">
-                <div class="form-title">
-                  <ui-icon name="users" /><span
-                    ><h2>
-                      {{ isFinalize ? 'Mes informations personnelles' : 'Demande d’adhésion' }}
+              <form class="enrollment-form" (submit)="submit($event)">
+                <header class="enrollment-form-header">
+                  <span><ui-icon [name]="isFinalize ? 'key' : 'users'" /></span>
+                  <div>
+                    <p class="eyebrow">
+                      {{ isFinalize ? 'Profil membre' : 'Demande d’adhésion' }}
+                    </p>
+                    <h2>
+                      {{
+                        isFinalize ? 'Finalisez vos informations' : 'Présentez-vous au mouvement'
+                      }}
                     </h2>
                     <p>
                       {{
                         isFinalize
-                          ? 'Complétez votre profil membre.'
-                          : 'Remplissez ce formulaire pour rejoindre le Mouvement TABAXI.'
+                          ? 'Les champs marqués d’un astérisque sont nécessaires pour créer votre compte.'
+                          : 'Comptez environ trois minutes. Tous les champs sont obligatoires.'
                       }}
-                    </p></span
-                  >
-                </div>
+                    </p>
+                  </div>
+                </header>
+
                 <div class="field-grid">
                   <label
                     >Prénom <em>*</em
@@ -145,42 +138,57 @@ import { UiIcon } from '../shared/ui-icon';
                       required
                   /></label>
                 </div>
+
                 @if (isFinalize) {
                   <label
                     >Adresse complète <em>*</em
-                    ><input name="address" placeholder="Numéro, rue, quartier, ville…" required
+                    ><input name="address" placeholder="Numéro, rue, quartier, ville" required
                   /></label>
-                } @else {
-                  <label
-                    >Adresse courriel <em>*</em
-                    ><input
-                      type="email"
-                      name="email"
-                      placeholder="votre.email@exemple.com"
-                      required
-                  /></label>
-                }
-                <label
-                  >Localité {{ isFinalize ? 'de coordination' : 'souhaitée' }} <em>*</em>
-                  <select name="territory" required>
-                    <option value="">Sélectionnez une localité</option>
-                    <option>Dakar</option>
-                    <option>Thiès</option>
-                    <option>Saint-Louis</option>
-                    <option>Ziguinchor</option>
-                  </select>
-                </label>
-                @if (isFinalize) {
+                  <div class="field-grid">
+                    <label
+                      >Localité <em>*</em
+                      ><select name="territory" required>
+                        <option value="">Sélectionnez une localité</option>
+                        <option>Dakar</option>
+                        <option>Thiès</option>
+                        <option>Saint-Louis</option>
+                        <option>Ziguinchor</option>
+                      </select></label
+                    >
+                    <label
+                      >Téléphone <em>*</em
+                      ><input type="tel" name="phone" placeholder="+221 77 000 00 00" required
+                    /></label>
+                  </div>
                   <label
                     >Photo de profil <em>*</em
-                    ><span class="upload-field"
+                    ><span class="enrollment-upload"
                       ><img src="member-aminata.jpg" alt="Aperçu de la photo" /><span
-                        ><strong>Ajouter une photo</strong
-                        ><small>Format JPG ou PNG. Taille max 5 Mo.</small></span
-                      ></span
-                    ></label
-                  >
-                  <label class="check-row"
+                        ><strong>Choisir une photo</strong
+                        ><small>JPG ou PNG · 5 Mo maximum</small></span
+                      ><ui-icon name="plus" /></span
+                  ></label>
+                  <div class="field-grid">
+                    <label
+                      >Créer un mot de passe <em>*</em
+                      ><input
+                        type="password"
+                        name="password"
+                        placeholder="8 caractères minimum"
+                        minlength="8"
+                        required
+                    /></label>
+                    <label
+                      >Confirmer le mot de passe <em>*</em
+                      ><input
+                        type="password"
+                        name="passwordConfirm"
+                        placeholder="Répétez le mot de passe"
+                        minlength="8"
+                        required
+                    /></label>
+                  </div>
+                  <label class="enrollment-consent"
                     ><input type="checkbox" required /><span
                       >J’accepte les <u>statuts</u> et le <u>règlement intérieur</u> du Mouvement
                       TABAXI.</span
@@ -188,26 +196,55 @@ import { UiIcon } from '../shared/ui-icon';
                   >
                 } @else {
                   <label
-                    >Qu’est-ce qui vous motive à rejoindre TABAXI&nbsp;? <em>*</em
+                    >Adresse courriel <em>*</em
+                    ><input type="email" name="email" placeholder="prenom.nom@exemple.com" required
+                  /></label>
+                  <div class="field-grid">
+                    <label
+                      >Localité souhaitée <em>*</em
+                      ><select name="territory" required>
+                        <option value="">Sélectionnez une localité</option>
+                        <option>Dakar</option>
+                        <option>Thiès</option>
+                        <option>Saint-Louis</option>
+                        <option>Ziguinchor</option>
+                      </select></label
+                    >
+                    <label
+                      >Profession <em>*</em
+                      ><input name="profession" placeholder="Votre activité principale" required
+                    /></label>
+                  </div>
+                  <label
+                    >Pourquoi souhaitez-vous rejoindre TABAXI ? <em>*</em
                     ><textarea
                       name="motivation"
                       rows="4"
-                      placeholder="Partagez votre motivation…"
+                      placeholder="En quelques phrases, dites-nous ce que vous souhaitez apporter…"
                       required
                     ></textarea>
                   </label>
-                }
-                <button class="btn btn-green btn-wide" type="submit">
-                  <ui-icon [name]="isFinalize ? 'plus' : 'mail'" />{{
-                    isFinalize ? 'Finaliser mon adhésion' : 'Envoyer ma demande'
-                  }}
-                </button>
-                <div class="form-privacy">
-                  <ui-icon name="key" /><span
-                    >Vos informations sont confidentielles et sont utilisées uniquement dans le
-                    cadre de votre adhésion.</span
+                  <label class="enrollment-consent"
+                    ><input type="checkbox" required /><span
+                      >J’accepte que mes informations soient utilisées pour examiner ma demande,
+                      conformément à la
+                      <a routerLink="/confidentialite">politique de confidentialité</a>.</span
+                    ></label
                   >
-                </div>
+                }
+
+                <footer class="enrollment-form-footer">
+                  <p>
+                    <ui-icon name="key" /><span
+                      ><strong>Données protégées</strong>Accès limité aux responsables
+                      habilités.</span
+                    >
+                  </p>
+                  <button class="btn btn-green" type="submit">
+                    {{ isFinalize ? 'Finaliser mon adhésion' : 'Envoyer ma demande' }}
+                    <span>→</span>
+                  </button>
+                </footer>
               </form>
             }
           </section>
