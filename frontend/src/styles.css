@@ -1,3 +1,51 @@
+/*
+ * Affichage agrandi sur ordinateur, jusqu'à 150 %, pour tous les comptes et sans réglage.
+ * Un site ne peut pas imposer le zoom du navigateur : `zoom` met les écrans à la taille équivalente.
+ * L'échelle monte par paliers avec la largeur de l'écran, de façon que la largeur utile (écran / échelle)
+ * reste d'au moins 1280 px, largeur pour laquelle les écrans sont conçus : 150 % à partir de 1920 px,
+ * moins sur un portable (à 150 %, un écran de 1440 px n'offrirait que 960 px). Le téléphone reste à 100 %.
+ * --echelle compense les unités d'écran (vh, vw), qui ne suivent pas le zoom.
+ */
+:root {
+  --echelle: 1;
+}
+@media (min-width: 1366px) {
+  :root {
+    zoom: 1.067;
+    --echelle: 1.067;
+  }
+}
+@media (min-width: 1440px) {
+  :root {
+    zoom: 1.125;
+    --echelle: 1.125;
+  }
+}
+@media (min-width: 1536px) {
+  :root {
+    zoom: 1.2;
+    --echelle: 1.2;
+  }
+}
+@media (min-width: 1702px) {
+  :root {
+    zoom: 1.33;
+    --echelle: 1.33;
+  }
+}
+@media (min-width: 1920px) {
+  :root {
+    zoom: 1.5;
+    --echelle: 1.5;
+  }
+}
+@media print {
+  :root {
+    zoom: 1;
+    --echelle: 1;
+  }
+}
+
 :root {
   --green-950: #023a27;
   --green-900: #00583a;
@@ -144,7 +192,7 @@ small {
 
 /* Public website */
 .public-canvas {
-  min-height: 100vh;
+  min-height: calc(100vh / var(--echelle));
   padding: 16px;
   background:
     radial-gradient(circle at 5% 30%, rgba(0, 93, 61, 0.22), transparent 27%),
@@ -153,7 +201,7 @@ small {
 }
 .public-frame {
   max-width: 1420px;
-  min-height: calc(100vh - 32px);
+  min-height: calc(calc(100vh / var(--echelle)) - 32px);
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.75);
@@ -187,7 +235,7 @@ small {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(22px, 3vw, 46px);
+  gap: clamp(22px, calc(3vw / var(--echelle)), 46px);
 }
 .public-header nav a {
   position: relative;
@@ -285,7 +333,7 @@ small {
 .public-hero h1 {
   margin-bottom: 12px;
   color: #003c27;
-  font-size: clamp(58px, 5.3vw, 82px);
+  font-size: clamp(58px, calc(5.3vw / var(--echelle)), 82px);
   line-height: 0.95;
   letter-spacing: -0.055em;
 }
@@ -791,13 +839,13 @@ small {
 
 /* Member and executive workspaces */
 .workspace-shell {
-  min-height: 100vh;
+  min-height: calc(100vh / var(--echelle));
   display: grid;
   grid-template-columns: 238px minmax(0, 1fr);
   background: #f1f5f0;
 }
 .side-nav {
-  height: 100vh;
+  height: calc(100vh / var(--echelle));
   position: sticky;
   top: 0;
   display: flex;
@@ -1029,7 +1077,7 @@ small {
 }
 .page-heading h1 {
   margin: 0;
-  font-size: clamp(25px, 2.2vw, 34px);
+  font-size: clamp(25px, calc(2.2vw / var(--echelle)), 34px);
   line-height: 1.08;
   letter-spacing: -0.035em;
 }
@@ -2111,7 +2159,7 @@ table input {
     padding: 0;
   }
   .public-frame {
-    min-height: 100vh;
+    min-height: calc(100vh / var(--echelle));
     border-radius: 0;
   }
   .public-header {
@@ -2159,7 +2207,7 @@ table input {
     padding: 0;
   }
   .public-hero h1 {
-    font-size: clamp(54px, 13vw, 72px);
+    font-size: clamp(54px, calc(13vw / var(--echelle)), 72px);
   }
   .public-lead {
     font-size: 17px;
@@ -2238,7 +2286,7 @@ table input {
     padding-inline: 16px;
   }
   .top-search {
-    width: min(360px, 70vw);
+    width: min(360px, calc(70vw / var(--echelle)));
     margin-right: auto;
   }
   .workspace-content {
@@ -2523,7 +2571,7 @@ h3 {
   max-width: 650px;
   margin-bottom: 22px;
   color: var(--green-950);
-  font-size: clamp(34px, 4vw, 54px);
+  font-size: clamp(34px, calc(4vw / var(--echelle)), 54px);
   line-height: 1.05;
 }
 .story-copy > p:last-child,
@@ -2662,7 +2710,7 @@ h3 {
 }
 .public-join-cta h2 {
   margin-bottom: 10px;
-  font-size: clamp(30px, 4vw, 48px);
+  font-size: clamp(30px, calc(4vw / var(--echelle)), 48px);
 }
 .public-join-cta p:last-child {
   max-width: 640px;
@@ -2703,10 +2751,10 @@ h3 {
 .auth-frame,
 .status-frame,
 .policy-frame {
-  min-height: calc(100vh - 32px);
+  min-height: calc(calc(100vh / var(--echelle)) - 32px);
 }
 .auth-layout {
-  min-height: calc(100vh - 110px);
+  min-height: calc(calc(100vh / var(--echelle)) - 110px);
   display: grid;
   grid-template-columns: minmax(360px, 0.88fr) minmax(440px, 1.12fr);
 }
@@ -2714,14 +2762,14 @@ h3 {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 72px clamp(40px, 7vw, 100px);
+  padding: 72px clamp(40px, calc(7vw / var(--echelle)), 100px);
   background: #f0f5f0;
 }
 .auth-story h1 {
   max-width: 520px;
   margin-bottom: 20px;
   color: var(--green-950);
-  font-size: clamp(42px, 5vw, 68px);
+  font-size: clamp(42px, calc(5vw / var(--echelle)), 68px);
   line-height: 1;
 }
 .auth-story > p:not(.overline) {
@@ -2838,7 +2886,7 @@ h3 {
 .status-layout,
 .policy-layout {
   max-width: 1160px;
-  min-height: calc(100vh - 140px);
+  min-height: calc(calc(100vh / var(--echelle)) - 140px);
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 72px;
@@ -2861,7 +2909,7 @@ h3 {
   max-width: 720px;
   margin-bottom: 18px;
   color: var(--green-950);
-  font-size: clamp(42px, 5vw, 68px);
+  font-size: clamp(42px, calc(5vw / var(--echelle)), 68px);
   line-height: 1.02;
 }
 .status-main > p:not(.eyebrow),
@@ -3075,7 +3123,7 @@ h3 {
 .activity-hero h1 {
   max-width: 760px;
   margin: 18px 0 14px;
-  font-size: clamp(34px, 4vw, 52px);
+  font-size: clamp(34px, calc(4vw / var(--echelle)), 52px);
   line-height: 1.05;
 }
 .activity-hero > p {
@@ -3540,14 +3588,14 @@ h3 {
   overflow: hidden;
 }
 .status-v2 .status-frame {
-  min-height: calc(100vh - 32px);
+  min-height: calc(calc(100vh / var(--echelle)) - 32px);
   overflow: hidden;
 }
 .enrollment-shell {
-  min-height: calc(100vh - 32px);
+  min-height: calc(calc(100vh / var(--echelle)) - 32px);
   display: grid;
   place-items: center;
-  padding: clamp(28px, 5vw, 52px);
+  padding: clamp(28px, calc(5vw / var(--echelle)), 52px);
   background: #f8faf7;
 }
 .enrollment-aside {
@@ -3574,7 +3622,7 @@ h3 {
 }
 .enrollment-copy h1 {
   margin-bottom: 18px;
-  font-size: clamp(40px, 4vw, 58px);
+  font-size: clamp(40px, calc(4vw / var(--echelle)), 58px);
   line-height: 1;
 }
 .enrollment-copy > p:last-of-type {
@@ -3848,8 +3896,8 @@ h3 {
 
 /* Confirmation step */
 .confirmation-shell {
-  min-height: calc(100vh - 108px);
-  padding: 30px clamp(24px, 5vw, 72px) 56px;
+  min-height: calc(calc(100vh / var(--echelle)) - 108px);
+  padding: 30px clamp(24px, calc(5vw / var(--echelle)), 72px) 56px;
   background: #f4f7f3;
 }
 .confirmation-steps {
@@ -3877,7 +3925,7 @@ h3 {
   max-width: 680px;
   margin-bottom: 14px;
   color: var(--green-950);
-  font-size: clamp(36px, 4vw, 52px);
+  font-size: clamp(36px, calc(4vw / var(--echelle)), 52px);
   line-height: 1.05;
 }
 .confirmation-lead {
@@ -3990,10 +4038,10 @@ h3 {
 @media (max-width: 600px) {
   .join-v2 .join-frame,
   .status-v2 .status-frame {
-    min-height: 100vh;
+    min-height: calc(100vh / var(--echelle));
   }
   .enrollment-shell {
-    min-height: 100vh;
+    min-height: calc(100vh / var(--echelle));
     padding: 20px 14px;
   }
   .enrollment-aside {
@@ -4291,7 +4339,7 @@ textarea {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw !important;
+    width: calc(100vw / var(--echelle)) !important;
     box-shadow: none;
   }
 }
