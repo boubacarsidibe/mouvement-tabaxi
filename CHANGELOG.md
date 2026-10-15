@@ -29,6 +29,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : dossier de membre avec numéro TBX-AAAA-NNNNN attribué automatiquement, unique et jamais réutilisé (#34).
 - Backend : finalisation de l'inscription avec le lien personnel (mot de passe, adresse et téléphone chiffrés, photo nettoyée), création du compte membre et passage de la demande à « Inscrite » (#25).
 - Backend : mot de passe oublié (lien valable une heure, utilisable une fois) et changement du mot de passe une fois connecté (#29).
+- Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
 
 ### Modifié
 
