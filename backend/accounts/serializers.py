@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from territories.serializers import TerritorySummarySerializer
+
 from .models import User
 
 
@@ -8,10 +10,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     role_label = serializers.CharField(source='get_role_display', read_only=True)
     is_bureau = serializers.BooleanField(read_only=True)
+    territory = TerritorySummarySerializer(read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'role', 'role_label', 'is_bureau')
+        fields = ('id', 'email', 'first_name', 'last_name', 'role', 'role_label', 'is_bureau', 'territory')
         read_only_fields = fields
 
 
