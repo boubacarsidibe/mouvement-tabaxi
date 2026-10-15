@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class UserManager(BaseUserManager):
@@ -24,6 +25,10 @@ class UserManager(BaseUserManager):
         extra.setdefault('role', User.Role.FONDATEUR)
         return self._create_user(email, password, **extra)
 
+    def get_by_natural_key(self, email):
+        # « Awa.Ndiaye@… » et « awa.ndiaye@… » désignent le même compte.
+        return self.get(email__iexact=email)
+
 
 class User(AbstractUser):
     """Compte unique pour tous les rôles : connexion par courriel et mot de passe."""
@@ -41,6 +46,15 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            # Un courriel ne sert qu'à un seul compte, quelle que soit la casse.
+            models.UniqueConstraint(
+                Lower('email'), name='utilisateur_courriel_unique_sans_casse',
+                violation_error_message='Un compte utilise déjà ce courriel.',
+            ),
+        ]
 
     def __str__(self):
         return self.email
