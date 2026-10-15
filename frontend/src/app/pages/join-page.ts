@@ -1,61 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PublicHeader } from '../shared/public-header';
 import { UiIcon } from '../shared/ui-icon';
 
 @Component({
   selector: 'app-join-page',
-  imports: [PublicHeader, RouterLink, UiIcon],
+  imports: [RouterLink, UiIcon],
   template: `
     <main class="public-canvas join-canvas join-v2">
       <section class="public-frame join-frame">
-        <app-public-header />
-
         <div class="enrollment-shell">
-          <aside class="enrollment-aside">
-            <a class="enrollment-back" routerLink="/">← Retour à l’accueil</a>
-            <div class="enrollment-copy">
-              <p class="overline light">
-                <span></span>{{ isFinalize ? 'Dernière étape' : 'Rejoindre TABAXI' }}
-              </p>
-              <h1>
-                {{
-                  isFinalize ? 'Votre place est presque prête.' : 'Votre engagement commence ici.'
-                }}
-              </h1>
-              <p>
-                {{
-                  isFinalize
-                    ? 'Complétez votre profil pour recevoir votre carte numérique et accéder aux activités de votre territoire.'
-                    : 'Parlez-nous simplement de vous. Le bureau étudiera votre demande et vous répondra personnellement.'
-                }}
-              </p>
-            </div>
-
-            <figure class="enrollment-visual">
-              <img src="hero-tabaxi.jpg" alt="Citoyens réunis autour du Mouvement TABAXI" />
-              <figcaption>
-                <strong>Une communauté, territoire par territoire.</strong>
-                <span>1 248 membres engagés dans 12 localités.</span>
-              </figcaption>
-            </figure>
-          </aside>
-
           <section class="enrollment-main">
-            <nav class="enrollment-steps" aria-label="Étapes de l’adhésion">
-              <span [class.done]="isFinalize" [class.active]="!isFinalize"
-                ><b>{{ isFinalize ? '✓' : '1' }}</b
-                ><small>Demande</small></span
-              >
-              <i></i>
-              <span [class.done]="isFinalize"
-                ><b>{{ isFinalize ? '✓' : '2' }}</b
-                ><small>Examen</small></span
-              >
-              <i></i>
-              <span [class.active]="isFinalize"><b>3</b><small>Adhésion</small></span>
-            </nav>
-
             @if (submitted()) {
               <div class="submit-success enrollment-success" role="status">
                 <span>✓</span>

@@ -3560,15 +3560,20 @@ h3 {
 .join-v2 {
   background: #e8eee9;
 }
-.join-v2 .join-frame,
+.join-v2 .join-frame {
+  width: min(860px, 100%);
+  min-height: auto;
+  overflow: hidden;
+}
 .status-v2 .status-frame {
   min-height: calc(100vh - 32px);
   overflow: hidden;
 }
 .enrollment-shell {
-  min-height: calc(100vh - 108px);
+  min-height: calc(100vh - 32px);
   display: grid;
-  grid-template-columns: minmax(360px, 0.82fr) minmax(560px, 1.18fr);
+  place-items: center;
+  padding: clamp(28px, 5vw, 52px);
   background: #f8faf7;
 }
 .enrollment-aside {
@@ -3643,10 +3648,11 @@ h3 {
   font-size: 12px;
 }
 .enrollment-main {
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 28px clamp(28px, 4vw, 62px) 44px;
+  padding: 0;
 }
 .enrollment-steps {
   width: min(100%, 560px);
@@ -3978,7 +3984,6 @@ h3 {
 }
 
 @media (max-width: 980px) {
-  .enrollment-shell,
   .confirmation-grid {
     grid-template-columns: 1fr;
   }
@@ -3998,9 +4003,6 @@ h3 {
     flex: none;
     margin-top: 20px;
   }
-  .enrollment-main {
-    padding-top: 30px;
-  }
   .confirmation-aside {
     display: grid;
     grid-template-columns: 0.8fr 1.2fr;
@@ -4015,6 +4017,10 @@ h3 {
   .join-v2 .join-frame,
   .status-v2 .status-frame {
     min-height: 100vh;
+  }
+  .enrollment-shell {
+    min-height: 100vh;
+    padding: 20px 14px;
   }
   .enrollment-aside {
     padding: 24px 20px 22px;
@@ -4033,15 +4039,8 @@ h3 {
   .enrollment-visual {
     display: none;
   }
-  .enrollment-main,
   .confirmation-shell {
     padding: 24px 14px 36px;
-  }
-  .enrollment-steps {
-    margin-bottom: 20px;
-  }
-  .enrollment-steps > span {
-    min-width: 58px;
   }
   .enrollment-form,
   .confirmation-card {
