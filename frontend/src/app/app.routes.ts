@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard, bureauGuard, founderGuard, guestGuard } from './core/auth.guards';
 import { AdminPage } from './pages/admin-page';
 import { AuthPage } from './pages/auth-page';
+import { FinalizePage } from './pages/finalize-page';
 import { JoinPage } from './pages/join-page';
 import { MemberPage } from './pages/member-page';
 import { PrivacyPage } from './pages/privacy-page';
@@ -32,12 +33,7 @@ export const routes: Routes = [
     data: { mode: 'request' },
     title: 'Demande d’adhésion — TABAXI',
   },
-  {
-    path: 'finaliser',
-    component: JoinPage,
-    data: { mode: 'finalize' },
-    title: 'Finaliser mon adhésion — TABAXI',
-  },
+  { path: 'finaliser', component: FinalizePage, title: 'Finaliser mon adhésion — TABAXI' },
   { path: 'adherer/confirmation', component: RequestStatusPage, title: 'Demande reçue — TABAXI' },
   {
     path: 'connexion',
