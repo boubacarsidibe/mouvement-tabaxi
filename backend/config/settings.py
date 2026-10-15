@@ -13,8 +13,12 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+from .env import load_env_file
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_env_file(BASE_DIR / '.env')
 
 
 # Les valeurs sensibles viennent de l'environnement (voir .env.example).
@@ -37,7 +41,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'core',
     'accounts',
+    'territories',
+    'applications',
+    'members',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -49,6 +57,9 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
+    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
+    + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
 }
 
 MIDDLEWARE = [
