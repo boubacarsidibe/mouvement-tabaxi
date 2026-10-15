@@ -196,6 +196,11 @@ DATABASES = {
         ssl_require=bool(os.environ.get('DATABASE_URL')) and not DEBUG,
     )
 }
+if DATABASES['default']['ENGINE'].endswith('postgresql'):
+    # Neon place un répartiteur de connexions devant la base : il ne gère pas les requêtes
+    # préparées côté serveur, ni les curseurs côté serveur (QuerySet.iterator).
+    DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
 
 
 # Password validation

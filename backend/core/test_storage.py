@@ -58,6 +58,8 @@ SHOW = (
     'import json; from django.conf import settings as s; print(json.dumps({'
     '"engine": s.DATABASES["default"]["ENGINE"], "host": s.DATABASES["default"].get("HOST"), '
     '"ssl": s.DATABASES["default"].get("OPTIONS", {}).get("sslmode"), '
+    '"prepare": s.DATABASES["default"].get("OPTIONS", {}).get("prepare_threshold", "absent"), '
+    '"cursors": s.DATABASES["default"].get("DISABLE_SERVER_SIDE_CURSORS"), '
     '"storage": s.STORAGES["default"]["BACKEND"], "frontend": s.FRONTEND_URL, '
     '"hosts": s.ALLOWED_HOSTS, "csrf": s.CSRF_TRUSTED_ORIGINS}))'
 )
@@ -77,6 +79,9 @@ class VercelConfigurationTests(SimpleTestCase):
         self.assertEqual(values['engine'], 'django.db.backends.postgresql')
         self.assertEqual(values['host'], 'db.example.org')
         self.assertEqual(values['ssl'], 'require')
+        # Répartiteur de connexions de Neon : pas de requêtes préparées ni de curseurs côté serveur.
+        self.assertIsNone(values['prepare'])
+        self.assertTrue(values['cursors'])
         self.assertEqual(values['storage'], 'core.storage.DatabaseStorage')
         self.assertEqual(values['frontend'], 'https://tabaxi-abc123.vercel.app')
         self.assertIn('tabaxi-abc123.vercel.app', values['hosts'])
