@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-from .env import load_env_file
+from .env import load_env_file, mailer_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -160,8 +160,9 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# Console en développement, SMTP dès que EMAIL_HOST est défini (voir .env.example).
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
+    'default': mailer_from_env(os.environ),
 }
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
