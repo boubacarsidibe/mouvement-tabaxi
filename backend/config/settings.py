@@ -66,6 +66,10 @@ REST_FRAMEWORK = {
     # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
     + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
+    # Limite les envois répétés depuis une même adresse sur les formulaires publics.
+    'DEFAULT_THROTTLE_RATES': {
+        'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
+    },
 }
 
 MIDDLEWARE = [
