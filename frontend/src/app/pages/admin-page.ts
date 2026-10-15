@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
 
 @Component({
@@ -13,7 +14,7 @@ import { UiIcon } from '../shared/ui-icon';
         /></a>
         <p class="side-label">Bureau exécutif</p>
         <nav aria-label="Bureau exécutif">
-          @for (item of navItems; track item.view) {
+          @for (item of visibleNavItems(); track item.view) {
             <a [routerLink]="item.link" [class.active]="view === item.view"
               ><ui-icon [name]="item.icon" />{{ item.label }}</a
             >
@@ -22,10 +23,18 @@ import { UiIcon } from '../shared/ui-icon';
         <div class="side-profile">
           <a routerLink="/membre"><ui-icon name="users" />Changer de profil</a>
           <div class="side-user">
-            <span>BE</span>
-            <p><strong>mouvement.tabaxi&#64;gmail.com</strong><small>Membre fondateur</small></p>
+            <span>{{ auth.initials() }}</span>
+            <p>
+              <strong>{{ auth.displayName() }}</strong
+              ><small
+                >{{ auth.user()?.role_label
+                }}{{ auth.user()?.territory ? ' · ' + auth.user()?.territory?.name : '' }}</small
+              >
+            </p>
           </div>
-          <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
+          <button class="side-logout" type="button" (click)="logout()">
+            <ui-icon name="logout" />Se déconnecter
+          </button>
         </div>
       </aside>
 
@@ -39,7 +48,7 @@ import { UiIcon } from '../shared/ui-icon';
           <button class="icon-button" aria-label="Notifications">
             <ui-icon name="bell" /><i></i>
           </button>
-          <button class="profile-chip" aria-label="Menu du profil">BE</button
+          <button class="profile-chip" aria-label="Menu du profil">{{ auth.initials() }}</button
           ><span class="chevron" aria-hidden="true">⌄</span>
         </header>
 
@@ -102,7 +111,13 @@ import { UiIcon } from '../shared/ui-icon';
                         </linearGradient>
                       </defs>
                       @for (tick of chartTicks; track tick) {
-                        <line class="grid-line" x1="0" x2="500" [attr.y1]="200 - tick" [attr.y2]="200 - tick" />
+                        <line
+                          class="grid-line"
+                          x1="0"
+                          x2="500"
+                          [attr.y1]="200 - tick"
+                          [attr.y2]="200 - tick"
+                        />
                       }
                       <path class="area" [attr.d]="chartArea" />
                       <path [attr.d]="chartLine" />
@@ -185,7 +200,9 @@ import { UiIcon } from '../shared/ui-icon';
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
-                  [attr.aria-label]="view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'"
+                  [attr.aria-label]="
+                    view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'
+                  "
                   [placeholder]="
                     view === 'requests'
                       ? 'Rechercher un nom, un email, une localité…'
@@ -194,12 +211,14 @@ import { UiIcon } from '../shared/ui-icon';
               ><select aria-label="Filtrer par localité">
                 <option>Localité · Toutes</option></select
               ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option></select
-              >@if (view !== 'requests') {
+                <option>Statut · Tous</option>
+              </select>
+              @if (view !== 'requests') {
                 <select aria-label="Filtrer par rôle">
                   <option>Rôle · Tous</option>
                 </select>
-              }<button>Réinitialiser</button>
+              }
+              <button>Réinitialiser</button>
             </div>
             <div class="table-wrap responsive-table">
               <table>
@@ -306,7 +325,9 @@ import { UiIcon } from '../shared/ui-icon';
                       <h2>{{ program.name }}</h2>
                       <p>{{ program.description }}</p>
                     </div>
-                    <button type="button" [attr.aria-label]="'Plus d’actions pour ' + program.name">•••</button>
+                    <button type="button" [attr.aria-label]="'Plus d’actions pour ' + program.name">
+                      •••
+                    </button>
                   </header>
                   <p class="program-city"><ui-icon name="location" />{{ program.city }}</p>
                   <div class="progress"><i [style.width.%]="program.progress"></i></div>
@@ -554,8 +575,7 @@ import { UiIcon } from '../shared/ui-icon';
               <label
                 ><ui-icon name="search" /><input
                   aria-label="Rechercher une action"
-                  placeholder="Rechercher une action…"
-              /></label
+                  placeholder="Rechercher une action…" /></label
               ><select aria-label="Filtrer par action">
                 <option>Action · Toutes</option></select
               ><select aria-label="Filtrer par auteur">
@@ -862,6 +882,8 @@ import { UiIcon } from '../shared/ui-icon';
   `,
 })
 export class AdminPage {
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly view = this.route.snapshot.data['view'] as string;
 
@@ -885,6 +907,16 @@ export class AdminPage {
     { view: 'accounts', label: 'Comptes d’accès', icon: 'key', link: '/bureau/comptes' },
     { view: 'audit', label: 'Journal des actions', icon: 'clipboard', link: '/bureau/journal' },
   ];
+  /** L'examen des demandes et les comptes d'accès sont réservés aux fondateurs. */
+  private readonly founderViews = new Set(['requests', 'accounts']);
+  protected readonly visibleNavItems = computed(() =>
+    this.navItems.filter((item) => this.auth.isFounder() || !this.founderViews.has(item.view)),
+  );
+
+  protected async logout(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/connexion');
+  }
   protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
   protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
   protected readonly formSaved = signal(false);
@@ -1131,8 +1163,7 @@ export class AdminPage {
     x: ((index + 0.5) * 500) / this.chartValues.length,
     y: 200 - value,
   }));
-  protected readonly chartLine =
-    'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
+  protected readonly chartLine = 'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
   protected readonly chartArea =
     this.chartLine +
     ` L${this.chartDots[this.chartDots.length - 1].x} 200 L${this.chartDots[0].x} 200Z`;
@@ -1209,9 +1240,7 @@ export class AdminPage {
     );
   }
   protected get hasPrimaryAction(): boolean {
-    return ['members', 'coordinators', 'programs', 'territories', 'accounts'].includes(
-      this.view,
-    );
+    return ['members', 'coordinators', 'programs', 'territories', 'accounts'].includes(this.view);
   }
   protected completeForm(event: SubmitEvent): void {
     event.preventDefault();

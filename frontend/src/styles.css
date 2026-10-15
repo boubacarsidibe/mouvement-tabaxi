@@ -4300,3 +4300,59 @@ textarea {
 .form-inline .check-row {
   align-items: center;
 }
+
+/* Retours des formulaires reliés à l'API : erreur générale, information, erreur d'un champ. */
+.form-alert,
+.form-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.form-alert {
+  background: #fdecea;
+  color: #8a2a24;
+}
+.form-notice {
+  background: var(--gold-soft);
+  color: #5b4200;
+}
+.field-error {
+  display: block;
+  margin-top: 4px;
+  color: #a1302a;
+  font-size: 0.86em;
+  font-weight: 600;
+}
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+/* Bouton « Se déconnecter » de la barre latérale, à l'apparence des liens voisins. */
+.side-profile > .side-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.side-profile > .side-logout:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.side-profile > .side-logout ui-icon {
+  width: 17px;
+  height: 17px;
+}
