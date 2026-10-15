@@ -25,6 +25,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : fermeture de la session du bureau après 30 minutes sans action ; chaque erreur de l'API porte un code stable (#31).
 - Backend : mots de passe en Argon2id, https obligatoire et cookies sécurisés en production, en-têtes de sécurité (CSP), refus de démarrer sans vraie clé secrète (#63).
 - Backend : chiffrement en base des données sensibles des demandes (motivation, motif de refus, note interne), avec changement de clé sans perte (#64).
+- Backend : rattachement des comptes à un territoire et règle d'accès par territoire (un coordonnateur voit son territoire et ceux qui en dépendent, un fondateur voit tout) (#36).
 
 ### Modifié
 
