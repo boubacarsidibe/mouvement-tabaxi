@@ -201,7 +201,7 @@ import { UiIcon } from '../shared/ui-icon';
                 </select>
               }<button>Réinitialiser</button>
             </div>
-            <div class="table-wrap">
+            <div class="table-wrap responsive-table">
               <table>
                 <thead>
                   <tr>
@@ -233,10 +233,16 @@ import { UiIcon } from '../shared/ui-icon';
                       <td>
                         <strong>{{ person.name }}</strong>
                       </td>
-                      <td>{{ view === 'accounts' ? person.email : person.city }}</td>
-                      <td>{{ view === 'requests' ? person.job : person.role }}</td>
-                      <td>{{ person.date }}</td>
-                      <td>
+                      <td [attr.data-label]="view === 'accounts' ? 'Email' : 'Localité'">
+                        {{ view === 'accounts' ? person.email : person.city }}
+                      </td>
+                      <td [attr.data-label]="view === 'requests' ? 'Profession' : 'Rôle'">
+                        {{ view === 'requests' ? person.job : person.role }}
+                      </td>
+                      <td [attr.data-label]="view === 'requests' ? 'Demande' : 'Adhésion'">
+                        {{ person.date }}
+                      </td>
+                      <td data-label="Statut">
                         <span
                           class="badge"
                           [class.success]="
@@ -344,7 +350,7 @@ import { UiIcon } from '../shared/ui-icon';
                   <strong>Dakar</strong><small>24 membres<br />3 coordonnateurs</small>
                 </div>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap responsive-table">
                 <table>
                   <thead>
                     <tr>
@@ -361,9 +367,9 @@ import { UiIcon } from '../shared/ui-icon';
                         <td>
                           <strong>{{ territory.city }}</strong>
                         </td>
-                        <td>{{ territory.region }}</td>
-                        <td>{{ territory.coordinators }}</td>
-                        <td>{{ territory.members }}</td>
+                        <td data-label="Région">{{ territory.region }}</td>
+                        <td data-label="Coordonnateurs">{{ territory.coordinators }}</td>
+                        <td data-label="Membres">{{ territory.members }}</td>
                         <td>
                           <button
                             class="row-action"

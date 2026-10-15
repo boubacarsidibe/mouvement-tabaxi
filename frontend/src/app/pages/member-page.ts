@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MemberCard } from '../shared/member-card';
+import { DEMO_MEMBER, drawMemberCard } from '../shared/member-card-image';
 import { UiIcon } from '../shared/ui-icon';
 
 @Component({
@@ -228,9 +229,15 @@ import { UiIcon } from '../shared/ui-icon';
             </header>
             <app-member-card [large]="true" />
             <div class="card-actions">
-              <button class="btn btn-green"><ui-icon name="download" />Télécharger en image</button
-              ><button class="btn btn-outline"><ui-icon name="card" />Enregistrer en PDF</button>
+              <button class="btn btn-green" type="button" (click)="downloadCard()">
+                <ui-icon name="download" />Télécharger en image</button
+              ><button class="btn btn-outline" type="button" (click)="printCard()">
+                <ui-icon name="card" />Enregistrer en PDF
+              </button>
             </div>
+            @if (cardError()) {
+              <p class="inline-error" role="alert">{{ cardError() }}</p>
+            }
             <p class="info-note">
               Cette carte est personnelle et confidentielle. Elle atteste de votre adhésion au
               Mouvement TABAXI.
@@ -410,6 +417,26 @@ export class MemberPage {
   protected readonly joined = signal(false);
   protected readonly profileSaved = signal(false);
   protected readonly passwordSaved = signal(false);
+  protected readonly cardError = signal('');
+
+  protected async downloadCard(): Promise<void> {
+    this.cardError.set('');
+    try {
+      const blob = await drawMemberCard(DEMO_MEMBER);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `carte-TABAXI-${DEMO_MEMBER.number}.png`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      this.cardError.set('La carte n’a pas pu être téléchargée. Réessayez dans un instant.');
+    }
+  }
+
+  /** La boîte d'impression du navigateur propose « Enregistrer au format PDF ». */
+  protected printCard(): void {
+    window.print();
+  }
 
   protected saveProfile(event: SubmitEvent): void {
     event.preventDefault();

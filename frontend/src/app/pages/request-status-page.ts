@@ -9,7 +9,7 @@ import { UiIcon } from '../shared/ui-icon';
   template: `
     <main class="public-canvas status-canvas status-v2">
       <section class="public-frame status-frame">
-        <app-public-header />
+        <app-public-header [minimal]="true" />
         <div class="confirmation-shell">
           <nav class="enrollment-steps confirmation-steps" aria-label="Étapes de l’adhésion">
             <span class="done"><b>✓</b><small>Demande</small></span

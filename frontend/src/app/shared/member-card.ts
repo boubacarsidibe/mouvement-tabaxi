@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { DEMO_MEMBER } from './member-card-image';
 
 /**
  * Carte de membre : le modèle officiel du mouvement sert de fond,
@@ -21,9 +22,9 @@ import { Component, Input } from '@angular/core';
 })
 export class MemberCard {
   @Input() large = false;
-  @Input() name = 'Aminata Ndiaye';
-  @Input() number = 'TBX-2026-00125';
-  @Input() locality = 'Dakar, Sénégal';
-  @Input() date = '12/03/2026';
-  @Input() photo: string | null = 'member-aminata.jpg';
+  @Input() name = DEMO_MEMBER.name;
+  @Input() number = DEMO_MEMBER.number;
+  @Input() locality = DEMO_MEMBER.locality;
+  @Input() date = DEMO_MEMBER.date;
+  @Input() photo: string | null = DEMO_MEMBER.photo;
 }

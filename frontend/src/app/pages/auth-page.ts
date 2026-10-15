@@ -9,7 +9,7 @@ import { UiIcon } from '../shared/ui-icon';
   template: `
     <main class="public-canvas auth-canvas">
       <section class="public-frame auth-frame">
-        <app-public-header />
+        <app-public-header [minimal]="true" />
         <div class="auth-layout">
           <aside class="auth-story">
             <p class="overline"><span></span>Espace sécurisé</p>
@@ -54,7 +54,6 @@ import { UiIcon } from '../shared/ui-icon';
               </div>
             } @else {
               <form class="auth-form" (submit)="submit($event)">
-                <a class="back-link" routerLink="/">← Retour à l’accueil</a>
                 <p class="eyebrow">{{ isForgot ? 'Réinitialisation' : 'Connexion' }}</p>
                 <h2>{{ isForgot ? 'Mot de passe oublié' : 'Accéder à mon espace' }}</h2>
                 <p class="form-intro">
