@@ -10,11 +10,17 @@ import { UiIcon } from '../shared/ui-icon';
       <section class="public-frame join-frame">
         <div class="enrollment-shell">
           <section class="enrollment-main">
+            <header class="enrollment-topbar">
+              <a class="enrollment-logo" routerLink="/"
+                ><img src="logo-tabaxi-transparent.png" alt="Mouvement TABAXI, retour à l’accueil"
+              /></a>
+              <a class="back-link" routerLink="/">← Retour à l’accueil</a>
+            </header>
             @if (submitted()) {
               <div class="submit-success enrollment-success" role="status">
                 <span>✓</span>
                 <p class="eyebrow">{{ isFinalize ? 'Adhésion finalisée' : 'Demande envoyée' }}</p>
-                <h2>{{ isFinalize ? 'Bienvenue chez TABAXI.' : 'Merci pour votre confiance.' }}</h2>
+                <h1>{{ isFinalize ? 'Bienvenue chez TABAXI.' : 'Merci pour votre confiance.' }}</h1>
                 <p>
                   {{
                     isFinalize
@@ -36,11 +42,11 @@ import { UiIcon } from '../shared/ui-icon';
                     <p class="eyebrow">
                       {{ isFinalize ? 'Profil membre' : 'Demande d’adhésion' }}
                     </p>
-                    <h2>
+                    <h1>
                       {{
                         isFinalize ? 'Finalisez vos informations' : 'Présentez-vous au mouvement'
                       }}
-                    </h2>
+                    </h1>
                     <p>
                       {{
                         isFinalize
@@ -105,8 +111,8 @@ import { UiIcon } from '../shared/ui-icon';
                       ><input
                         type="password"
                         name="password"
-                        placeholder="8 caractères minimum"
-                        minlength="8"
+                        placeholder="10 caractères minimum"
+                        minlength="10"
                         required
                     /></label>
                     <label
@@ -115,7 +121,7 @@ import { UiIcon } from '../shared/ui-icon';
                         type="password"
                         name="passwordConfirm"
                         placeholder="Répétez le mot de passe"
-                        minlength="8"
+                        minlength="10"
                         required
                     /></label>
                   </div>

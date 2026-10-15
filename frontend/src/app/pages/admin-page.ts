@@ -25,19 +25,22 @@ import { UiIcon } from '../shared/ui-icon';
             <span>BE</span>
             <p><strong>mouvement.tabaxi&#64;gmail.com</strong><small>Membre fondateur</small></p>
           </div>
+          <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
         </div>
       </aside>
 
       <section class="workspace-area">
         <header class="workspace-topbar">
           <label class="top-search"
-            ><ui-icon name="search" /><input placeholder="Rechercher dans la plateforme…"
+            ><ui-icon name="search" /><input
+              aria-label="Rechercher dans la plateforme"
+              placeholder="Rechercher dans la plateforme…"
           /></label>
           <button class="icon-button" aria-label="Notifications">
             <ui-icon name="bell" /><i></i>
           </button>
           <button class="profile-chip" aria-label="Menu du profil">BE</button
-          ><span class="chevron">⌄</span>
+          ><span class="chevron" aria-hidden="true">⌄</span>
         </header>
 
         <div class="workspace-content admin-content">
@@ -52,7 +55,7 @@ import { UiIcon } from '../shared/ui-icon';
               >
             } @else if (view === 'dashboard') {
               <button class="date-button">
-                <ui-icon name="calendar" />1 jan. 2024 – 31 déc. 2024
+                <ui-icon name="calendar" />1 jan. 2026 – 31 déc. 2026
               </button>
             }
           </header>
@@ -75,38 +78,45 @@ import { UiIcon } from '../shared/ui-icon';
               <article class="panel chart-panel">
                 <div class="panel-title">
                   <h2>Évolution des adhésions</h2>
-                  <button>12 derniers mois</button>
+                  <span class="chart-period">12 derniers mois</span>
                 </div>
-                <div class="chart-y">
-                  <span>200</span><span>150</span><span>100</span><span>0</span>
-                </div>
-                <svg
-                  class="line-chart"
-                  viewBox="0 0 520 190"
-                  preserveAspectRatio="none"
-                  aria-label="Progression des adhésions"
-                >
-                  <defs>
-                    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stop-color="#168558" stop-opacity=".28" />
-                      <stop offset="1" stop-color="#168558" stop-opacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    class="area"
-                    d="M5 155 L60 145 L115 125 L170 132 L225 112 L280 103 L335 78 L390 83 L445 63 L500 28 L500 185 L5 185Z"
-                  />
-                  <path
-                    d="M5 155 L60 145 L115 125 L170 132 L225 112 L280 103 L335 78 L390 83 L445 63 L500 28"
-                  />
-                  @for (dot of chartDots; track $index) {
-                    <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="4" />
-                  }
-                </svg>
-                <div class="chart-months">
-                  <span>Jan</span><span>Mar</span><span>Mai</span><span>Juil</span><span>Sept</span
-                  ><span>Nov</span><span>Déc</span>
-                </div>
+                <figure class="chart-figure">
+                  <figcaption>Nouveaux membres par mois</figcaption>
+                  <div class="chart-body">
+                    <div class="chart-y" aria-hidden="true">
+                      @for (tick of chartTicks; track tick) {
+                        <span>{{ tick }}</span>
+                      }
+                    </div>
+                    <svg
+                      class="line-chart"
+                      viewBox="0 0 500 200"
+                      preserveAspectRatio="none"
+                      role="img"
+                      [attr.aria-label]="chartSummary"
+                    >
+                      <defs>
+                        <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0" stop-color="#168558" stop-opacity=".28" />
+                          <stop offset="1" stop-color="#168558" stop-opacity="0" />
+                        </linearGradient>
+                      </defs>
+                      @for (tick of chartTicks; track tick) {
+                        <line class="grid-line" x1="0" x2="500" [attr.y1]="200 - tick" [attr.y2]="200 - tick" />
+                      }
+                      <path class="area" [attr.d]="chartArea" />
+                      <path [attr.d]="chartLine" />
+                      @for (dot of chartDots; track $index) {
+                        <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="4" />
+                      }
+                    </svg>
+                  </div>
+                  <div class="chart-months" aria-hidden="true">
+                    @for (month of chartMonths; track month) {
+                      <span>{{ month }}</span>
+                    }
+                  </div>
+                </figure>
               </article>
               <article class="panel recent-panel">
                 <div class="panel-title">
@@ -121,7 +131,7 @@ import { UiIcon } from '../shared/ui-icon';
                       ><small>{{ person.city }}</small>
                     </p>
                     <time>Il y a {{ $index + 2 }} h</time
-                    ><span class="badge warning">En attente</span>
+                    ><span class="badge warning">À examiner</span>
                   </div>
                 }
               </article>
@@ -132,14 +142,14 @@ import { UiIcon } from '../shared/ui-icon';
                 </div>
                 <p>
                   <ui-icon name="calendar" /><span
-                    ><strong>Brigades citoyennes</strong><small>Dakar</small></span
-                  ><time>15 mars 2024</time><b class="badge success">À venir</b>
+                    ><strong>Éducation civique</strong><small>Thiès</small></span
+                  ><time>22 nov. 2026</time><b class="badge success">À venir</b>
                 </p>
               </article>
               <article class="panel small-panel">
                 <div class="panel-title">
                   <h2>Dernières activités</h2>
-                  <a href="#">Voir tout →</a>
+                  <a routerLink="/bureau/journal">Voir tout →</a>
                 </div>
                 <p>
                   <ui-icon name="users" /><span
@@ -169,44 +179,57 @@ import { UiIcon } from '../shared/ui-icon';
                   <strong>Sécurité</strong>Veillez à n’accorder des accès qu’aux personnes de
                   confiance. Les comptes inactifs doivent être désactivés.
                 </p>
-                <button>×</button>
+                <button type="button" aria-label="Fermer l’avertissement">×</button>
               </div>
             }
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
+                  [attr.aria-label]="view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'"
                   [placeholder]="
                     view === 'requests'
                       ? 'Rechercher un nom, un email, une localité…'
                       : 'Rechercher un membre…'
                   " /></label
-              ><select>
+              ><select aria-label="Filtrer par localité">
                 <option>Localité · Toutes</option></select
-              ><select>
+              ><select aria-label="Filtrer par statut">
                 <option>Statut · Tous</option></select
-              ><select>
-                <option>Rôle · Tous</option></select
-              ><button>Réinitialiser</button>
+              >@if (view !== 'requests') {
+                <select aria-label="Filtrer par rôle">
+                  <option>Rôle · Tous</option>
+                </select>
+              }<button>Réinitialiser</button>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th><input type="checkbox" aria-label="Tout sélectionner" /></th>
-                    <th>Nom complet</th>
-                    <th>{{ view === 'accounts' ? 'Email' : 'Localité' }}</th>
+                    <th [attr.aria-sort]="ariaSort('name')">
+                      <button class="th-sort" type="button" (click)="sortBy('name')">
+                        Nom complet <span aria-hidden="true">{{ sortIndicator('name') }}</span>
+                      </button>
+                    </th>
+                    <th [attr.aria-sort]="ariaSort('place')">
+                      <button class="th-sort" type="button" (click)="sortBy('place')">
+                        {{ view === 'accounts' ? 'Email' : 'Localité' }}
+                        <span aria-hidden="true">{{ sortIndicator('place') }}</span>
+                      </button>
+                    </th>
                     <th>{{ view === 'requests' ? 'Profession' : 'Rôle' }}</th>
-                    <th>{{ view === 'requests' ? 'Date de demande' : 'Date d’adhésion' }}</th>
+                    <th [attr.aria-sort]="ariaSort('date')">
+                      <button class="th-sort" type="button" (click)="sortBy('date')">
+                        {{ view === 'requests' ? 'Date de demande' : 'Date d’adhésion' }}
+                        <span aria-hidden="true">{{ sortIndicator('date') }}</span>
+                      </button>
+                    </th>
                     <th>Statut</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (person of visiblePeople; track person.name) {
+                  @for (person of sortedPeople; track person.name) {
                     <tr>
-                      <td>
-                        <input type="checkbox" [attr.aria-label]="'Sélectionner ' + person.name" />
-                      </td>
                       <td>
                         <strong>{{ person.name }}</strong>
                       </td>
@@ -217,9 +240,13 @@ import { UiIcon } from '../shared/ui-icon';
                         <span
                           class="badge"
                           [class.success]="
-                            person.status === 'Actif' || person.status === 'Approuvée'
+                            person.status === 'Actif' ||
+                            person.status === 'Acceptée' ||
+                            person.status === 'Inscrite'
                           "
-                          [class.warning]="person.status === 'En attente'"
+                          [class.warning]="
+                            person.status === 'À examiner' || person.status === 'Suspendu'
+                          "
                           [class.danger]="
                             person.status === 'Rejetée' || person.status === 'Inactif'
                           "
@@ -234,20 +261,16 @@ import { UiIcon } from '../shared/ui-icon';
                               ? '/bureau/demandes/awa-ndiaye'
                               : '/bureau/membres/aminata-ndiaye'
                           "
-                          aria-label="Voir la fiche"
+                          [attr.aria-label]="'Voir la fiche de ' + person.name"
                           >Voir</a
-                        ><button class="row-action" aria-label="Plus d’actions">•••</button>
+                        >
                       </td>
                     </tr>
                   }
                 </tbody>
               </table>
               <footer class="table-footer">
-                <span>Affichage de 1 à {{ visiblePeople.length }} résultats</span>
-                <nav>
-                  <button>‹</button><button class="active">1</button><button>2</button
-                  ><button>3</button><button>›</button>
-                </nav>
+                <span>{{ visiblePeople.length }} résultats</span>
               </footer>
             </div>
           }
@@ -259,10 +282,12 @@ import { UiIcon } from '../shared/ui-icon';
             </nav>
             <div class="filter-bar">
               <label
-                ><ui-icon name="search" /><input placeholder="Rechercher un programme…" /></label
-              ><select>
+                ><ui-icon name="search" /><input
+                  aria-label="Rechercher un programme"
+                  placeholder="Rechercher un programme…" /></label
+              ><select aria-label="Filtrer par statut">
                 <option>Statut · Tous</option></select
-              ><select>
+              ><select aria-label="Filtrer par localité">
                 <option>Localité · Toutes</option></select
               ><button>Réinitialiser</button>
             </div>
@@ -275,7 +300,7 @@ import { UiIcon } from '../shared/ui-icon';
                       <h2>{{ program.name }}</h2>
                       <p>{{ program.description }}</p>
                     </div>
-                    <button>•••</button>
+                    <button type="button" [attr.aria-label]="'Plus d’actions pour ' + program.name">•••</button>
                   </header>
                   <p class="program-city"><ui-icon name="location" />{{ program.city }}</p>
                   <div class="progress"><i [style.width.%]="program.progress"></i></div>
@@ -340,8 +365,19 @@ import { UiIcon } from '../shared/ui-icon';
                         <td>{{ territory.coordinators }}</td>
                         <td>{{ territory.members }}</td>
                         <td>
-                          <button class="row-action">◉</button
-                          ><button class="row-action">•••</button>
+                          <button
+                            class="row-action"
+                            type="button"
+                            [attr.aria-label]="'Voir ' + territory.city + ' sur la carte'"
+                          >
+                            ◉</button
+                          ><button
+                            class="row-action"
+                            type="button"
+                            [attr.aria-label]="'Plus d’actions pour ' + territory.city"
+                          >
+                            •••
+                          </button>
                         </td>
                       </tr>
                     }
@@ -360,9 +396,9 @@ import { UiIcon } from '../shared/ui-icon';
                   <div>
                     <p class="eyebrow">Demande TAB-2026-00418</p>
                     <h2>Awa Ndiaye</h2>
-                    <p>Déposée le 12 mars 2024 à 10 h 24</p>
+                    <p>Déposée le 12 octobre 2026 à 10 h 24</p>
                   </div>
-                  <span class="badge warning">En attente</span>
+                  <span class="badge warning">À examiner</span>
                 </div>
                 <dl class="detail-list">
                   <div>
@@ -431,7 +467,7 @@ import { UiIcon } from '../shared/ui-icon';
                 <div class="identity-row">
                   <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
                   <div>
-                    <p class="eyebrow">TABAXI-2024-0125</p>
+                    <p class="eyebrow">TBX-2026-00125</p>
                     <h2>Aminata Ndiaye</h2>
                     <p>Membre simple · Dakar</p>
                   </div>
@@ -458,7 +494,7 @@ import { UiIcon } from '../shared/ui-icon';
                   </div>
                   <div>
                     <dt>Date d’adhésion</dt>
-                    <dd>12 mars 2024</dd>
+                    <dd>12 mars 2026</dd>
                   </div>
                 </dl>
                 <h3>Participation récente</h3>
@@ -509,12 +545,16 @@ import { UiIcon } from '../shared/ui-icon';
 
           @if (view === 'audit') {
             <div class="filter-bar audit-filters">
-              <label><ui-icon name="search" /><input placeholder="Rechercher une action…" /></label
-              ><select>
+              <label
+                ><ui-icon name="search" /><input
+                  aria-label="Rechercher une action"
+                  placeholder="Rechercher une action…"
+              /></label
+              ><select aria-label="Filtrer par action">
                 <option>Action · Toutes</option></select
-              ><select>
+              ><select aria-label="Filtrer par auteur">
                 <option>Auteur · Tous</option></select
-              ><select>
+              ><select aria-label="Filtrer par période">
                 <option>Période · 30 jours</option></select
               ><button>Réinitialiser</button>
             </div>
@@ -566,6 +606,7 @@ import { UiIcon } from '../shared/ui-icon';
                   <label
                     >Territoire
                     <select required>
+                      <option value="">Sélectionner un territoire</option>
                       <option>Dakar</option>
                       <option>Thiès</option>
                       <option>Saint-Louis</option>
@@ -573,6 +614,7 @@ import { UiIcon } from '../shared/ui-icon';
                   ><label
                     >Responsable
                     <select required>
+                      <option value="">Sélectionner un responsable</option>
                       <option>Mamadou Diop</option>
                       <option>Fatou Sarr</option>
                     </select></label
@@ -589,6 +631,7 @@ import { UiIcon } from '../shared/ui-icon';
                 <label
                   >Programme
                   <select required>
+                    <option value="">Sélectionner un programme</option>
                     <option>Brigades citoyennes</option>
                     <option>Éducation civique</option>
                   </select></label
@@ -664,6 +707,7 @@ import { UiIcon } from '../shared/ui-icon';
                   ><label
                     >Territoire
                     <select required>
+                      <option value="">Sélectionner un territoire</option>
                       <option>Dakar</option>
                       <option>Thiès</option>
                       <option>Saint-Louis</option>
@@ -838,6 +882,8 @@ export class AdminPage {
   protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
   protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
   protected readonly formSaved = signal(false);
+  protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
+  protected readonly sortAsc = signal(false);
   protected readonly stats = [
     {
       icon: 'users',
@@ -856,7 +902,7 @@ export class AdminPage {
     {
       icon: 'clipboard',
       value: '24',
-      label: 'Demandes en attente',
+      label: 'Demandes à examiner',
       note: 'À examiner par les membres fondateurs',
       delta: '+8%',
     },
@@ -875,8 +921,8 @@ export class AdminPage {
       email: 'awa.ndiaye@gmail.com',
       job: 'Enseignante',
       role: 'Membre',
-      date: '12 mars 2024',
-      status: 'En attente',
+      date: '12 oct. 2026',
+      status: 'À examiner',
     },
     {
       name: 'Mamadou Diop',
@@ -884,8 +930,8 @@ export class AdminPage {
       email: 'm.diop@gmail.com',
       job: 'Commerçant',
       role: 'Coordonnateur',
-      date: '12 mars 2024',
-      status: 'En attente',
+      date: '12 oct. 2026',
+      status: 'À examiner',
     },
     {
       name: 'Khady Fall',
@@ -893,8 +939,8 @@ export class AdminPage {
       email: 'khady.fall@gmail.com',
       job: 'Étudiante',
       role: 'Membre',
-      date: '11 mars 2024',
-      status: 'En attente',
+      date: '11 oct. 2026',
+      status: 'À examiner',
     },
     {
       name: 'El Hadj Ba',
@@ -902,8 +948,8 @@ export class AdminPage {
       email: 'elh.ba@gmail.com',
       job: 'Agriculteur',
       role: 'Membre',
-      date: '11 mars 2024',
-      status: 'En attente',
+      date: '11 oct. 2026',
+      status: 'À examiner',
     },
     {
       name: 'Fatou Sarr',
@@ -911,8 +957,8 @@ export class AdminPage {
       email: 'fatou.sarr@gmail.com',
       job: 'Infirmière',
       role: 'Membre',
-      date: '10 mars 2024',
-      status: 'Approuvée',
+      date: '10 oct. 2026',
+      status: 'Acceptée',
     },
     {
       name: 'Ibrahima Cissé',
@@ -920,7 +966,7 @@ export class AdminPage {
       email: 'i.cisse@gmail.com',
       job: 'Enseignant',
       role: 'Coordonnateur',
-      date: '10 mars 2024',
+      date: '10 oct. 2026',
       status: 'Rejetée',
     },
     {
@@ -929,8 +975,8 @@ export class AdminPage {
       email: 'm.diallo@gmail.com',
       job: 'Commerçante',
       role: 'Membre',
-      date: '9 mars 2024',
-      status: 'Actif',
+      date: '9 oct. 2026',
+      status: 'Inscrite',
     },
     {
       name: 'Cheikh Fall',
@@ -938,8 +984,8 @@ export class AdminPage {
       email: 'c.fall@gmail.com',
       job: 'Technicien',
       role: 'Membre',
-      date: '8 mars 2024',
-      status: 'Actif',
+      date: '8 oct. 2026',
+      status: 'Inscrite',
     },
   ];
   protected readonly programs = [
@@ -947,7 +993,7 @@ export class AdminPage {
       name: 'Brigades citoyennes',
       description: 'Mobilisation des jeunes pour des actions citoyennes.',
       city: 'Dakar',
-      date: '15 mars 2024',
+      date: '15 sept. 2026',
       progress: 70,
       status: 'En cours',
       icon: 'leaf',
@@ -956,7 +1002,7 @@ export class AdminPage {
       name: 'Éducation civique',
       description: 'Sensibilisation dans les écoles et communautés.',
       city: 'Thiès',
-      date: '22 avril 2024',
+      date: '22 nov. 2026',
       progress: 45,
       status: 'À venir',
       icon: 'users',
@@ -965,7 +1011,7 @@ export class AdminPage {
       name: 'Santé communautaire',
       description: 'Actions de prévention et de soutien sanitaire.',
       city: 'Saint-Louis',
-      date: '10 févr. 2024',
+      date: '10 août 2026',
       progress: 80,
       status: 'En cours',
       icon: 'heart',
@@ -974,7 +1020,7 @@ export class AdminPage {
       name: 'Environnement propre',
       description: 'Campagnes de reboisement et de salubrité.',
       city: 'Ziguinchor',
-      date: '5 mai 2024',
+      date: '5 déc. 2026',
       progress: 30,
       status: 'À venir',
       icon: 'leaf',
@@ -983,7 +1029,7 @@ export class AdminPage {
       name: 'Autonomisation des femmes',
       description: 'Formations et appui aux activités génératrices de revenus.',
       city: 'Kaolack',
-      date: '12 mars 2024',
+      date: '12 sept. 2026',
       progress: 60,
       status: 'En cours',
       icon: 'chart',
@@ -992,7 +1038,7 @@ export class AdminPage {
       name: 'Jeunesse et leadership',
       description: 'Renforcement des capacités des jeunes leaders.',
       city: 'Tambacounda',
-      date: '20 janv. 2024',
+      date: '20 janv. 2026',
       progress: 100,
       status: 'Terminé',
       icon: 'book',
@@ -1057,18 +1103,34 @@ export class AdminPage {
     { name: 'Marième Diallo', id: 'TBX-2026-00154', time: '—', present: false },
     { name: 'Cheikh Fall', id: 'TBX-2026-00161', time: '09 h 08', present: true },
   ];
-  protected readonly chartDots = [
-    { x: 5, y: 155 },
-    { x: 60, y: 145 },
-    { x: 115, y: 125 },
-    { x: 170, y: 132 },
-    { x: 225, y: 112 },
-    { x: 280, y: 103 },
-    { x: 335, y: 78 },
-    { x: 390, y: 83 },
-    { x: 445, y: 63 },
-    { x: 500, y: 28 },
+  /** Nouveaux membres par mois, de novembre 2025 à octobre 2026 (données de démonstration). */
+  protected readonly chartValues = [32, 41, 48, 58, 54, 70, 78, 92, 108, 104, 126, 172];
+  protected readonly chartMonths = [
+    'Nov.',
+    'Déc.',
+    'Janv.',
+    'Févr.',
+    'Mars',
+    'Avr.',
+    'Mai',
+    'Juin',
+    'Juil.',
+    'Août',
+    'Sept.',
+    'Oct.',
   ];
+  /** Échelle régulière : une unité du graphique vaut un membre (hauteur 200). */
+  protected readonly chartTicks = [200, 150, 100, 50, 0];
+  protected readonly chartDots = this.chartValues.map((value, index) => ({
+    x: ((index + 0.5) * 500) / this.chartValues.length,
+    y: 200 - value,
+  }));
+  protected readonly chartLine =
+    'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
+  protected readonly chartArea =
+    this.chartLine +
+    ` L${this.chartDots[this.chartDots.length - 1].x} 200 L${this.chartDots[0].x} 200Z`;
+  protected readonly chartSummary = `Nouveaux membres par mois sur 12 mois : de ${this.chartValues[0]} en novembre 2025 à ${this.chartValues[this.chartValues.length - 1]} en octobre 2026.`;
 
   protected get pageTitle(): string {
     return (
@@ -1118,7 +1180,6 @@ export class AdminPage {
     return (
       (
         {
-          requests: 'Nouvelle demande',
           members: 'Ajouter un membre',
           programs: 'Nouveau programme',
           territories: 'Ajouter une localité',
@@ -1132,7 +1193,6 @@ export class AdminPage {
     return (
       (
         {
-          requests: '/bureau/demandes/awa-ndiaye',
           members: '/bureau/membres/aminata-ndiaye',
           coordinators: '/bureau/comptes/inviter',
           programs: '/bureau/programmes/nouveau',
@@ -1143,13 +1203,43 @@ export class AdminPage {
     );
   }
   protected get hasPrimaryAction(): boolean {
-    return ['requests', 'members', 'coordinators', 'programs', 'territories', 'accounts'].includes(
+    return ['members', 'coordinators', 'programs', 'territories', 'accounts'].includes(
       this.view,
     );
   }
   protected completeForm(event: SubmitEvent): void {
     event.preventDefault();
     if ((event.currentTarget as HTMLFormElement).reportValidity()) this.formSaved.set(true);
+  }
+  protected sortBy(key: 'name' | 'place' | 'date'): void {
+    if (this.sortKey() === key) this.sortAsc.set(!this.sortAsc());
+    else {
+      this.sortKey.set(key);
+      this.sortAsc.set(key !== 'date');
+    }
+  }
+  protected sortIndicator(key: 'name' | 'place' | 'date'): string {
+    if (this.sortKey() !== key) return '↕';
+    return this.sortAsc() ? '↑' : '↓';
+  }
+  protected ariaSort(key: 'name' | 'place' | 'date'): string | null {
+    if (this.sortKey() !== key) return null;
+    return this.sortAsc() ? 'ascending' : 'descending';
+  }
+  /** Les données de démonstration sont rangées de la plus récente à la plus ancienne. */
+  protected get sortedPeople() {
+    const direction = this.sortAsc() ? 1 : -1;
+    const key = this.sortKey();
+    const place = (person: { city: string; email: string }) =>
+      this.view === 'accounts' ? person.email : person.city;
+    return this.visiblePeople
+      .map((person, order) => ({ ...person, order }))
+      .sort((a, b) => {
+        if (key === 'date') return (b.order - a.order) * direction;
+        const left = key === 'name' ? a.name : place(a);
+        const right = key === 'name' ? b.name : place(b);
+        return left.localeCompare(right, 'fr') * direction;
+      });
   }
   protected get visiblePeople() {
     if (this.view === 'requests') return this.requests;
@@ -1161,7 +1251,7 @@ export class AdminPage {
       }));
     return this.requests.map((person, index) => ({
       ...person,
-      status: index === 6 ? 'Inactif' : 'Actif',
+      status: index === 6 ? 'Suspendu' : 'Actif',
     }));
   }
 }

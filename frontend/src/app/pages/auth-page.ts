@@ -83,7 +83,7 @@ import { UiIcon } from '../shared/ui-icon';
                         name="password"
                         placeholder="Votre mot de passe"
                         required
-                        minlength="8"
+                        minlength="10"
                     /></span>
                   </label>
                   <div class="form-inline">

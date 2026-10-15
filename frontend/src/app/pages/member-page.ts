@@ -40,13 +40,15 @@ import { UiIcon } from '../shared/ui-icon';
       <section class="workspace-area">
         <header class="workspace-topbar">
           <label class="top-search"
-            ><ui-icon name="search" /><input placeholder="Rechercher une activité, un programme…"
+            ><ui-icon name="search" /><input
+              aria-label="Rechercher une activité ou un programme"
+              placeholder="Rechercher une activité, un programme…"
           /></label>
           <button class="icon-button" aria-label="Notifications">
             <ui-icon name="bell" /><i></i>
           </button>
           <button class="profile-chip" aria-label="Menu du profil">AA</button
-          ><span class="chevron">⌄</span>
+          ><span class="chevron" aria-hidden="true">⌄</span>
         </header>
 
         @if (view === 'home') {
@@ -99,13 +101,13 @@ import { UiIcon } from '../shared/ui-icon';
                 <span class="badge success">Membre actif</span>
                 <dl>
                   <dt>N° d’adhérent</dt>
-                  <dd>TABAXI-2024-0125</dd>
+                  <dd>TBX-2026-00125</dd>
                   <dt>Localité</dt>
                   <dd>Dakar</dd>
                   <dt>Rôle</dt>
                   <dd>Membre</dd>
                   <dt>Date d’adhésion</dt>
-                  <dd>12 mars 2024</dd>
+                  <dd>12 mars 2026</dd>
                 </dl>
               </article>
               <article class="panel coordinator-panel">
@@ -145,7 +147,7 @@ import { UiIcon } from '../shared/ui-icon';
               <article class="panel news-panel">
                 <div class="panel-title">
                   <h2>Actualités du mouvement</h2>
-                  <a href="#">Voir tout →</a>
+                  <a routerLink="/" fragment="actualites">Voir tout →</a>
                 </div>
                 @for (item of news; track item.title) {
                   <div class="news-row">
@@ -176,12 +178,14 @@ import { UiIcon } from '../shared/ui-icon';
             </nav>
             <div class="filter-bar">
               <label
-                ><ui-icon name="search" /><input placeholder="Rechercher une activité…" /></label
-              ><select>
+                ><ui-icon name="search" /><input
+                  aria-label="Rechercher une activité"
+                  placeholder="Rechercher une activité…" /></label
+              ><select aria-label="Filtrer par localité">
                 <option>Localité · Toutes</option></select
-              ><select>
+              ><select aria-label="Filtrer par catégorie">
                 <option>Catégorie · Toutes</option></select
-              ><select>
+              ><select aria-label="Filtrer par statut">
                 <option>Statut · Tous</option></select
               ><button>Réinitialiser</button>
             </div>
@@ -369,13 +373,13 @@ import { UiIcon } from '../shared/ui-icon';
             <section class="settings-stack">
               <form class="workspace-form panel" (submit)="savePassword($event)">
                 <h2>Changer mon mot de passe</h2>
-                <p>Utilisez au moins 8 caractères, avec une lettre et un chiffre.</p>
-                <label>Mot de passe actuel <input type="password" required minlength="8" /></label>
+                <p>Utilisez au moins 10 caractères, avec une lettre et un chiffre.</p>
+                <label>Mot de passe actuel <input type="password" required minlength="10" /></label>
                 <div class="field-grid">
                   <label
-                    >Nouveau mot de passe <input type="password" required minlength="8" /></label
+                    >Nouveau mot de passe <input type="password" required minlength="10" /></label
                   ><label
-                    >Confirmer le mot de passe <input type="password" required minlength="8"
+                    >Confirmer le mot de passe <input type="password" required minlength="10"
                   /></label>
                 </div>
                 <div class="form-actions">
@@ -433,7 +437,7 @@ export class MemberPage {
     {
       name: 'Brigades citoyennes',
       description: 'Mobilisation des jeunes pour des actions citoyennes dans les localités.',
-      date: '15 mars 2024',
+      date: '15 sept. 2026',
       city: 'Dakar',
       status: 'En cours',
       icon: 'leaf',
@@ -442,7 +446,7 @@ export class MemberPage {
     {
       name: 'Éducation civique',
       description: 'Sensibilisation dans les écoles et communautés.',
-      date: '22 avril 2024',
+      date: '22 nov. 2026',
       city: 'Dakar',
       status: 'À venir',
       icon: 'users',
@@ -451,7 +455,7 @@ export class MemberPage {
     {
       name: 'Santé communautaire',
       description: 'Actions de prévention et de soutien sanitaire.',
-      date: '10 févr. 2024',
+      date: '10 août 2026',
       city: 'Saint-Louis',
       status: 'En cours',
       icon: 'heart',
@@ -460,7 +464,7 @@ export class MemberPage {
     {
       name: 'Environnement propre',
       description: 'Campagnes de reboisement et de salubrité.',
-      date: '5 mai 2024',
+      date: '5 déc. 2026',
       city: 'Ziguinchor',
       status: 'À venir',
       icon: 'leaf',
@@ -469,7 +473,7 @@ export class MemberPage {
     {
       name: 'Autonomisation des femmes',
       description: 'Formations et appui aux activités génératrices de revenus.',
-      date: '12 mars 2024',
+      date: '12 sept. 2026',
       city: 'Kaolack',
       status: 'En cours',
       icon: 'chart',
@@ -478,7 +482,7 @@ export class MemberPage {
     {
       name: 'Jeunesse et leadership',
       description: 'Renforcement des capacités des jeunes leaders.',
-      date: '20 janv. 2024',
+      date: '20 janv. 2026',
       city: 'Tambacounda',
       status: 'Terminée',
       icon: 'book',
@@ -486,8 +490,8 @@ export class MemberPage {
     },
   ];
   protected readonly news = [
-    { title: 'Lancement du programme de reboisement', date: '5 mars 2024' },
-    { title: 'Ateliers de citoyenneté dans les écoles', date: '26 février 2024' },
-    { title: 'Le mouvement TABAXI grandit à Dakar', date: '15 février 2024' },
+    { title: 'Lancement du programme de reboisement', date: '5 octobre 2026' },
+    { title: 'Ateliers de citoyenneté dans les écoles', date: '26 septembre 2026' },
+    { title: 'Le mouvement TABAXI grandit à Dakar', date: '15 septembre 2026' },
   ];
 }

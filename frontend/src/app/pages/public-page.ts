@@ -81,7 +81,7 @@ import { UiIcon } from '../shared/ui-icon';
       </section>
 
       <section class="public-story" id="apropos">
-        <div class="story-number">01</div>
+        <div class="story-number" aria-hidden="true">01</div>
         <div class="story-copy">
           <p class="overline"><span></span>Pourquoi TABAXI</p>
           <h2>Les décisions prennent racine dans les territoires.</h2>
