@@ -1,0 +1,221 @@
+﻿<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Cahier des charges — Plateforme du Mouvement TABAXI</title><style>
+@page{size:A4;margin:20mm 18mm;@bottom-center{content:"Cahier des charges TABAXI — page " counter(page) " / " counter(pages);font:9pt 'Segoe UI',Arial,sans-serif;color:#6c7d71}}
+@page:first{@bottom-center{content:""}}
+:root{--green:#087443;--lime:#e4c451;--ink:#183b2b;--line:#d5e2d6;--soft:#f1f7f1}
+*{box-sizing:border-box}
+body{font:10.5pt/1.55 'Segoe UI',Arial,sans-serif;color:var(--ink);margin:0}
+h1{font-size:19pt;color:var(--green);border-bottom:3px solid var(--lime);padding-bottom:5px;margin:0 0 12px;break-before:page}
+h2{font-size:13pt;color:var(--green);margin:20px 0 4px;break-after:avoid}
+p{margin:6px 0}ul,ol{margin:4px 0 8px 20px;padding:0}li{margin:3px 0}
+.cover{height:250mm;display:flex;flex-direction:column;justify-content:center;break-after:page}
+.cover img{width:190px;margin-bottom:30px;align-self:flex-start}
+.kicker{color:var(--green);letter-spacing:2px;font-weight:700;font-size:10pt;text-transform:uppercase}
+.cover h1{font-size:30pt;border:0;margin:8px 0 10px;break-before:auto;line-height:1.15}
+.sub{font-size:13pt;color:#4b6455}.meta{margin-top:40px;color:#4b6455;line-height:1.9}
+.box{border-left:5px solid var(--lime);background:#fbf8e8;padding:8px 12px;margin:10px 0;break-inside:avoid}
+.info{border-left:5px solid var(--green);background:var(--soft);padding:8px 12px;margin:10px 0;break-inside:avoid}
+.story{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:6px;padding:8px 14px;margin:10px 0;break-inside:avoid}
+.sh{display:flex;align-items:center;gap:10px}.sid{background:var(--green);color:#fff;border-radius:5px;padding:0 8px;font-weight:700;font-size:9.5pt}
+.sh .tag{margin-left:auto}.us{background:var(--soft);padding:6px 10px;border-radius:5px}
+.lab{font-weight:700;color:var(--green)}.lab2{font-weight:700;margin:6px 0 0}
+.tag{display:inline-block;border-radius:10px;padding:0 8px;font-size:8.5pt;font-weight:700;white-space:nowrap}
+.t1{background:#dff1e6;color:#0b5c36}.t2{background:#fdf1c4;color:#7a5b00}.t3{background:#e6e9ee;color:#46505e}
+.toc{list-style:none;margin-left:0}</style></head><body>
+
+<div class="cover">
+<img src="logo-tabaxi.png" alt="TABAXI">
+<div class="kicker">Cahier des charges</div>
+<h1>Plateforme web du Mouvement TABAXI</h1>
+<div class="sub">Organiser le mouvement, accueillir ses membres et suivre ses programmes</div>
+<div class="meta"><b>Version :</b> 1.0<br><b>Date :</b> 15 octobre 2026<br><b>Destinataires :</b> Fondateurs et bureau exécutif<br><b>Langue de la plateforme :</b> français</div>
+</div>
+
+<h2 style="margin-top:0">Sommaire</h2>
+<ol class="toc">
+<li>1. Présentation et objectifs</li><li>2. Qui utilise la plateforme</li><li>3. Ce qui est prévu et ce qui ne l'est pas</li>
+<li>4. Les besoins, sous forme d'histoires d'utilisateurs</li><li>5. Règles de fonctionnement</li><li>6. Informations conservées</li>
+<li>7. Qualité attendue</li><li>8. Protection des données personnelles</li><li>9. Solution technique et coûts</li><li>10. Aspect visuel</li>
+<li>11. Planning proposé</li><li>12. Validation de la plateforme</li><li>13. Points à valider par les fondateurs</li><li>14. Lexique</li>
+</ol>
+<div class="box"><b>Comment lire ce document.</b> Les besoins sont écrits sous forme d'<b>histoires d'utilisateurs</b> : « En tant que… je veux… afin de… ». Pour chacune, le document explique <b>comment on compte la réaliser</b> et <b>à quoi on reconnaît qu'elle est réussie</b>.<br>
+<span class="tag t1">Indispensable</span> sans elle, la plateforme ne peut pas ouvrir. <span class="tag t2">Important</span> à livrer dans la première version si possible. <span class="tag t3">Souhaitable</span> utile, mais peut venir plus tard.</div>
+
+<h1>1. Présentation et objectifs</h1>
+<h2>1.1 Le contexte</h2>
+<p>Le Mouvement TABAXI est un mouvement citoyen organisé par territoire : pays, régions et communes. Chaque territoire est représenté par un coordonnateur ; l'ensemble des coordonnateurs, fondateurs compris, forme le bureau exécutif. Un premier prototype existe : il comprend un site d'accueil, un formulaire d'adhésion avec examen des demandes par les fondateurs, un modèle de carte de membre et des maquettes des espaces membre et bureau. Il n'est pas encore relié à une connexion sécurisée complète pour tous les profils. Ce cahier des charges décrit la plateforme complète à mettre en service.</p>
+<h2>1.2 Le besoin</h2>
+<p>Créer une plateforme web, en français et utilisable sur téléphone comme sur ordinateur, qui permet au mouvement de :</p>
+<ul><li><b>accueillir</b> de nouveaux membres de façon organisée et contrôlée ;</li><li><b>connaître ses membres</b> et les retrouver par territoire et par date d'adhésion ;</li><li><b>donner à chaque membre une carte numérique</b> ;</li><li><b>organiser et suivre ses programmes</b> et activités.</li></ul>
+<h2>1.3 Les objectifs</h2>
+<ul><li>Toute demande d'adhésion reçoit une réponse, et le bureau voit en un coup d'œil celles qui attendent.</li><li>Le fichier des membres est fiable : aucun doublon, chaque membre est rattaché à un territoire.</li><li>Chaque territoire s'organise de façon autonome : un coordonnateur gère son territoire et ceux qui en dépendent.</li><li>Les programmes et activités sont suivis avec leur état et leurs participants.</li></ul>
+
+<h1>2. Qui utilise la plateforme</h1>
+<ul>
+<li><b>Visiteur</b> : toute personne qui n'est pas encore membre. Elle découvre le mouvement et peut déposer une demande d'adhésion.</li>
+<li><b>Membre simple</b> : membre rattaché à un territoire. Il gère son profil, affiche sa carte et consulte les programmes de son territoire.</li>
+<li><b>Coordonnateur</b> : représentant d'un territoire (pays, région ou commune), membre du bureau exécutif. Il consulte les membres de son territoire et gère ses programmes.</li>
+<li><b>Membre fondateur</b> : membre du bureau exécutif aux droits renforcés. Il voit tous les territoires et est <b>le seul à examiner les demandes d'adhésion</b>. Il invite les coordonnateurs et gère les territoires.</li>
+</ul>
+<div class="info"><b>Une seule connexion.</b> Tout le monde se connecte au même endroit avec son courriel et son mot de passe. La plateforme ouvre ensuite l'interface correspondant au rôle : <b>interface membre</b> ou <b>interface bureau exécutif</b>.</div>
+<p><b>Les territoires sont emboîtés :</b> pays, puis région, puis commune. Un coordonnateur de région voit ses communes ; un coordonnateur de pays voit ses régions et leurs communes ; un coordonnateur de commune voit sa seule commune. Les fondateurs voient tout.</p>
+
+<h1>3. Ce qui est prévu et ce qui ne l'est pas</h1>
+<h2>Inclus dans la première version</h2>
+<ul><li>Site public avec demande d'adhésion en ligne</li><li>Examen des demandes par les fondateurs, avec courriel de réponse</li><li>Inscription finalisée par un lien personnel</li><li>Connexion sécurisée et deux interfaces (membre, bureau exécutif)</li><li>Profil et carte numérique du membre</li><li>Bases des membres simples et des coordonnateurs, filtrables par territoire et par date</li><li>Gestion des territoires</li><li>Gestion des programmes et de leurs activités</li><li>Tableau de bord du bureau exécutif</li></ul>
+<h2>Volontairement laissé pour plus tard</h2>
+<ul><li>Paiement en ligne des cotisations ou des dons</li><li>Envoi de SMS ou de messages WhatsApp</li><li>Votes ou sondages en ligne</li><li>Application à installer sur téléphone (le site s'utilise dans le navigateur)</li><li>Plusieurs langues</li><li>Forum ou discussions entre membres</li></ul>
+
+<h1>4. Les besoins, sous forme d'histoires d'utilisateurs</h1>
+<h2>A. Site public et adhésion</h2><p>Ce que vit une personne qui veut rejoindre le mouvement.</p><div class="story"><div class="sh"><span class="sid">A1</span><b>Découvrir le mouvement</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>visiteur</b>, je veux <b>comprendre rapidement ce qu'est TABAXI et trouver comment adhérer</b>, afin de décider de rejoindre le mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Une page d'accueil claire présente le mouvement, avec un bouton « Adhérer » et un lien « Se connecter », visibles dès l'ouverture sur téléphone.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le bouton d'adhésion est visible sans faire défiler la page sur un téléphone</li><li>La page s'affiche correctement sur téléphone et sur ordinateur</li></ul></div><div class="story"><div class="sh"><span class="sid">A2</span><b>Déposer une demande d'adhésion</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>visiteur</b>, je veux <b>remplir un formulaire de demande d'adhésion</b>, afin de être examiné par le mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Un formulaire demande le prénom, le nom, le courriel, le territoire (choisi dans une liste) et la motivation. La personne coche une case pour accepter le traitement de ses données.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Une demande incomplète est refusée avec un message clair en français</li><li>Une demande valide affiche une confirmation à l'écran</li><li>Un même courriel ne peut pas avoir deux demandes en cours</li></ul></div><div class="story"><div class="sh"><span class="sid">A3</span><b>Recevoir la réponse du mouvement</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>visiteur</b>, je veux <b>être prévenu par courriel de la décision</b>, afin de savoir où en est ma demande.</p>
+<p><span class="lab">Comment on le réalise</span> En cas d'acceptation, la plateforme envoie un courriel contenant un lien personnel. En cas de refus, le courriel contient le motif.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le courriel arrive à la bonne adresse</li><li>Si l'envoi du courriel échoue, la demande n'est pas marquée « Acceptée » et le fondateur est prévenu de l'erreur</li></ul></div><div class="story"><div class="sh"><span class="sid">A4</span><b>Finaliser mon inscription</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>personne acceptée</b>, je veux <b>compléter mon dossier avec mon lien personnel</b>, afin de devenir officiellement membre.</p>
+<p><span class="lab">Comment on le réalise</span> Le lien ouvre une page où la personne renseigne son adresse, ajoute sa photo et choisit son mot de passe. Le lien est valable 7 jours et ne peut servir qu'une seule fois.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le lien fonctionne une seule fois et pendant 7 jours</li><li>Après ce délai, ou après usage, un message explique quoi faire</li><li>La personne devient membre simple actif et peut se connecter</li></ul></div>
+<h2>B. Connexion et comptes</h2><p>Une seule porte d'entrée pour tout le monde.</p><div class="story"><div class="sh"><span class="sid">B1</span><b>Me connecter</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre ou coordonnateur</b>, je veux <b>me connecter avec mon courriel et mon mot de passe</b>, afin de accéder à mon espace.</p>
+<p><span class="lab">Comment on le réalise</span> Une seule page de connexion pour tous. Après connexion, la plateforme ouvre l'interface qui correspond au rôle : membre ou bureau exécutif. Les droits sont vérifiés par la plateforme, pas seulement cachés à l'écran.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Un membre simple n'accède jamais à l'interface du bureau, même en tapant son adresse à la main</li><li>Un membre suspendu ou radié ne peut plus se connecter</li></ul></div><div class="story"><div class="sh"><span class="sid">B2</span><b>Retrouver mon mot de passe</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>utilisateur</b>, je veux <b>recevoir un lien de réinitialisation par courriel si j'oublie mon mot de passe</b>, afin de retrouver l'accès sans aide.</p>
+<p><span class="lab">Comment on le réalise</span> Un lien envoyé par courriel permet de choisir un nouveau mot de passe.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le lien expire au bout d'une heure</li><li>Le lien ne sert qu'une fois</li></ul></div><div class="story"><div class="sh"><span class="sid">B3</span><b>Inviter un coordonnateur</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>fondateur</b>, je veux <b>inviter une personne comme coordonnateur ou fondateur</b>, afin de constituer le bureau exécutif.</p>
+<p><span class="lab">Comment on le réalise</span> Le fondateur saisit le courriel, le territoire et la fonction. La personne reçoit un lien personnel pour créer son mot de passe.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Seul un fondateur peut inviter</li><li>La personne invitée accède directement à l'interface du bureau exécutif</li></ul></div><div class="story"><div class="sh"><span class="sid">B4</span><b>Être déconnecté automatiquement</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>membre du bureau</b>, je veux <b>que ma session se ferme après un long moment d'inactivité</b>, afin de protéger les données si j'oublie de me déconnecter.</p>
+<p><span class="lab">Comment on le réalise</span> La session se ferme automatiquement après une période sans action.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Après 30 minutes sans action dans l'interface du bureau, la connexion est fermée</li></ul></div>
+<h2>C. Interface du membre simple</h2><p>Ce que voit et fait un membre ordinaire.</p><div class="story"><div class="sh"><span class="sid">C1</span><b>Gérer mon profil</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre</b>, je veux <b>consulter et modifier mes informations</b>, afin de garder mon dossier à jour.</p>
+<p><span class="lab">Comment on le réalise</span> Une page de profil permet de modifier l'adresse, la photo et le mot de passe. Le nom et le territoire ne peuvent être changés que par le bureau.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Les modifications sont retrouvées à la connexion suivante</li><li>Le membre ne peut pas modifier son nom ni son territoire</li></ul></div><div class="story"><div class="sh"><span class="sid">C2</span><b>Avoir ma carte numérique</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre</b>, je veux <b>afficher, télécharger et imprimer ma carte de membre</b>, afin de prouver mon appartenance au mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> La carte reprend le modèle graphique du mouvement et affiche automatiquement la photo, le nom, le numéro de membre, le territoire et la date d'adhésion.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>La carte est lisible sur téléphone</li><li>Elle s'imprime sur une page au bon format</li><li>Elle affiche exactement les informations du profil</li></ul></div><div class="story"><div class="sh"><span class="sid">C3</span><b>Suivre les programmes de mon territoire</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>membre</b>, je veux <b>consulter les programmes et activités de mon territoire</b>, afin de savoir ce que fait le mouvement près de moi.</p>
+<p><span class="lab">Comment on le réalise</span> Une page liste les programmes en cours et à venir de son territoire, avec leurs activités.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le membre voit les programmes de son territoire et pas ceux des autres</li></ul></div><div class="story"><div class="sh"><span class="sid">C4</span><b>M'inscrire à une activité</b><span class="tag t3">Souhaitable</span></div>
+<p class="us">En tant que <b>membre</b>, je veux <b>m'inscrire à une activité</b>, afin de participer à la vie du mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Un bouton d'inscription et de désinscription sur chaque activité.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le membre s'inscrit et se désinscrit</li><li>Le coordonnateur voit la liste des inscrits</li></ul></div>
+<h2>D. Interface du bureau exécutif</h2><p>Pour piloter le mouvement et ses territoires.</p><div class="story"><div class="sh"><span class="sid">D1</span><b>Voir l'état du mouvement d'un coup d'œil</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre du bureau</b>, je veux <b>un tableau de bord</b>, afin de suivre l'activité sans fouiller les listes.</p>
+<p><span class="lab">Comment on le réalise</span> Une page d'accueil du bureau affiche les demandes à examiner, le nombre de membres actifs, de coordonnateurs, de programmes en cours et la répartition par territoire.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Les chiffres correspondent aux listes</li><li>Un coordonnateur ne voit que les chiffres de son territoire</li></ul></div><div class="story"><div class="sh"><span class="sid">D2</span><b>Examiner les demandes d'adhésion</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>fondateur</b>, je veux <b>consulter chaque demande et l'accepter ou la refuser</b>, afin de choisir qui rejoint le mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Une liste des demandes avec leur statut (À examiner, Acceptée, Rejetée, Inscrite). Le fondateur ouvre une demande, puis accepte ou refuse en indiquant un motif.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Seuls les fondateurs voient cette page</li><li>Un refus exige un motif écrit</li><li>Chaque décision enregistre son auteur et la date</li></ul></div><div class="story"><div class="sh"><span class="sid">D3</span><b>Consulter la base des membres simples</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre du bureau</b>, je veux <b>consulter la liste des membres, la filtrer par territoire et par date, et chercher par nom</b>, afin de connaître et contacter mes membres.</p>
+<p><span class="lab">Comment on le réalise</span> Une liste filtrable. Chaque coordonnateur voit son territoire et ceux qui en dépendent ; le fondateur voit tout.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le filtre « région X, janvier à mars » n'affiche que les membres concernés</li><li>Un coordonnateur ne voit jamais les membres d'un autre territoire</li></ul></div><div class="story"><div class="sh"><span class="sid">D4</span><b>Consulter la base des coordonnateurs</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>membre du bureau</b>, je veux <b>consulter la liste des coordonnateurs avec les mêmes filtres</b>, afin de connaître le bureau exécutif.</p>
+<p><span class="lab">Comment on le réalise</span> Même fonctionnement que la base des membres simples.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Les filtres par territoire et par date fonctionnent comme en D3</li></ul></div><div class="story"><div class="sh"><span class="sid">D5</span><b>Suspendre ou radier un membre</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>fondateur</b>, je veux <b>changer le statut d'un membre (Actif, Suspendu, Radié)</b>, afin de faire respecter les règles du mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Un bouton de changement de statut sur la fiche du membre.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Un membre suspendu ou radié ne peut plus se connecter</li><li>Son historique est conservé</li></ul></div><div class="story"><div class="sh"><span class="sid">D6</span><b>Exporter une liste</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>membre du bureau</b>, je veux <b>exporter la liste affichée dans un fichier Excel</b>, afin de travailler hors de la plateforme.</p>
+<p><span class="lab">Comment on le réalise</span> Un bouton d'export sur chaque liste.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le fichier contient exactement la liste filtrée</li><li>Chaque export est noté dans le journal</li></ul></div><div class="story"><div class="sh"><span class="sid">D7</span><b>Gérer les territoires</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>fondateur</b>, je veux <b>ajouter, renommer et rattacher les territoires (commune à une région, région à un pays)</b>, afin de refléter l'organisation réelle du mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Une page de gestion des territoires, organisés en pays, régions et communes.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Un territoire qui contient des membres ou des programmes ne peut pas être supprimé</li></ul></div><div class="story"><div class="sh"><span class="sid">D8</span><b>Garder une trace des actions</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>fondateur</b>, je veux <b>consulter un journal des actions</b>, afin de savoir qui a fait quoi et quand.</p>
+<p><span class="lab">Comment on le réalise</span> Les acceptations, refus, changements de statut, invitations et exports sont enregistrés automatiquement.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Personne ne peut modifier ni effacer le journal</li></ul></div>
+<h2>E. Programmes et activités</h2><p>Organiser et suivre ce que le mouvement réalise.</p><div class="story"><div class="sh"><span class="sid">E1</span><b>Créer un programme</b><span class="tag t1">Indispensable</span></div>
+<p class="us">En tant que <b>coordonnateur</b>, je veux <b>créer et modifier un programme pour mon territoire</b>, afin de organiser l'action du mouvement.</p>
+<p><span class="lab">Comment on le réalise</span> Un formulaire : nom, objectif, territoire concerné, responsable, dates de début et de fin, état (Prévu, En cours, Terminé, Annulé).</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Un coordonnateur gère uniquement les programmes de son territoire</li><li>Un fondateur gère tous les programmes</li></ul></div><div class="story"><div class="sh"><span class="sid">E2</span><b>Planifier des activités</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>coordonnateur</b>, je veux <b>ajouter des activités à un programme</b>, afin de détailler ce qui sera fait et quand.</p>
+<p><span class="lab">Comment on le réalise</span> Chaque activité a un titre, une date, un lieu et une description.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Les activités s'affichent par ordre de date sous leur programme</li></ul></div><div class="story"><div class="sh"><span class="sid">E3</span><b>Rendre compte</b><span class="tag t2">Important</span></div>
+<p class="us">En tant que <b>coordonnateur</b>, je veux <b>écrire un compte rendu après une activité et mettre à jour l'état du programme</b>, afin de garder la mémoire de ce qui a été fait.</p>
+<p><span class="lab">Comment on le réalise</span> Un champ de compte rendu sur chaque activité.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le compte rendu est rattaché à l'activité et visible par le bureau du territoire</li></ul></div><div class="story"><div class="sh"><span class="sid">E4</span><b>Noter les présences</b><span class="tag t3">Souhaitable</span></div>
+<p class="us">En tant que <b>coordonnateur</b>, je veux <b>noter qui a participé à une activité</b>, afin de mesurer la mobilisation.</p>
+<p><span class="lab">Comment on le réalise</span> Une liste de membres à cocher, avec le total des présents.</p>
+<p class="lab2">C'est réussi quand :</p><ul><li>Le nombre de participants s'affiche sur l'activité</li></ul></div>
+
+<h1>5. Règles de fonctionnement</h1>
+<ol><li>Seuls les <b>fondateurs</b> examinent les demandes d'adhésion.</li><li>Un courriel ne peut servir qu'à un seul compte.</li><li>Le lien personnel d'inscription est valable 7 jours et ne s'utilise qu'une fois.</li><li>Une demande n'est marquée « Acceptée » que si le courriel d'acceptation est bien parti.</li><li>Un refus exige un motif écrit.</li><li>Le bureau exécutif est formé de tous les coordonnateurs, fondateurs compris.</li><li>Un coordonnateur voit et gère son territoire et ceux qui en dépendent ; un fondateur voit et gère tout.</li><li>Un membre suspendu ou radié ne peut plus se connecter ; ses données sont conservées pour l'historique.</li><li>Un territoire qui contient des membres ou des programmes ne peut pas être supprimé.</li><li>Toute décision importante (accepter, refuser, suspendre, inviter, exporter) est inscrite dans le journal.</li></ol>
+
+<h1>6. Informations conservées</h1>
+<ul>
+<li><b>Demande d'adhésion</b> : prénom, nom, courriel, territoire, motivation, statut, motif de refus, dates, auteur de la décision.</li>
+<li><b>Membre simple</b> : prénom, nom, courriel, adresse, territoire, statut (Actif, Suspendu, Radié), date d'adhésion, photo, numéro de membre.</li>
+<li><b>Coordonnateur</b> : prénom, nom, courriel, adresse, territoire, fonction (Fondateur ou Coordonnateur), statut, date d'entrée.</li>
+<li><b>Territoire</b> : nom, type (pays, région, commune), territoire dont il dépend.</li>
+<li><b>Programme</b> : nom, objectif, territoire, responsable, dates, état.</li>
+<li><b>Activité</b> : programme, titre, date, lieu, description, compte rendu, participants.</li>
+<li><b>Journal des actions</b> : auteur, action, date et heure.</li>
+</ul>
+<p>Le mot de passe n'est jamais conservé tel quel : seule une empreinte illisible est enregistrée, personne ne peut le lire. Le numéro de membre est généré automatiquement.</p>
+
+<h1>7. Qualité attendue</h1>
+<ul>
+<li><b>Mobile d'abord</b> : toutes les pages sont pensées pour téléphone, puis adaptées à l'ordinateur.</li>
+<li><b>Rapidité</b> : page d'accueil affichée en moins de 3 secondes sur une connexion mobile moyenne ; photos réduites automatiquement avant envoi.</li>
+<li><b>Sécurité</b> : mot de passe d'au moins 10 caractères, blocage temporaire après plusieurs échecs, connexion chiffrée (https) partout.</li>
+<li><b>Lisibilité</b> : textes assez grands et contrastés, boutons faciles à toucher, messages d'erreur en français simple.</li>
+<li><b>Disponibilité et sauvegarde</b> : plateforme accessible en continu ; copie de la base au moins une fois par semaine.</li>
+<li><b>Compatibilité</b> : versions récentes de Chrome, Safari, Firefox et Edge, sur Android et iPhone.</li>
+</ul>
+
+<h1>8. Protection des données personnelles</h1>
+<div class="box">La plateforme conserve des noms, courriels, adresses et photos, et révèle l'appartenance à un mouvement citoyen. Au Sénégal, ces données sont encadrées par la loi n° 2008-12 du 25 janvier 2008 et contrôlées par la Commission de protection des données personnelles (CDP). Une déclaration préalable est exigée, et certains traitements demandent une autorisation. <b>Il faut s'adresser à la CDP avant l'ouverture au public</b> pour savoir quelle démarche s'applique au mouvement.</div>
+<p>Dans tous les cas, la plateforme doit :</p>
+<ul><li>afficher une page expliquant quelles données sont collectées, pourquoi, et qui y a accès ;</li><li>recueillir le consentement par une case à cocher dans le formulaire d'adhésion ;</li><li>ne collecter que le nécessaire (ni pièce d'identité, ni carte d'électeur) ;</li><li>permettre à toute personne de demander la consultation, la correction ou la suppression de ses données ;</li><li>limiter l'accès aux personnes qui en ont besoin, selon leur territoire ;</li><li>noter chaque export de liste dans le journal.</li></ul>
+
+<h1>9. Solution technique et coûts</h1>
+<p>Le budget est minimal : la plateforme s'appuie sur des services d'hébergement, de base de données et d'envoi de courriels gratuits ou peu coûteux, adaptés à un mouvement de cette taille. Les choix précis seront arrêtés au démarrage de la réalisation.</p>
+<ul><li><b>Coût mensuel visé au lancement :</b> aucun ou très faible.</li><li><b>Nom de domaine propre</b> (par exemple en .sn) : facultatif, avec un coût annuel.</li><li>Si le mouvement grandit fortement, certains services gratuits pourraient devenir insuffisants et un abonnement être nécessaire.</li></ul>
+
+<h1>10. Aspect visuel</h1>
+<ul><li>Logo et couleurs du mouvement (vert et doré), sobres et lisibles.</li><li>Carte de membre selon le modèle graphique du mouvement.</li><li>Navigation simple : peu de boutons par écran, vocabulaire courant.</li></ul>
+
+<h1>11. Planning proposé</h1>
+<p>Les durées sont des estimations, à ajuster selon les disponibilités.</p>
+<ol>
+<li><b>Validation du cahier des charges</b> et démarche auprès de la CDP : 1 à 2 semaines.</li>
+<li><b>Adhésion complète, connexion et territoires</b> (A1 à A4, B1 à B3, D7) : 3 semaines. Un visiteur peut devenir membre et se connecter.</li>
+<li><b>Interface membre et interface bureau</b> (C1, C2, D1 à D6, D8) : 3 semaines. Le bureau pilote ses membres et chacun a sa carte.</li>
+<li><b>Programmes et activités</b> (E1 à E3, puis les fonctions souhaitables si possible) : 2 semaines.</li>
+<li><b>Tests par le bureau, corrections et mise en ligne</b> : 2 semaines.</li>
+</ol>
+<p>Au total, environ <b>11 à 12 semaines</b>.</p>
+
+<h1>12. Validation de la plateforme</h1>
+<ol><li>Chaque phrase « C'est réussi quand » de la partie 4 devient un test.</li><li>Les tests sont faits par des membres du bureau, sur téléphone et sur ordinateur, avec des comptes d'essai.</li><li>Les droits sont testés en essayant volontairement d'aller là où l'on n'a pas le droit.</li><li>Un besoin « Indispensable » qui échoue à un test empêche la mise en ligne.</li><li>À la fin, les fondateurs signent un procès-verbal de validation listant les tests réussis et les réserves éventuelles.</li></ol>
+
+<h1>13. Points à valider par les fondateurs</h1>
+<p>Pour avancer, certains choix ont été retenus par défaut. Ils sont à confirmer ou à modifier :</p>
+<ol>
+<li>Un membre ne peut pas changer lui-même son nom ni son territoire : il passe par le bureau.</li>
+<li>Les coordonnateurs et fondateurs ont eux aussi une carte numérique.</li>
+<li>Le numéro de membre suit le format TBX-année-numéro (exemple : TBX-2026-00001).</li>
+<li>Un membre ne voit que les programmes de son territoire.</li>
+<li>Le numéro de téléphone n'est pas demandé à l'adhésion.</li>
+<li>Aucune cotisation ni paiement en ligne dans la première version.</li>
+<li>Un seul fondateur suffit pour accepter ou refuser une demande.</li>
+<li>Un âge minimum pour adhérer est à fixer par le bureau.</li>
+<li>Une personne est désignée pour les sauvegardes et la démarche auprès de la CDP.</li>
+</ol>
+
+<h1>14. Lexique</h1>
+<ul>
+<li><b>Territoire de coordination</b> : pays, région ou commune dont un coordonnateur a la charge.</li>
+<li><b>Bureau exécutif</b> : ensemble des coordonnateurs, fondateurs compris.</li>
+<li><b>Lien personnel</b> : adresse internet unique envoyée par courriel, qui ne marche qu'une fois et qui expire.</li>
+<li><b>Interface</b> : ensemble des écrans qu'un utilisateur voit selon son rôle.</li>
+<li><b>Histoire d'utilisateur</b> : un besoin écrit sous la forme « En tant que… je veux… afin de… ».</li>
+<li><b>CDP</b> : Commission de protection des données personnelles du Sénégal.</li>
+</ul>
+</body></html>
