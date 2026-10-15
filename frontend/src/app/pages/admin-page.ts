@@ -21,7 +21,7 @@ import { UiIcon } from '../shared/ui-icon';
           }
         </nav>
         <div class="side-profile">
-          <a routerLink="/membre"><ui-icon name="users" />Changer de profil</a>
+          <a routerLink="/membre"><ui-icon name="users" />Mon espace membre</a>
           <div class="side-user">
             <span>{{ auth.initials() }}</span>
             <p>

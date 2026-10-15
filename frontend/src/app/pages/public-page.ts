@@ -31,16 +31,13 @@ import { UiIcon } from '../shared/ui-icon';
           </div>
 
           <div class="role-row">
-            <a class="role-card role-founder" routerLink="/bureau">
-              <ui-icon name="users" />
-              <strong>Membre fondateur</strong>
-              <span>Contribuez dès aujourd’hui à bâtir le mouvement.</span>
-              <b aria-hidden="true">→</b>
-            </a>
-            <a class="role-card role-member" routerLink="/membre">
-              <ui-icon name="users" />
-              <strong>Membre simple</strong>
-              <span>Rejoignez une communauté citoyenne active.</span>
+            <a class="role-card role-login" routerLink="/connexion">
+              <ui-icon name="key" />
+              <strong>Se connecter</strong>
+              <span
+                >Membres, coordonnateurs et fondateurs : une seule connexion avec votre
+                courriel.</span
+              >
               <b aria-hidden="true">→</b>
             </a>
             <a class="role-card role-join" routerLink="/adherer">
@@ -74,7 +71,7 @@ import { UiIcon } from '../shared/ui-icon';
             Les membres découvrent les activités proches de chez eux. Les coordonnateurs organisent
             les programmes et gardent une trace claire de ce qui a été accompli.
           </p>
-          <a class="btn btn-green" routerLink="/membre/programmes"
+          <a class="btn btn-green" routerLink="/" fragment="programmes"
             >Découvrir les programmes <span>→</span></a
           >
         </div>

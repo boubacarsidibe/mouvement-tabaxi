@@ -370,7 +370,7 @@ small {
   z-index: 4;
   display: grid;
   grid-area: roles;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   align-self: end;
 }
@@ -417,13 +417,13 @@ small {
   border-radius: 50%;
   font-size: 17px;
 }
-.role-founder {
+.role-login {
   border-color: var(--green-700);
   background: linear-gradient(145deg, #087b51, #005538);
   color: #fff;
 }
-.role-founder ui-icon,
-.role-founder span {
+.role-login ui-icon,
+.role-login span {
   color: #fff;
 }
 .role-join {
@@ -2232,6 +2232,10 @@ table input {
   .role-card strong {
     font-size: 16px;
   }
+  .role-card span {
+    /* Laisse la place de la flèche en bas à droite de la carte. */
+    padding-right: 36px;
+  }
   .member-strip {
     width: 100%;
   }
@@ -2491,7 +2495,7 @@ h3 {
   font-weight: 600;
   transform: none;
 }
-.role-founder {
+.role-login {
   background: var(--green-800);
 }
 .role-join {
