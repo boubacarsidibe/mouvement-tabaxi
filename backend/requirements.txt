@@ -6,6 +6,7 @@ cryptography==50.0.2
 django-cors-headers==4.9.0
 Django==6.1.2
 djangorestframework==3.18.3
+pillow==12.3.0
 pycparser==3.11
 sqlparse==0.6.0
 tzdata==2026.5

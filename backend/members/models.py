@@ -2,12 +2,15 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
 
+from core.fields import EncryptedTextField
+
 
 class Member(models.Model):
-    """Fiche d'adhérent d'un compte : numéro de membre et date d'adhésion.
+    """Fiche d'adhérent d'un compte : numéro, date d'adhésion, coordonnées, photo.
 
     Le numéro TBX-AAAA-NNNNN est attribué automatiquement à la création : année
     d'adhésion et numéro d'ordre unique, jamais réutilisé, même après une radiation.
+    L'adresse et le téléphone sont chiffrés en base.
     """
 
     user = models.OneToOneField(
@@ -15,6 +18,19 @@ class Member(models.Model):
     )
     number = models.CharField('numéro de membre', max_length=20, unique=True, null=True, editable=False)
     joined_on = models.DateField("date d'adhésion", default=timezone.localdate)
+    address = EncryptedTextField('adresse', max_length=255, blank=True)
+    phone = EncryptedTextField('téléphone', max_length=30, blank=True)
+    # Photos hors du dossier public : elles ne sont servies qu'à travers l'API, après contrôle d'accès.
+    photo = models.FileField('photo', upload_to='photos/', blank=True)
+    application = models.OneToOneField(
+        'applications.Application',
+        verbose_name="demande d'adhésion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='member',
+    )
+    rules_accepted_at = models.DateTimeField('statuts et règlement acceptés le', null=True, blank=True)
     created_at = models.DateTimeField('créée le', auto_now_add=True)
     updated_at = models.DateTimeField('modifiée le', auto_now=True)
 
