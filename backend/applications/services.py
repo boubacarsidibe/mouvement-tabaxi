@@ -5,13 +5,16 @@ d'échec de l'envoi, la transaction est annulée, la demande reste « À examine
 ``EmailNotSent`` remonte jusqu'au fondateur.
 """
 
+from urllib.parse import urlencode
+
+from django.conf import settings
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from core.mail import send_email
 
-from .models import Application
+from .models import Application, RegistrationLink
 
 DECISION_SUBJECT = "Votre demande d'adhésion au Mouvement TABAXI"
 
@@ -38,6 +41,28 @@ def _record_decision(application, status, by, note):
     application.decided_at = timezone.now()
     application.internal_note = note
     application.save()
+
+
+def registration_url(token):
+    """Adresse de la page de finalisation du frontend, avec le jeton du lien personnel."""
+    return f'{settings.FRONTEND_URL.rstrip("/")}/finaliser?{urlencode({"jeton": token})}'
+
+
+def accept(application, *, by, note=''):
+    """Accepte la demande et envoie le lien personnel d'inscription (7 jours, usage unique).
+
+    Si le courriel ne part pas, tout est annulé : pas de lien, demande « À examiner ».
+    """
+    with transaction.atomic():
+        application = _lock_pending(application)
+        _record_decision(application, Application.Status.ACCEPTEE, by, note)
+        link, token = RegistrationLink.issue(application)
+        body = render_to_string(
+            'applications/emails/acceptance.txt',
+            {'application': application, 'link': link, 'url': registration_url(token)},
+        )
+        send_email(to=application.email, subject=DECISION_SUBJECT, body=body)
+    return application
 
 
 def reject(application, *, by, reason, note=''):

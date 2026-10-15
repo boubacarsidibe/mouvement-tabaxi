@@ -1,0 +1,14 @@
+{% autoescape off %}Bonjour {{ application.first_name }},
+
+Bonne nouvelle : votre demande d'adhésion {{ application.reference }} au Mouvement TABAXI a été acceptée.
+
+Pour devenir officiellement membre, finalisez votre inscription avec votre lien personnel :
+
+{{ url }}
+
+Ce lien est valable 7 jours, jusqu'au {{ link.expires_at|date:"j F Y à H \h i" }}, et ne peut servir qu'une seule fois. Ne le transmettez à personne.
+
+Bienvenue dans le mouvement !
+
+Le bureau exécutif du Mouvement TABAXI
+{% endautoescape %}

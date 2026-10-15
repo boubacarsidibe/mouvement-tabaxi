@@ -166,3 +166,6 @@ MAILERS = {
 }
 
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
+
+# Adresse publique du frontend, pour les liens personnels envoyés par courriel.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
