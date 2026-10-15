@@ -12,3 +12,5 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Documentation du dépôt : guide de contribution, code de conduite, architecture, feuille de route, planning, backlog, glossaire, hypothèses.
 - Modèles d'issues et de Pull Request.
 - Labels, sprints et issues GitHub.
+- Backend : applications `core`, `territories`, `applications` et `members`, routes sous `/api/` et point de contrôle `/api/health/` (#12).
+- Backend : lecture du fichier `backend/.env` au démarrage (#12).
