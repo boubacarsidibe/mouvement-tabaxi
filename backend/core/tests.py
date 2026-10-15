@@ -1,12 +1,32 @@
 import os
+import smtplib
 import tempfile
 from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
+from django.core import mail
+from django.core.mail.backends.base import BaseEmailBackend
 from django.db import OperationalError
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 
-from config.env import load_env_file
+from config.env import load_env_file, mailer_from_env
+
+from .mail import EmailNotSent, send_email
+
+
+class FailingBackend(BaseEmailBackend):
+    """Service d'envoi qui refuse tout, comme un serveur SMTP en panne."""
+
+    def send_messages(self, messages):
+        raise smtplib.SMTPServerDisconnected('Connexion perdue')
+
+
+class SilentBackend(BaseEmailBackend):
+    """Service d'envoi qui ne lève pas d'erreur mais n'envoie rien."""
+
+    def send_messages(self, messages):
+        return 0
 
 
 class HealthTests(TestCase):
@@ -68,3 +88,81 @@ class EnvFileTests(SimpleTestCase):
 
     def test_fichier_absent(self):
         load_env_file(self.path)  # aucune erreur
+
+
+class SendEmailTests(SimpleTestCase):
+    def test_courriel_envoye(self):
+        send_email(to='awa.ndiaye@example.org', subject='Votre demande', body='Bonjour Awa,')
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, ['awa.ndiaye@example.org'])
+        self.assertEqual(message.subject, 'Votre demande')
+        self.assertEqual(message.body, 'Bonjour Awa,')
+        self.assertEqual(message.from_email, settings.DEFAULT_FROM_EMAIL)
+
+    @override_settings(MAILERS={'default': {'BACKEND': 'core.tests.FailingBackend'}})
+    def test_echec_detecte_et_remonte(self):
+        with self.assertLogs('core.mail', level='ERROR'):
+            with self.assertRaises(EmailNotSent) as raised:
+                send_email(to='awa.ndiaye@example.org', subject='Votre demande', body='Bonjour')
+        self.assertIsInstance(raised.exception.__cause__, smtplib.SMTPException)
+        self.assertIn("n'a pas pu être envoyé", str(raised.exception))
+
+    @override_settings(MAILERS={'default': {'BACKEND': 'core.tests.SilentBackend'}})
+    def test_envoi_non_confirme_considere_comme_un_echec(self):
+        with self.assertLogs('core.mail', level='ERROR'):
+            with self.assertRaises(EmailNotSent):
+                send_email(to='awa.ndiaye@example.org', subject='Votre demande', body='Bonjour')
+
+    def test_serveur_smtp_injoignable(self):
+        # Port 1 de la machine locale : aucun serveur n'y écoute, la connexion est refusée.
+        mailer = mailer_from_env({'EMAIL_HOST': '127.0.0.1', 'EMAIL_PORT': '1', 'EMAIL_USE_TLS': '0', 'EMAIL_TIMEOUT': '2'})
+        with override_settings(MAILERS={'default': mailer}):
+            with self.assertLogs('core.mail', level='ERROR'):
+                with self.assertRaises(EmailNotSent):
+                    send_email(to='awa.ndiaye@example.org', subject='Votre demande', body='Bonjour')
+
+    def test_journal_sans_adresse_du_destinataire(self):
+        with override_settings(MAILERS={'default': {'BACKEND': 'core.tests.FailingBackend'}}):
+            with self.assertLogs('core.mail', level='ERROR') as logs:
+                with self.assertRaises(EmailNotSent):
+                    send_email(to='awa.ndiaye@example.org', subject='Votre demande', body='Bonjour')
+        self.assertNotIn('awa.ndiaye@example.org', '\n'.join(logs.output))
+
+
+class MailerConfigurationTests(SimpleTestCase):
+    def test_console_sans_serveur_configure(self):
+        self.assertEqual(mailer_from_env({}), {'BACKEND': 'django.core.mail.backends.console.EmailBackend'})
+
+    def test_smtp_par_variables_d_environnement(self):
+        mailer = mailer_from_env({
+            'EMAIL_HOST': 'smtp.example.org',
+            'EMAIL_PORT': '587',
+            'EMAIL_HOST_USER': 'adhesion@example.org',
+            'EMAIL_HOST_PASSWORD': 'secret-de-test',
+        })
+        self.assertEqual(mailer['BACKEND'], 'django.core.mail.backends.smtp.EmailBackend')
+        self.assertEqual(mailer['OPTIONS'], {
+            'host': 'smtp.example.org', 'port': 587, 'use_tls': True, 'use_ssl': False, 'timeout': 10,
+            'username': 'adhesion@example.org', 'password': 'secret-de-test',
+        })
+
+    def test_ssl_au_lieu_de_tls(self):
+        options = mailer_from_env({'EMAIL_HOST': 'smtp.example.org', 'EMAIL_USE_TLS': '0', 'EMAIL_USE_SSL': '1'})['OPTIONS']
+        self.assertEqual((options['use_tls'], options['use_ssl']), (False, True))
+
+
+class NoCredentialsInRepositoryTests(SimpleTestCase):
+    """Aucun identifiant n'est versionné : il n'existe que dans l'environnement ou le fichier .env ignoré."""
+
+    root = Path(settings.BASE_DIR).parent
+
+    def test_fichier_env_ignore_par_git(self):
+        ignored = (self.root / '.gitignore').read_text(encoding='utf-8').splitlines()
+        self.assertIn('.env', [line.strip() for line in ignored])
+
+    def test_exemple_sans_mot_de_passe(self):
+        example = (Path(settings.BASE_DIR) / '.env.example').read_text(encoding='utf-8')
+        values = dict(line.split('=', 1) for line in example.splitlines() if '=' in line and not line.startswith('#'))
+        self.assertEqual(values.get('EMAIL_HOST_PASSWORD', '').strip(), '')
+        self.assertEqual(values.get('EMAIL_HOST', '').strip(), '')
