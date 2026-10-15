@@ -1,7 +1,11 @@
-from django.db import IntegrityError
-from django.test import Client, TestCase
+from datetime import timedelta
+from unittest import mock
 
-from .models import User
+from django.db import IntegrityError
+from django.test import Client, TestCase, override_settings
+from django.utils import timezone
+
+from .models import LoginFailure, User
 
 PASSWORD = 'un-mot-de-passe-long'
 
@@ -156,3 +160,90 @@ class CsrfTests(TestCase):
         token = self.client.cookies['XSRF-TOKEN'].value
         response = self.client.post('/api/auth/logout/', headers={'X-XSRF-TOKEN': token})
         self.assertEqual(response.status_code, 204)
+
+
+class LockoutTests(TestCase):
+    """Après 5 échecs, la connexion est bloquée temporairement (15 minutes par défaut)."""
+
+    url = '/api/auth/login/'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.membre = User.objects.create_user('membre@example.org', PASSWORD)
+
+    def login(self, email='membre@example.org', password=PASSWORD, ip='192.0.2.10', **headers):
+        return self.client.post(
+            self.url, {'email': email, 'password': password}, content_type='application/json',
+            REMOTE_ADDR=ip, **headers,
+        )
+
+    def fail(self, times, **kwargs):
+        for _ in range(times):
+            self.assertEqual(self.login(password='mauvais-mot-de-passe', **kwargs).status_code, 400)
+
+    def test_bloque_apres_5_echecs_meme_avec_le_bon_mot_de_passe(self):
+        self.fail(5)
+        response = self.login()
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json()['code'], 'too_many_attempts')
+        self.assertEqual(response.json()['detail'], 'Trop de tentatives de connexion. Réessayez dans 15 minutes.')
+        self.assertTrue(1 <= int(response['Retry-After']) <= 15 * 60)
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
+
+    def test_4_echecs_ne_bloquent_pas(self):
+        self.fail(4)
+        self.assertEqual(self.login().status_code, 200)
+
+    def test_compte_debloque_apres_le_delai(self):
+        self.fail(5)
+        later = timezone.now() + timedelta(minutes=15, seconds=1)
+        with mock.patch('django.utils.timezone.now', return_value=later):
+            self.assertEqual(self.login().status_code, 200)
+
+    def test_blocage_par_compte_quelle_que_soit_l_adresse(self):
+        for i in range(5):
+            self.login(password='mauvais-mot-de-passe', ip=f'192.0.2.{i + 1}')
+        self.assertEqual(self.login(ip='198.51.100.7').status_code, 429)
+
+    def test_blocage_sans_tenir_compte_des_majuscules(self):
+        self.fail(5, email='Membre@Example.org')
+        self.assertEqual(self.login().status_code, 429)
+
+    def test_blocage_par_adresse_ip(self):
+        for i in range(20):
+            self.login(email=f'inconnu{i}@example.org', password='x' * 10)
+        self.assertEqual(self.login().status_code, 429)
+        # Un autre visiteur n'est pas touché.
+        self.assertEqual(self.login(ip='198.51.100.7').status_code, 200)
+
+    def test_connexion_reussie_efface_les_echecs(self):
+        self.fail(4)
+        self.assertEqual(self.login().status_code, 200)
+        self.client.logout()
+        self.fail(4)
+        self.assertEqual(self.login().status_code, 200)
+
+    def test_compte_desactive_avec_le_bon_mot_de_passe_ne_compte_pas_comme_echec(self):
+        User.objects.filter(pk=self.membre.pk).update(is_active=False)
+        for _ in range(6):
+            self.assertEqual(self.login().status_code, 403)
+        self.assertFalse(LoginFailure.objects.exists())
+
+    def test_anciens_echecs_effaces(self):
+        old = LoginFailure.objects.create(email='ancien@example.org', ip_address='192.0.2.99')
+        LoginFailure.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=2))
+        self.fail(1)
+        self.assertFalse(LoginFailure.objects.filter(pk=old.pk).exists())
+
+    @override_settings(LOGIN_TRUSTED_PROXIES=1)
+    def test_adresse_lue_derriere_un_proxy_de_confiance(self):
+        for _ in range(20):
+            self.login(email='x@example.org', password='x' * 10, ip='10.0.0.1', HTTP_X_FORWARDED_FOR='203.0.113.5')
+        self.assertTrue(LoginFailure.objects.filter(ip_address='203.0.113.5').exists())
+        # Un autre visiteur derrière le même proxy reste libre.
+        response = self.login(ip='10.0.0.1', HTTP_X_FORWARDED_FOR='203.0.113.6')
+        self.assertEqual(response.status_code, 200)
+
+    def test_adresse_x_forwarded_for_ignoree_sans_proxy_de_confiance(self):
+        self.login(password='mauvais-mot-de-passe', ip='192.0.2.10', HTTP_X_FORWARDED_FOR='203.0.113.5')
+        self.assertEqual(LoginFailure.objects.get().ip_address, '192.0.2.10')

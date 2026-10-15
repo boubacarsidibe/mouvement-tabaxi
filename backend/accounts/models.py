@@ -63,3 +63,23 @@ class User(AbstractUser):
     def is_bureau(self):
         """Le bureau exécutif réunit les coordonnateurs et les fondateurs."""
         return self.role in (self.Role.COORDONNATEUR, self.Role.FONDATEUR)
+
+
+class LoginFailure(models.Model):
+    """Échec de connexion, gardé quelques heures pour bloquer les essais répétés.
+
+    Le courriel est enregistré tel que saisi (en minuscules), qu'un compte existe ou
+    non : on ne doit pas pouvoir deviner un mot de passe en changeant d'adresse.
+    """
+
+    email = models.CharField('courriel saisi', max_length=254, db_index=True)
+    ip_address = models.GenericIPAddressField('adresse IP', null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField('date', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'échec de connexion'
+        verbose_name_plural = 'échecs de connexion'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.email} – {self.created_at:%d/%m/%Y %H:%M}'

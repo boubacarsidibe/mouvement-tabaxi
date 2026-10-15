@@ -133,6 +133,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Blocage temporaire de la connexion après plusieurs échecs (voir accounts/lockout.py).
+LOGIN_MAX_FAILURES_PER_ACCOUNT = int(os.environ.get('LOGIN_MAX_FAILURES_PER_ACCOUNT', '5'))
+LOGIN_MAX_FAILURES_PER_IP = int(os.environ.get('LOGIN_MAX_FAILURES_PER_IP', '20'))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', '15'))
+# Nombre de proxys de confiance devant Django (hébergeur, répartiteur de charge) : l'adresse
+# du visiteur est alors lue dans X-Forwarded-For. 0 = connexion directe.
+LOGIN_TRUSTED_PROXIES = int(os.environ.get('LOGIN_TRUSTED_PROXIES', '0'))
+
 # Les tests créent beaucoup de comptes : un hachage rapide les accélère.
 # Partout ailleurs, le hachage lent et sûr par défaut de Django reste utilisé.
 if sys.argv[1:2] == ['test']:
