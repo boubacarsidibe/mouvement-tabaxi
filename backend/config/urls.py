@@ -7,6 +7,7 @@ from core.views import health
 
 api_patterns = [
     path('health/', health, name='health'),
+    path('auth/', include('accounts.urls')),
 ]
 
 urlpatterns = [
