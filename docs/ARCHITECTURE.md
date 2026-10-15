@@ -58,13 +58,25 @@ Modèle `territories.Territory` : nom, type (`pays`, `region`, `commune`), terri
 - Toutes les routes commencent par `/api/` et se terminent par une barre oblique (`/api/health/`).
 - Échanges en JSON uniquement. L'interface navigable de Django REST Framework n'est active qu'en développement (`DJANGO_DEBUG=1`).
 - Par défaut, une route exige une connexion ; les routes publiques le déclarent explicitement.
-- Messages d'erreur en français.
+- Messages d'erreur en français. Une erreur générale a la forme `{"detail": "…", "code": "…"}` ; une erreur de saisie liste les messages par champ (`{"email": ["Ce champ est obligatoire."]}`).
+- `401` : personne n'est connecté (le frontend renvoie vers la connexion). `403` : la personne connectée n'a pas le droit.
+
+### Connexion et sécurité des requêtes
+
+- Session Django par cookie, sur le même domaine que le frontend (le proxy Angular renvoie `/api` vers Django en développement).
+- Courriel reconnu sans tenir compte des majuscules ; un courriel ne sert qu'à un seul compte (contrainte en base).
+- Un compte désactivé (suspendu ou radié) ne peut plus se connecter, et sa session en cours cesse aussitôt d'être valable.
+- Sans « rester connecté », la session se ferme avec le navigateur.
+- Protection CSRF aux noms attendus par Angular : Django dépose le cookie `XSRF-TOKEN` (à la connexion et sur `GET /api/auth/me/`), et chaque requête qui modifie renvoie sa valeur dans l'en-tête `X-XSRF-TOKEN`. Le client HTTP d'Angular le fait tout seul.
 
 ### Routes
 
 | Méthode et route | Accès | Rôle |
 |---|---|---|
 | `GET /api/health/` | public | Contrôle de santé : `{"status": "ready"}` (200), ou `{"status": "unavailable"}` (503) si la base est injoignable |
+| `POST /api/auth/login/` | public | Connexion. Corps : `email`, `password`, `remember` (facultatif). Renvoie l'utilisateur (200) ; 400 `invalid_credentials` ; 403 `inactive_account` |
+| `POST /api/auth/logout/` | public | Déconnexion (204) |
+| `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau` ; 401 sinon |
 
 ## Frontend
 

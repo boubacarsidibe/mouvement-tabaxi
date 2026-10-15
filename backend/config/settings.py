@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from .env import load_env_file
@@ -54,8 +55,13 @@ CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http:
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+# Noms attendus par défaut par le client HTTP d'Angular : il lit le cookie XSRF-TOKEN
+# et renvoie sa valeur dans l'en-tête X-XSRF-TOKEN pour chaque requête qui modifie.
+CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.SessionAuthentication'],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
     # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
@@ -122,6 +128,11 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Les tests créent beaucoup de comptes : un hachage rapide les accélère.
+# Partout ailleurs, le hachage lent et sûr par défaut de Django reste utilisé.
+if sys.argv[1:2] == ['test']:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 
 # Internationalization
