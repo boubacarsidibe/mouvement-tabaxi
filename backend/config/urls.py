@@ -9,6 +9,7 @@ api_patterns = [
     path('health/', health, name='health'),
     path('auth/', include('accounts.urls')),
     path('territories/', include('territories.urls')),
+    path('applications/', include('applications.urls')),
 ]
 
 urlpatterns = [

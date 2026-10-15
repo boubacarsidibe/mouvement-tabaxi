@@ -53,6 +53,18 @@ Modèle `territories.Territory` : nom, type (`pays`, `region`, `commune`), terri
 - Un territoire utilisé ne peut pas être supprimé (protection en base) : on le désactive.
 - Territoires de départ chargés par la migration `0002` : le Sénégal, ses 14 régions et 47 communes (chefs-lieux des 46 départements, plus Touba), à compléter par les fondateurs depuis l'administration.
 
+### Demandes d'adhésion
+
+Modèle `applications.Application` : référence, prénom, nom, courriel, localité souhaitée (territoire), profession, motivation, date du consentement, statut, dates de dépôt et de modification.
+
+- Statuts : `a_examiner` (À examiner), `acceptee` (Acceptée), `rejetee` (Rejetée), `inscrite` (Inscrite). Une demande est « en cours » tant qu'elle est à examiner ou acceptée.
+- Un même courriel (sans tenir compte des majuscules) ne peut avoir qu'une demande en cours : vérifié par l'API et par une contrainte en base. Un courriel déjà utilisé par un compte est refusé.
+- Référence `TAB-AAAA-NNNNN` : année de dépôt et numéro unique de la demande (exemple : `TAB-2026-00418`). Le numéro ne repart pas de zéro chaque année.
+- La localité est un territoire actif (commune ou région) dont les parents sont actifs.
+- Le consentement au traitement des données est obligatoire ; sa date est conservée.
+- Dépôt public limité à 10 envois par heure depuis une même adresse (variable `ADHESION_RATE`).
+- Dans l'administration Django, les demandes sont en lecture seule : les décisions passent par l'API d'examen, qui envoie les courriels.
+
 ### Conventions de l'API
 
 - Toutes les routes commencent par `/api/` et se terminent par une barre oblique (`/api/health/`).
@@ -78,6 +90,7 @@ Modèle `territories.Territory` : nom, type (`pays`, `region`, `commune`), terri
 | `POST /api/auth/logout/` | public | Déconnexion (204) |
 | `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau` ; 401 sinon |
 | `GET /api/territories/` | public | Territoires actifs en arbre pays > région > commune, par ordre alphabétique : `[{"id", "name", "kind", "kind_label", "children": [...]}]`. Un territoire dont un parent est inactif n'apparaît pas |
+| `POST /api/applications/` | public | Dépôt d'une demande. Corps : `first_name`, `last_name`, `email`, `territory` (identifiant), `profession`, `motivation`, `consent` (`true`). Renvoie `reference`, `status`, `status_label`, `created_at` (201) ; 400 avec un message par champ ; 429 si trop d'envois |
 
 ## Frontend
 
