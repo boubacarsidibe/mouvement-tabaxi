@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { UiIcon } from '../shared/ui-icon';
 
@@ -46,9 +46,11 @@ import { UiIcon } from '../shared/ui-icon';
               <h1>{{ pageTitle }}</h1>
               <p>{{ pageSubtitle }}</p>
             </div>
-            @if (view !== 'dashboard') {
-              <button class="btn btn-green"><ui-icon name="plus" />{{ actionLabel }}</button>
-            } @else {
+            @if (hasPrimaryAction) {
+              <a class="btn btn-green" [routerLink]="actionLink"
+                ><ui-icon name="plus" />{{ actionLabel }}</a
+              >
+            } @else if (view === 'dashboard') {
               <button class="date-button">
                 <ui-icon name="calendar" />1 jan. 2024 – 31 déc. 2024
               </button>
@@ -148,7 +150,12 @@ import { UiIcon } from '../shared/ui-icon';
             </section>
           }
 
-          @if (view === 'requests' || view === 'members' || view === 'accounts') {
+          @if (
+            view === 'requests' ||
+            view === 'members' ||
+            view === 'accounts' ||
+            view === 'coordinators'
+          ) {
             @if (view === 'members') {
               <nav class="tabs">
                 <a class="active">Tous les membres (1 248)</a><a>Membres fondateurs (12)</a
@@ -220,7 +227,15 @@ import { UiIcon } from '../shared/ui-icon';
                         >
                       </td>
                       <td>
-                        <button class="row-action" aria-label="Voir">◉</button
+                        <a
+                          class="row-action"
+                          [routerLink]="
+                            view === 'requests'
+                              ? '/bureau/demandes/awa-ndiaye'
+                              : '/bureau/membres/aminata-ndiaye'
+                          "
+                          aria-label="Voir la fiche"
+                          >Voir</a
                         ><button class="row-action" aria-label="Plus d’actions">•••</button>
                       </td>
                     </tr>
@@ -253,7 +268,7 @@ import { UiIcon } from '../shared/ui-icon';
             </div>
             <section class="admin-program-grid">
               @for (program of programs; track program.name) {
-                <article class="panel">
+                <article class="panel" routerLink="/bureau/programmes/brigades-citoyennes">
                   <header>
                     <ui-icon [name]="program.icon" />
                     <div>
@@ -335,6 +350,462 @@ import { UiIcon } from '../shared/ui-icon';
               </div>
             </section>
           }
+
+          @if (view === 'request-detail') {
+            <a class="back-link" routerLink="/bureau/demandes">← Retour aux demandes</a>
+            <section class="review-grid">
+              <article class="panel review-main">
+                <div class="identity-row">
+                  <span class="identity-avatar">AN</span>
+                  <div>
+                    <p class="eyebrow">Demande TAB-2026-00418</p>
+                    <h2>Awa Ndiaye</h2>
+                    <p>Déposée le 12 mars 2024 à 10 h 24</p>
+                  </div>
+                  <span class="badge warning">En attente</span>
+                </div>
+                <dl class="detail-list">
+                  <div>
+                    <dt>Adresse courriel</dt>
+                    <dd>awa.ndiaye&#64;gmail.com</dd>
+                  </div>
+                  <div>
+                    <dt>Profession</dt>
+                    <dd>Enseignante</dd>
+                  </div>
+                  <div>
+                    <dt>Localité souhaitée</dt>
+                    <dd>Saint-Louis</dd>
+                  </div>
+                  <div>
+                    <dt>Disponibilité</dt>
+                    <dd>Soirs et week-ends</dd>
+                  </div>
+                </dl>
+                <div class="motivation-box">
+                  <h3>Motivation</h3>
+                  <p>
+                    Je souhaite contribuer aux activités d’éducation civique auprès des jeunes de
+                    Saint-Louis et mettre mon expérience d’enseignante au service du mouvement.
+                  </p>
+                </div>
+              </article>
+              <aside class="panel decision-panel">
+                <p class="eyebrow">Décision du fondateur</p>
+                <h2>Examiner la demande</h2>
+                <p>Chaque décision est datée et ajoutée au journal d’actions.</p>
+                <label
+                  >Note interne<textarea
+                    rows="4"
+                    placeholder="Ajouter une note utile au bureau…"
+                  ></textarea>
+                </label>
+                <button
+                  class="btn btn-green btn-wide"
+                  type="button"
+                  (click)="requestDecision.set('accepted')"
+                >
+                  Accepter la demande
+                </button>
+                <button
+                  class="btn btn-danger-outline btn-wide"
+                  type="button"
+                  (click)="requestDecision.set('rejected')"
+                >
+                  Refuser avec un motif
+                </button>
+                @if (requestDecision() !== 'pending') {
+                  <p class="inline-success" role="status">
+                    ✓ Décision enregistrée :
+                    {{ requestDecision() === 'accepted' ? 'demande acceptée' : 'refus préparé' }}.
+                  </p>
+                }
+              </aside>
+            </section>
+          }
+
+          @if (view === 'member-detail') {
+            <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
+            <section class="review-grid member-detail-grid">
+              <article class="panel member-record">
+                <div class="identity-row">
+                  <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
+                  <div>
+                    <p class="eyebrow">TABAXI-2024-0125</p>
+                    <h2>Aminata Ndiaye</h2>
+                    <p>Membre simple · Dakar</p>
+                  </div>
+                  <span
+                    class="badge"
+                    [class.success]="memberStatus() === 'Actif'"
+                    [class.warning]="memberStatus() === 'Suspendu'"
+                    [class.danger]="memberStatus() === 'Radié'"
+                    >{{ memberStatus() }}</span
+                  >
+                </div>
+                <dl class="detail-list">
+                  <div>
+                    <dt>Courriel</dt>
+                    <dd>aminata.ndiaye&#64;gmail.com</dd>
+                  </div>
+                  <div>
+                    <dt>Téléphone</dt>
+                    <dd>+221 77 456 78 90</dd>
+                  </div>
+                  <div>
+                    <dt>Adresse</dt>
+                    <dd>18, rue de la Corniche, Dakar</dd>
+                  </div>
+                  <div>
+                    <dt>Date d’adhésion</dt>
+                    <dd>12 mars 2024</dd>
+                  </div>
+                </dl>
+                <h3>Participation récente</h3>
+                <div class="history-row">
+                  <ui-icon name="leaf" /><span
+                    ><strong>Nettoyage citoyen de Yoff</strong
+                    ><small>Inscrite · 24 octobre 2026</small></span
+                  >
+                </div>
+                <div class="history-row">
+                  <ui-icon name="users" /><span
+                    ><strong>Atelier d’éducation civique</strong
+                    ><small>Présente · 8 octobre 2026</small></span
+                  >
+                </div>
+              </article>
+              <aside class="panel decision-panel">
+                <p class="eyebrow">Statut du compte</p>
+                <h2>Gérer l’accès</h2>
+                <p>
+                  Une suspension ou une radiation bloque immédiatement la connexion sans effacer
+                  l’historique.
+                </p>
+                <button
+                  class="btn btn-outline btn-wide"
+                  type="button"
+                  (click)="memberStatus.set('Actif')"
+                >
+                  Rendre actif
+                </button>
+                <button
+                  class="btn btn-gold-outline btn-wide"
+                  type="button"
+                  (click)="memberStatus.set('Suspendu')"
+                >
+                  Suspendre
+                </button>
+                <button
+                  class="btn btn-danger-outline btn-wide"
+                  type="button"
+                  (click)="memberStatus.set('Radié')"
+                >
+                  Radier
+                </button>
+              </aside>
+            </section>
+          }
+
+          @if (view === 'audit') {
+            <div class="filter-bar audit-filters">
+              <label><ui-icon name="search" /><input placeholder="Rechercher une action…" /></label
+              ><select>
+                <option>Action · Toutes</option></select
+              ><select>
+                <option>Auteur · Tous</option></select
+              ><select>
+                <option>Période · 30 jours</option></select
+              ><button>Réinitialiser</button>
+            </div>
+            <section class="audit-list panel">
+              @for (entry of auditEntries; track entry.when) {
+                <article>
+                  <span class="audit-icon"><ui-icon [name]="entry.icon" /></span>
+                  <div>
+                    <strong>{{ entry.action }}</strong>
+                    <p>{{ entry.detail }}</p>
+                    <small>{{ entry.author }} · {{ entry.when }}</small>
+                  </div>
+                  <span class="badge">{{ entry.scope }}</span>
+                </article>
+              }
+            </section>
+          }
+
+          @if (
+            view === 'program-new' ||
+            view === 'activity-new' ||
+            view === 'report' ||
+            view === 'invite'
+          ) {
+            <a
+              class="back-link"
+              [routerLink]="view === 'invite' ? '/bureau/comptes' : '/bureau/programmes'"
+              >← Retour</a
+            >
+            <form class="workspace-form panel admin-form" (submit)="completeForm($event)">
+              @if (view === 'program-new') {
+                <p class="eyebrow">Programme</p>
+                <h2>Créer un nouveau programme</h2>
+                <p>
+                  Cadrez l’objectif, le territoire et la période avant de planifier les activités.
+                </p>
+                <label
+                  >Nom du programme <input placeholder="Ex. Lecture pour tous" required
+                /></label>
+                <label
+                  >Objectif
+                  <textarea
+                    rows="4"
+                    placeholder="Quel changement ce programme doit-il produire ?"
+                    required
+                  ></textarea>
+                </label>
+                <div class="field-grid">
+                  <label
+                    >Territoire
+                    <select required>
+                      <option>Dakar</option>
+                      <option>Thiès</option>
+                      <option>Saint-Louis</option>
+                    </select></label
+                  ><label
+                    >Responsable
+                    <select required>
+                      <option>Mamadou Diop</option>
+                      <option>Fatou Sarr</option>
+                    </select></label
+                  >
+                </div>
+                <div class="field-grid">
+                  <label>Date de début <input type="date" required /></label
+                  ><label>Date de fin <input type="date" required /></label>
+                </div>
+              } @else if (view === 'activity-new') {
+                <p class="eyebrow">Activité</p>
+                <h2>Planifier une activité</h2>
+                <p>Ajoutez les informations pratiques visibles par les membres du territoire.</p>
+                <label
+                  >Programme
+                  <select required>
+                    <option>Brigades citoyennes</option>
+                    <option>Éducation civique</option>
+                  </select></label
+                >
+                <label
+                  >Nom de l’activité
+                  <input placeholder="Ex. Nettoyage citoyen de la plage" required
+                /></label>
+                <div class="field-grid">
+                  <label>Date <input type="date" required /></label
+                  ><label>Horaires <input placeholder="09 h 00 – 12 h 00" required /></label>
+                </div>
+                <label>Lieu précis <input placeholder="Point de rendez-vous" required /></label>
+                <label
+                  >Description
+                  <textarea
+                    rows="4"
+                    placeholder="Déroulement, matériel et consignes…"
+                    required
+                  ></textarea>
+                </label>
+                <label>Nombre de places <input type="number" value="50" min="1" required /></label>
+              } @else if (view === 'report') {
+                <p class="eyebrow">Brigades citoyennes · 24 octobre 2026</p>
+                <h2>Ajouter le compte rendu</h2>
+                <p>Conservez une trace utile, concise et vérifiable de l’activité.</p>
+                <label
+                  >Résumé
+                  <textarea rows="5" placeholder="Ce qui a été réalisé…" required></textarea>
+                </label>
+                <div class="field-grid">
+                  <label
+                    >Participants présents
+                    <input type="number" value="42" min="0" required /></label
+                  ><label>Sacs collectés <input type="number" value="68" min="0" /></label>
+                </div>
+                <label
+                  >Résultats et suites
+                  <textarea
+                    rows="4"
+                    placeholder="Résultats observés et prochaines étapes…"
+                    required
+                  ></textarea>
+                </label>
+                <label
+                  >Photos ou document
+                  <span class="upload-field"
+                    ><ui-icon name="plus" /><span
+                      ><strong>Ajouter des fichiers</strong
+                      ><small>JPG, PNG ou PDF · 10 Mo maximum</small></span
+                    ></span
+                  ></label
+                >
+              } @else {
+                <p class="eyebrow">Compte d’accès</p>
+                <h2>Inviter un coordonnateur</h2>
+                <p>La personne recevra un lien personnel pour créer son mot de passe.</p>
+                <div class="field-grid">
+                  <label>Prénom <input placeholder="Prénom" required /></label
+                  ><label>Nom <input placeholder="Nom" required /></label>
+                </div>
+                <label
+                  >Adresse courriel
+                  <input type="email" placeholder="prenom.nom@exemple.com" required
+                /></label>
+                <div class="field-grid">
+                  <label
+                    >Rôle
+                    <select required>
+                      <option>Coordonnateur</option>
+                      <option>Membre fondateur</option>
+                    </select></label
+                  ><label
+                    >Territoire
+                    <select required>
+                      <option>Dakar</option>
+                      <option>Thiès</option>
+                      <option>Saint-Louis</option>
+                    </select></label
+                  >
+                </div>
+                <div class="security-alert compact">
+                  <ui-icon name="key" />
+                  <p>
+                    <strong>Accès contrôlé</strong>Seul un fondateur peut envoyer cette invitation.
+                  </p>
+                </div>
+              }
+              <div class="form-actions">
+                <a
+                  class="btn btn-outline"
+                  [routerLink]="view === 'invite' ? '/bureau/comptes' : '/bureau/programmes'"
+                  >Annuler</a
+                ><button class="btn btn-green" type="submit">
+                  {{
+                    view === 'report'
+                      ? 'Publier le compte rendu'
+                      : view === 'invite'
+                        ? 'Envoyer l’invitation'
+                        : 'Enregistrer'
+                  }}
+                </button>
+              </div>
+              @if (formSaved()) {
+                <p class="inline-success" role="status">✓ Les informations ont été enregistrées.</p>
+              }
+            </form>
+          }
+
+          @if (view === 'program-detail') {
+            <a class="back-link" routerLink="/bureau/programmes">← Retour aux programmes</a>
+            <section class="program-overview panel">
+              <div>
+                <p class="eyebrow">Programme · Dakar</p>
+                <h2>Brigades citoyennes</h2>
+                <p>
+                  Mobiliser les jeunes autour d’actions concrètes de salubrité et de solidarité.
+                </p>
+              </div>
+              <span class="badge success">En cours</span>
+              <div class="progress"><i style="width: 70%"></i></div>
+              <dl>
+                <div>
+                  <dt>Responsable</dt>
+                  <dd>Mamadou Diop</dd>
+                </div>
+                <div>
+                  <dt>Période</dt>
+                  <dd>Janvier – décembre 2026</dd>
+                </div>
+                <div>
+                  <dt>Progression</dt>
+                  <dd>70 %</dd>
+                </div>
+              </dl>
+            </section>
+            <div class="section-heading">
+              <div>
+                <h2>Activités du programme</h2>
+                <p>3 activités planifiées · 96 participations</p>
+              </div>
+              <a class="btn btn-green" routerLink="/bureau/activites/nouvelle"
+                ><ui-icon name="plus" />Planifier une activité</a
+              >
+            </div>
+            <section class="activity-admin-list">
+              <article class="panel">
+                <span class="date-tile"><b>24</b>OCT</span>
+                <div>
+                  <h3>Nettoyage citoyen de la plage de Yoff</h3>
+                  <p>09 h 00 – 12 h 00 · Plage de Yoff · 42 inscrits</p>
+                </div>
+                <span class="badge success">Terminée</span
+                ><a routerLink="/bureau/activites/brigade-dakar/presences">Présences</a
+                ><a routerLink="/bureau/activites/brigade-dakar/compte-rendu">Compte rendu</a>
+              </article>
+              <article class="panel">
+                <span class="date-tile"><b>12</b>NOV</span>
+                <div>
+                  <h3>Réhabilitation de l’aire de jeux</h3>
+                  <p>08 h 30 – 13 h 00 · Parc Hann · 31 inscrits</p>
+                </div>
+                <span class="badge warning">À venir</span
+                ><a routerLink="/bureau/activites/brigade-dakar/presences">Gérer</a>
+              </article>
+            </section>
+          }
+
+          @if (view === 'attendance') {
+            <a class="back-link" routerLink="/bureau/programmes/brigades-citoyennes"
+              >← Retour au programme</a
+            >
+            <section class="attendance-heading panel">
+              <div>
+                <p class="eyebrow">24 octobre 2026 · Plage de Yoff</p>
+                <h2>Présences — Nettoyage citoyen</h2>
+                <p>Cochez les membres présents. Les changements sont conservés avec leur auteur.</p>
+              </div>
+              <strong>8 / 10 présents</strong>
+            </section>
+            <div class="table-wrap attendance-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Présent</th>
+                    <th>Membre</th>
+                    <th>N° d’adhérent</th>
+                    <th>Territoire</th>
+                    <th>Arrivée</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (person of attendees; track person.name) {
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          [checked]="person.present"
+                          [attr.aria-label]="'Présence de ' + person.name"
+                        />
+                      </td>
+                      <td>
+                        <strong>{{ person.name }}</strong>
+                      </td>
+                      <td>{{ person.id }}</td>
+                      <td>Dakar</td>
+                      <td>{{ person.time }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <footer class="table-footer">
+                <span>Liste enregistrée automatiquement</span
+                ><button class="btn btn-green" type="button">Valider les présences</button>
+              </footer>
+            </div>
+          }
         </div>
       </section>
     </main>
@@ -348,6 +819,12 @@ export class AdminPage {
     { view: 'dashboard', label: 'Tableau de bord', icon: 'home', link: '/bureau' },
     { view: 'requests', label: 'Demandes d’adhésion', icon: 'users', link: '/bureau/demandes' },
     { view: 'members', label: 'Bases de membres', icon: 'grid', link: '/bureau/membres' },
+    {
+      view: 'coordinators',
+      label: 'Coordonnateurs',
+      icon: 'users',
+      link: '/bureau/coordonnateurs',
+    },
     { view: 'programs', label: 'Programmes', icon: 'calendar', link: '/bureau/programmes' },
     {
       view: 'territories',
@@ -356,7 +833,11 @@ export class AdminPage {
       link: '/bureau/territoires',
     },
     { view: 'accounts', label: 'Comptes d’accès', icon: 'key', link: '/bureau/comptes' },
+    { view: 'audit', label: 'Journal des actions', icon: 'clipboard', link: '/bureau/journal' },
   ];
+  protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
+  protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
+  protected readonly formSaved = signal(false);
   protected readonly stats = [
     {
       icon: 'users',
@@ -527,6 +1008,55 @@ export class AdminPage {
     { city: 'Kolda', region: 'Kolda', coordinators: 3, members: 84 },
     { city: 'Louga', region: 'Louga', coordinators: 5, members: 100 },
   ];
+  protected readonly auditEntries = [
+    {
+      icon: 'users',
+      action: 'Demande acceptée',
+      detail: 'Awa Ndiaye · Saint-Louis',
+      author: 'Bureau national',
+      when: 'Aujourd’hui, 10 h 42',
+      scope: 'Adhésion',
+    },
+    {
+      icon: 'download',
+      action: 'Liste exportée',
+      detail: 'Membres actifs de Dakar · 320 lignes',
+      author: 'Mamadou Diop',
+      when: 'Hier, 16 h 18',
+      scope: 'Export',
+    },
+    {
+      icon: 'key',
+      action: 'Coordonnatrice invitée',
+      detail: 'Fatou Sarr · Ziguinchor',
+      author: 'Bureau national',
+      when: '13 octobre, 09 h 05',
+      scope: 'Accès',
+    },
+    {
+      icon: 'calendar',
+      action: 'Activité modifiée',
+      detail: 'Nettoyage citoyen de la plage de Yoff',
+      author: 'Mamadou Diop',
+      when: '12 octobre, 14 h 33',
+      scope: 'Programme',
+    },
+    {
+      icon: 'users',
+      action: 'Membre suspendu',
+      detail: 'Compte de Cheikh Fall',
+      author: 'Bureau national',
+      when: '10 octobre, 11 h 20',
+      scope: 'Statut',
+    },
+  ];
+  protected readonly attendees = [
+    { name: 'Aminata Ndiaye', id: 'TBX-2026-00125', time: '08 h 52', present: true },
+    { name: 'Moussa Faye', id: 'TBX-2026-00133', time: '08 h 57', present: true },
+    { name: 'Adama Sow', id: 'TBX-2026-00141', time: '09 h 03', present: true },
+    { name: 'Marième Diallo', id: 'TBX-2026-00154', time: '—', present: false },
+    { name: 'Cheikh Fall', id: 'TBX-2026-00161', time: '09 h 08', present: true },
+  ];
   protected readonly chartDots = [
     { x: 5, y: 155 },
     { x: 60, y: 145 },
@@ -549,6 +1079,16 @@ export class AdminPage {
         programs: 'Programmes',
         territories: 'Localités de coordination',
         accounts: 'Comptes d’accès',
+        coordinators: 'Coordonnateurs',
+        audit: 'Journal des actions',
+        'request-detail': 'Examiner la demande',
+        'member-detail': 'Fiche membre',
+        'program-new': 'Nouveau programme',
+        'program-detail': 'Détail du programme',
+        'activity-new': 'Planifier une activité',
+        report: 'Compte rendu',
+        attendance: 'Présences',
+        invite: 'Inviter un coordonnateur',
       } as Record<string, string>
     )[this.view];
   }
@@ -561,6 +1101,16 @@ export class AdminPage {
         programs: 'Suivi des initiatives du Mouvement TABAXI',
         territories: 'Gestion des localités et de leurs coordonnateurs',
         accounts: 'Gestion des utilisateurs et des accès à la plateforme',
+        coordinators: 'Membres du bureau exécutif et territoires rattachés',
+        audit: 'Historique des décisions et opérations sensibles',
+        'request-detail': 'Décider avec les informations utiles et garder une trace',
+        'member-detail': 'Informations, participation et statut du compte',
+        'program-new': 'Définir un objectif, un territoire et une période',
+        'program-detail': 'Suivre les activités, la participation et l’avancement',
+        'activity-new': 'Préparer une activité visible par les membres du territoire',
+        report: 'Documenter les résultats d’une activité terminée',
+        attendance: 'Enregistrer les membres effectivement présents',
+        invite: 'Donner un accès au bureau exécutif',
       } as Record<string, string>
     )[this.view];
   }
@@ -573,16 +1123,42 @@ export class AdminPage {
           programs: 'Nouveau programme',
           territories: 'Ajouter une localité',
           accounts: 'Créer un compte',
+          coordinators: 'Inviter un coordonnateur',
         } as Record<string, string>
       )[this.view] || 'Ajouter'
     );
   }
+  protected get actionLink(): string {
+    return (
+      (
+        {
+          requests: '/bureau/demandes/awa-ndiaye',
+          members: '/bureau/membres/aminata-ndiaye',
+          coordinators: '/bureau/comptes/inviter',
+          programs: '/bureau/programmes/nouveau',
+          territories: '/bureau/territoires',
+          accounts: '/bureau/comptes/inviter',
+        } as Record<string, string>
+      )[this.view] || '/bureau'
+    );
+  }
+  protected get hasPrimaryAction(): boolean {
+    return ['requests', 'members', 'coordinators', 'programs', 'territories', 'accounts'].includes(
+      this.view,
+    );
+  }
+  protected completeForm(event: SubmitEvent): void {
+    event.preventDefault();
+    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.formSaved.set(true);
+  }
   protected get visiblePeople() {
     if (this.view === 'requests') return this.requests;
-    if (this.view === 'accounts')
-      return this.requests
-        .slice(0, 6)
-        .map((person, index) => ({ ...person, status: index === 5 ? 'Inactif' : 'Actif' }));
+    if (this.view === 'accounts' || this.view === 'coordinators')
+      return this.requests.slice(0, 6).map((person, index) => ({
+        ...person,
+        role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
+        status: index === 5 ? 'Inactif' : 'Actif',
+      }));
     return this.requests.map((person, index) => ({
       ...person,
       status: index === 6 ? 'Inactif' : 'Actif',

@@ -105,9 +105,11 @@ import { UiIcon } from '../shared/ui-icon';
                 <span>✓</span>
                 <h2>{{ isFinalize ? 'Votre profil est prêt.' : 'Votre demande est prête.' }}</h2>
                 <p>Le parcours visuel est validé. Le raccordement à l’API activera l’envoi réel.</p>
-                <a class="btn btn-green" [routerLink]="isFinalize ? '/membre' : '/finaliser'">{{
-                  isFinalize ? 'Voir mon espace' : 'Voir l’étape suivante'
-                }}</a>
+                <a
+                  class="btn btn-green"
+                  [routerLink]="isFinalize ? '/membre' : '/adherer/confirmation'"
+                  >{{ isFinalize ? 'Voir mon espace' : 'Suivre ma demande' }}</a
+                >
               </div>
             } @else {
               <form class="join-form" (submit)="submit($event)">

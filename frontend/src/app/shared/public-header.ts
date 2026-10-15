@@ -13,13 +13,16 @@ import { UiIcon } from './ui-icon';
       <nav aria-label="Navigation principale">
         <a routerLink="/" fragment="apropos">À propos</a>
         <a routerLink="/" fragment="actions">Nos actions</a>
-        <a routerLink="/membre/programmes">Nos programmes</a>
+        <a routerLink="/" fragment="programmes">Nos programmes</a>
         <a routerLink="/" fragment="actualites">Actualités</a>
         <a routerLink="/adherer">Nous rejoindre</a>
       </nav>
-      <a class="btn btn-green header-login" routerLink="/membre"
-        ><ui-icon name="users" /> Se connecter</a
-      >
+      <div class="header-actions">
+        <a class="btn btn-gold header-join" routerLink="/adherer">Adhérer</a>
+        <a class="btn btn-green header-login" routerLink="/connexion"
+          ><ui-icon name="users" /> Se connecter</a
+        >
+      </div>
     </header>
   `,
 })

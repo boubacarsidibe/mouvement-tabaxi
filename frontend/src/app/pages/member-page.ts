@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MemberCard } from '../shared/member-card';
 import { UiIcon } from '../shared/ui-icon';
@@ -23,11 +23,16 @@ import { UiIcon } from '../shared/ui-icon';
           <a routerLink="/membre/carte" [class.active]="view === 'card'"
             ><ui-icon name="card" />Ma carte numérique</a
           >
+          <a routerLink="/membre/profil" [class.active]="view === 'profile'"
+            ><ui-icon name="users" />Mon profil</a
+          >
         </nav>
         <div class="side-profile">
           <img src="member-aminata.jpg" alt="" />
           <span><strong>Aminata Ndiaye</strong><small>Dakar</small></span>
-          <a routerLink="/"><ui-icon name="users" />Changer de profil</a>
+          <a routerLink="/membre/securite" [class.active]="view === 'security'"
+            ><ui-icon name="key" />Sécurité du compte</a
+          >
           <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
         </div>
       </aside>
@@ -87,7 +92,7 @@ import { UiIcon } from '../shared/ui-icon';
               <article class="panel profile-panel">
                 <div class="panel-title">
                   <h2>Mon profil</h2>
-                  <a href="#"><ui-icon name="plus" />Modifier</a>
+                  <a routerLink="/membre/profil"><ui-icon name="plus" />Modifier</a>
                 </div>
                 <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
                 <h3>Aminata Ndiaye</h3>
@@ -200,7 +205,9 @@ import { UiIcon } from '../shared/ui-icon';
                     [class.warning]="program.status === 'À venir'"
                     [class.success]="program.status === 'En cours'"
                     >{{ program.status }}</span
-                  ><button class="btn btn-green">Participer</button>
+                  ><a class="btn btn-green" routerLink="/membre/activites/brigades-citoyennes"
+                    >Voir l’activité</a
+                  >
                 </article>
               }
             </section>
@@ -226,13 +233,189 @@ import { UiIcon } from '../shared/ui-icon';
             </p>
           </div>
         }
+
+        @if (view === 'profile') {
+          <div class="workspace-content narrow-workspace">
+            <header class="page-heading">
+              <div>
+                <p class="eyebrow">Informations personnelles</p>
+                <h1>Mon profil</h1>
+                <p>Mettez à jour vos coordonnées et votre photo.</p>
+              </div>
+              <span class="badge success">Membre actif</span>
+            </header>
+            <form class="workspace-form panel" (submit)="saveProfile($event)">
+              <section class="profile-identity">
+                <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
+                <div>
+                  <h2>Photo de profil</h2>
+                  <p>JPG ou PNG, 5 Mo maximum.</p>
+                  <button class="btn btn-outline" type="button">Choisir une photo</button>
+                </div>
+              </section>
+              <div class="field-grid">
+                <label
+                  >Prénom <input value="Aminata" disabled /><small
+                    >Modifiable uniquement par le bureau.</small
+                  ></label
+                >
+                <label
+                  >Nom <input value="Ndiaye" disabled /><small
+                    >Modifiable uniquement par le bureau.</small
+                  ></label
+                >
+              </div>
+              <label
+                >Adresse courriel <input type="email" value="aminata.ndiaye@gmail.com" required
+              /></label>
+              <label
+                >Adresse complète <input value="18, rue de la Corniche, Dakar" required
+              /></label>
+              <div class="field-grid">
+                <label>Téléphone <input type="tel" value="+221 77 456 78 90" /></label>
+                <label
+                  >Territoire <input value="Dakar" disabled /><small
+                    >Rattaché par le bureau.</small
+                  ></label
+                >
+              </div>
+              <div class="form-actions">
+                <a class="btn btn-outline" routerLink="/membre">Annuler</a>
+                <button class="btn btn-green" type="submit">Enregistrer les modifications</button>
+              </div>
+              @if (profileSaved()) {
+                <p class="inline-success" role="status">✓ Vos informations ont été enregistrées.</p>
+              }
+            </form>
+          </div>
+        }
+
+        @if (view === 'activity') {
+          <div class="workspace-content activity-detail-view">
+            <a class="back-link" routerLink="/membre/programmes">← Retour aux activités</a>
+            <section class="activity-hero panel">
+              <div class="activity-kicker"><ui-icon name="leaf" />Brigades citoyennes · Dakar</div>
+              <h1>Nettoyage citoyen de la plage de Yoff</h1>
+              <p>
+                Une matinée utile pour rendre la plage plus propre et sensibiliser les riverains à
+                la gestion des déchets.
+              </p>
+              <div class="activity-meta">
+                <span
+                  ><ui-icon name="calendar" /><strong>Samedi 24 octobre</strong>09 h 00 – 12 h
+                  00</span
+                >
+                <span
+                  ><ui-icon name="location" /><strong>Plage de Yoff</strong>Rendez-vous près du
+                  poste de secours</span
+                >
+                <span
+                  ><ui-icon name="users" /><strong>42 participants</strong>8 places restantes</span
+                >
+              </div>
+            </section>
+            <div class="detail-columns">
+              <article class="panel prose-panel">
+                <h2>À propos de l’activité</h2>
+                <p>
+                  Les équipes seront réparties par zone. Le matériel de collecte, les gants et l’eau
+                  seront fournis sur place.
+                </p>
+                <h3>À prévoir</h3>
+                <ul>
+                  <li>Une tenue confortable et des chaussures fermées</li>
+                  <li>Une casquette et une protection solaire</li>
+                  <li>Votre carte de membre numérique</li>
+                </ul>
+                <h3>Coordination</h3>
+                <div class="contact-row">
+                  <img src="coordinator-mamadou.jpg" alt="" /><span
+                    ><strong>Mamadou Diop</strong><small>Coordonnateur · Dakar</small></span
+                  ><button class="btn btn-outline">Contacter</button>
+                </div>
+              </article>
+              <aside class="panel registration-panel">
+                <p class="eyebrow">Votre participation</p>
+                <h2>{{ joined() ? 'Inscription confirmée' : 'Participez avec nous' }}</h2>
+                <p>
+                  {{
+                    joined()
+                      ? 'Votre place est réservée. Vous recevrez un rappel la veille.'
+                      : 'Inscrivez-vous avant le 22 octobre pour aider l’équipe à préparer le matériel.'
+                  }}
+                </p>
+                <button
+                  class="btn btn-green btn-wide"
+                  type="button"
+                  (click)="joined.set(!joined())"
+                >
+                  {{ joined() ? 'Se désinscrire' : 'Je participe' }}
+                </button>
+                <small>Inscription gratuite · réservée aux membres de Dakar</small>
+              </aside>
+            </div>
+          </div>
+        }
+
+        @if (view === 'security') {
+          <div class="workspace-content narrow-workspace">
+            <header class="page-heading">
+              <div>
+                <p class="eyebrow">Compte</p>
+                <h1>Sécurité du compte</h1>
+                <p>Gérez votre mot de passe et vos connexions actives.</p>
+              </div>
+            </header>
+            <section class="settings-stack">
+              <form class="workspace-form panel" (submit)="savePassword($event)">
+                <h2>Changer mon mot de passe</h2>
+                <p>Utilisez au moins 8 caractères, avec une lettre et un chiffre.</p>
+                <label>Mot de passe actuel <input type="password" required minlength="8" /></label>
+                <div class="field-grid">
+                  <label
+                    >Nouveau mot de passe <input type="password" required minlength="8" /></label
+                  ><label
+                    >Confirmer le mot de passe <input type="password" required minlength="8"
+                  /></label>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-green" type="submit">Mettre à jour</button>
+                </div>
+                @if (passwordSaved()) {
+                  <p class="inline-success" role="status">✓ Mot de passe mis à jour.</p>
+                }
+              </form>
+              <article class="panel session-panel">
+                <div>
+                  <h2>Session active</h2>
+                  <p><strong>Windows · Codex</strong><small>Dakar · maintenant</small></p>
+                </div>
+                <span class="badge success">Cette session</span>
+              </article>
+            </section>
+          </div>
+        }
       </section>
     </main>
   `,
 })
 export class MemberPage {
   private readonly route = inject(ActivatedRoute);
-  protected readonly view = this.route.snapshot.data['view'] as 'home' | 'programs' | 'card';
+  protected readonly view = this.route.snapshot.data['view'] as
+    'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
+  protected readonly joined = signal(false);
+  protected readonly profileSaved = signal(false);
+  protected readonly passwordSaved = signal(false);
+
+  protected saveProfile(event: SubmitEvent): void {
+    event.preventDefault();
+    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.profileSaved.set(true);
+  }
+
+  protected savePassword(event: SubmitEvent): void {
+    event.preventDefault();
+    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.passwordSaved.set(true);
+  }
 
   protected readonly stats = [
     { icon: 'users', value: '1 248', label: 'Membres', note: 'dans le mouvement', delta: '+12%' },
