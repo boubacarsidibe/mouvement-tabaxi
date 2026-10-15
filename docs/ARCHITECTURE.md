@@ -134,10 +134,12 @@ sequenceDiagram
 
 ## Sécurité
 
-- Mot de passe d'au moins 10 caractères, stocké sous forme d'empreinte.
+- Mot de passe d'au moins 10 caractères, stocké sous forme d'empreinte Argon2id ; les anciennes empreintes PBKDF2 sont converties à la connexion suivante.
+- Sans `DJANGO_DEBUG=1`, le serveur se comporte comme en production : il refuse de démarrer sans vraie clé secrète (50 caractères au moins), redirige tout vers https, active HSTS (un an) et n'envoie les cookies qu'en https. Derrière un hébergeur qui termine le https, `DJANGO_BEHIND_HTTPS_PROXY=1`. Contrôle : `python manage.py check --deploy`.
+- En-têtes sur toutes les réponses de Django : politique de contenu (CSP) stricte, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Cross-Origin-Opener-Policy: same-origin`. Le frontend, servi à part, devra avoir les mêmes en-têtes chez son hébergeur.
+- Cookie de session `HttpOnly` (illisible par le JavaScript) et `SameSite=Lax` ; le cookie anti-CSRF reste lisible, car Angular doit le renvoyer.
 - Liens personnels : jeton aléatoire, empreinte seule conservée, valable 7 jours, usage unique.
-- Connexion chiffrée (https) en production.
-- Journal des actions importantes.
+- Journal des actions importantes (à venir, #42).
 - Aucune donnée de membre ni secret dans le dépôt.
 
 ## Décisions à prendre
