@@ -8,7 +8,7 @@ import { UiIcon } from '../shared/ui-icon';
   imports: [PublicHeader, RouterLink, UiIcon],
   template: `
     <main class="public-canvas">
-      <section class="public-frame">
+      <section class="public-frame home-frame">
         <app-public-header />
 
         <div class="public-hero">

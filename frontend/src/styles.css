@@ -161,6 +161,9 @@ small {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 28px 80px rgba(26, 55, 38, 0.18);
 }
+.public-frame.home-frame {
+  min-height: 0;
+}
 .public-header {
   height: 76px;
   position: relative;
