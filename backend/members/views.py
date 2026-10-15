@@ -1,6 +1,6 @@
 from django.contrib.auth import login
 from django.http import FileResponse, Http404
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -10,7 +10,7 @@ from accounts.serializers import UserSerializer
 from core.links import LinkProblem
 
 from .registration import check_link, complete_registration
-from .serializers import RegistrationLinkSerializer, RegistrationSerializer
+from .serializers import MemberProfileSerializer, RegistrationLinkSerializer, RegistrationSerializer
 
 
 class RegistrationCheckView(APIView):
@@ -78,3 +78,17 @@ class MyPhotoView(APIView):
         response = FileResponse(member.photo.open('rb'), content_type='image/jpeg')
         response['Cache-Control'] = 'private, max-age=300'
         return response
+
+
+class MyProfileView(generics.RetrieveUpdateAPIView):
+    """Profil et données de carte du membre connecté (GET), modification de ses coordonnées (PATCH)."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = MemberProfileSerializer
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_object(self):
+        member = getattr(self.request.user, 'member', None)
+        if member is None:
+            raise Http404
+        return member
