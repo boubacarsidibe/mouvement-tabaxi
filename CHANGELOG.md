@@ -31,6 +31,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : mot de passe oublié (lien valable une heure, utilisable une fois) et changement du mot de passe une fois connecté (#29).
 - Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
 - Backend : profil du membre connecté (lecture des données de la carte, modification de l'adresse, du téléphone et de la photo ; nom et territoire réservés au bureau) (#33).
+- Déploiement sur Vercel : configuration, base Postgres par `DATABASE_URL`, photos chiffrées en base, procédure manuelle (#52).
 
 ### Modifié
 

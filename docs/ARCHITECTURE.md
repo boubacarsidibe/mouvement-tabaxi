@@ -18,7 +18,7 @@ flowchart LR
 |---|---|---|
 | Frontend | `frontend/` | Application Angular : pages publiques, interface membre, interface bureau exécutif |
 | Backend | `backend/` | API Django REST : comptes, territoires, demandes, membres, programmes |
-| Base de données | SQLite en local, à choisir en production | Stockage des données |
+| Base de données | SQLite en local, Postgres (Neon) en ligne | Stockage des données |
 | Courriels | Service d'envoi configurable | Réponses aux demandes, liens personnels, réinitialisation de mot de passe |
 
 ## Backend
@@ -184,3 +184,4 @@ sequenceDiagram
 |---|---|---|
 | 2026-10-15 | Django + Angular | Choix du propriétaire du projet |
 | 2026-10-15 | Pas d'intégration ni de déploiement automatiques | Choix du propriétaire du projet |
+| 2026-10-15 | Hébergement sur Vercel (écrans et API), base Postgres Neon, photos en base | Choix du propriétaire du projet ; procédure dans [DEPLOIEMENT.md](DEPLOIEMENT.md) |
