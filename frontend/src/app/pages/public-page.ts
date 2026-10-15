@@ -30,24 +30,6 @@ import { UiIcon } from '../shared/ui-icon';
             Notre engagement<br />pour des communautés<br />plus fortes <i></i>
           </div>
 
-          <div class="role-row">
-            <a class="role-card role-login" routerLink="/connexion">
-              <ui-icon name="key" />
-              <strong>Se connecter</strong>
-              <span
-                >Membres, coordonnateurs et fondateurs : une seule connexion avec votre
-                courriel.</span
-              >
-              <b aria-hidden="true">→</b>
-            </a>
-            <a class="role-card role-join" routerLink="/adherer">
-              <ui-icon name="plus" />
-              <strong>Je souhaite<br />devenir membre</strong>
-              <span>Commencez votre demande d’adhésion en quelques minutes.</span>
-              <b aria-hidden="true">→</b>
-            </a>
-          </div>
-
           <aside class="member-strip" aria-label="Exemples de membres du mouvement">
             <h2>Découvrez des membres du mouvement</h2>
             <div class="member-faces">
