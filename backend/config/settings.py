@@ -97,6 +97,7 @@ REST_FRAMEWORK = {
     # Limite les envois répétés depuis une même adresse sur les formulaires publics.
     'DEFAULT_THROTTLE_RATES': {
         'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
+        'registration': os.environ.get('REGISTRATION_RATE', '30/hour'),
     },
 }
 
@@ -247,6 +248,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Fichiers envoyés (photos de profil). Ils ne sont jamais servis directement : l'API les
+# renvoie après contrôle d'accès. Le dossier est ignoré par Git.
+MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
 
 # Email
