@@ -10,4 +10,7 @@ urlpatterns = [
     path('password/reset/check/', views.PasswordResetCheckView.as_view(), name='password-reset-check'),
     path('password/reset/', views.PasswordResetView.as_view(), name='password-reset'),
     path('password/change/', views.PasswordChangeView.as_view(), name='password-change'),
+    path('invitations/', views.InvitationCreateView.as_view(), name='invitation-create'),
+    path('invitation/check/', views.InvitationCheckView.as_view(), name='invitation-check'),
+    path('invitation/accept/', views.InvitationAcceptView.as_view(), name='invitation-accept'),
 ]
