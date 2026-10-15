@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
 
@@ -41,6 +42,16 @@ class User(AbstractUser):
     username = None
     email = models.EmailField('courriel', unique=True)
     role = models.CharField('rôle', max_length=20, choices=Role.choices, default=Role.MEMBRE)
+    # Territoire de rattachement d'un membre, ou territoire de coordination d'un coordonnateur.
+    # Un fondateur voit tout et n'en a pas besoin.
+    territory = models.ForeignKey(
+        'territories.Territory',
+        verbose_name='territoire',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='users',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -58,6 +69,15 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def clean(self):
+        super().clean()
+        if self.role == self.Role.COORDONNATEUR and self.territory_id is None:
+            raise ValidationError({'territory': 'Un coordonnateur doit être rattaché à un territoire.'})
+
+    @property
+    def is_founder(self):
+        return self.role == self.Role.FONDATEUR
 
     @property
     def is_bureau(self):
