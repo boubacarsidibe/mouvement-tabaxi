@@ -4356,3 +4356,13 @@ textarea[aria-invalid='true'] {
   width: 17px;
   height: 17px;
 }
+/* Bouton à l'apparence d'un lien, pour « Réessayer » dans un message d'erreur. */
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
