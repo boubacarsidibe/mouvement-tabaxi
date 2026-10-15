@@ -221,7 +221,16 @@ p {
 .public-hero {
   min-height: 640px;
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 680px) minmax(420px, 1fr);
+  grid-template-areas:
+    'copy note'
+    'roles members';
+  grid-template-rows: auto 1fr;
+  gap: 40px 28px;
+  align-items: start;
   overflow: hidden;
+  padding: 50px 28px 28px 60px;
 }
 .public-hero::after {
   position: absolute;
@@ -245,10 +254,10 @@ p {
   object-position: center bottom;
 }
 .public-hero-copy {
-  width: 520px;
+  width: min(520px, 100%);
   position: relative;
   z-index: 2;
-  padding: 50px 0 0 60px;
+  grid-area: copy;
 }
 .overline {
   display: flex;
@@ -281,12 +290,13 @@ p {
   color: #5c6770;
   font-size: 20px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 .commitment-note {
-  position: absolute;
+  position: relative;
   z-index: 3;
-  top: 50px;
-  right: 12%;
+  grid-area: note;
+  justify-self: center;
   color: #08734e;
   font-family: Georgia, serif;
   font-size: 25px;
@@ -303,17 +313,18 @@ p {
   transform: rotate(-3deg);
 }
 .role-row {
-  width: 680px;
-  position: absolute;
+  width: 100%;
+  position: relative;
   z-index: 4;
-  left: 60px;
-  bottom: 54px;
   display: grid;
+  grid-area: roles;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  align-self: end;
 }
 .role-card {
-  min-height: 160px;
+  min-width: 0;
+  min-height: 180px;
   position: relative;
   display: flex;
   align-items: flex-start;
@@ -334,11 +345,13 @@ p {
   margin-bottom: 6px;
   font-size: 18px;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 .role-card span {
   color: #58665e;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .role-card b {
   width: 28px;
@@ -370,18 +383,19 @@ p {
   color: #116c49;
 }
 .member-strip {
-  width: 580px;
+  width: 100%;
   min-height: 132px;
-  position: absolute;
+  min-width: 0;
+  position: relative;
   z-index: 4;
-  right: 28px;
-  bottom: 10px;
   padding: 18px 22px;
   border: 1px solid rgba(218, 226, 220, 0.9);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(10px);
   box-shadow: 0 12px 35px rgba(24, 55, 37, 0.12);
+  grid-area: members;
+  align-self: end;
 }
 .member-strip h2 {
   margin-bottom: 12px;
@@ -406,12 +420,12 @@ p {
   object-fit: cover;
 }
 .member-faces strong {
-  font-size: 10px;
-  line-height: 1.15;
+  font-size: 13px;
+  line-height: 1.2;
 }
 .member-faces span {
-  color: #66746c;
-  font-size: 9px;
+  color: #536159;
+  font-size: 12px;
 }
 .public-actions {
   max-width: 1180px;
@@ -2111,6 +2125,35 @@ table input {
   }
 }
 
+@media (max-width: 1200px) {
+  .public-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'copy'
+      'roles'
+      'members';
+    grid-template-rows: auto;
+    gap: 24px;
+    padding: 40px 32px 32px;
+  }
+  .commitment-note {
+    display: none;
+  }
+  .public-hero-copy {
+    width: min(600px, 100%);
+  }
+  .role-row,
+  .member-strip {
+    width: 100%;
+    right: auto;
+    left: auto;
+  }
+  .member-faces {
+    gap: 16px;
+  }
+}
+
 @media (max-width: 900px) {
   .public-canvas {
     padding: 0;
@@ -2143,7 +2186,8 @@ table input {
     padding: 9px 12px;
   }
   .public-hero {
-    min-height: 950px;
+    min-height: auto;
+    padding: 40px 24px 24px;
   }
   .public-hero::after {
     background: linear-gradient(
@@ -2154,13 +2198,13 @@ table input {
     );
   }
   .public-hero-art {
-    height: 560px;
-    top: 260px;
+    height: 100%;
+    top: 0;
     object-position: 60% bottom;
   }
   .public-hero-copy {
     width: auto;
-    padding: 40px 24px 0;
+    padding: 0;
   }
   .public-hero h1 {
     font-size: clamp(54px, 13vw, 72px);
@@ -2172,10 +2216,7 @@ table input {
     display: none;
   }
   .role-row {
-    width: auto;
-    left: 20px;
-    right: 20px;
-    bottom: 160px;
+    width: 100%;
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -2192,10 +2233,7 @@ table input {
     font-size: 16px;
   }
   .member-strip {
-    width: auto;
-    left: 20px;
-    right: 20px;
-    bottom: 18px;
+    width: 100%;
   }
   .member-faces {
     grid-template-columns: repeat(6, 1fr);
@@ -2325,20 +2363,20 @@ table input {
     display: none;
   }
   .public-hero {
-    min-height: 1030px;
+    min-height: auto;
+    padding: 32px 16px 18px;
   }
   .public-hero-art {
-    top: 310px;
-    height: 480px;
-  }
-  .role-row {
-    bottom: 172px;
+    top: 0;
+    height: 100%;
   }
   .member-strip {
-    overflow-x: auto;
+    overflow: hidden;
   }
   .member-faces {
-    width: 520px;
+    width: auto;
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 16px;
   }
   .join-layout {
     padding: 10px;
