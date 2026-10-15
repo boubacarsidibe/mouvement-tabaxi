@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
+from core.fields import EncryptedTextField
 from core.tokens import new_token, token_digest
 
 
@@ -29,7 +30,8 @@ class Application(models.Model):
         'territories.Territory', verbose_name='localité souhaitée', on_delete=models.PROTECT, related_name='applications'
     )
     profession = models.CharField('profession', max_length=120)
-    motivation = models.TextField('motivation', max_length=2000)
+    # Données sensibles : chiffrées en base (core/crypto.py).
+    motivation = EncryptedTextField('motivation', max_length=2000)
     consent_at = models.DateTimeField('consentement donné le')
     status = models.CharField('statut', max_length=20, choices=Status.choices, default=Status.A_EXAMINER, db_index=True)
     created_at = models.DateTimeField('déposée le', auto_now_add=True)
@@ -45,8 +47,8 @@ class Application(models.Model):
         related_name='decided_applications',
     )
     decided_at = models.DateTimeField('décision prise le', null=True, blank=True)
-    rejection_reason = models.TextField('motif du refus', blank=True)
-    internal_note = models.TextField('note interne', blank=True, help_text='Visible par les fondateurs seulement.')
+    rejection_reason = EncryptedTextField('motif du refus', blank=True)
+    internal_note = EncryptedTextField('note interne', blank=True, help_text='Visible par les fondateurs seulement.')
 
     class Meta:
         verbose_name = "demande d'adhésion"
