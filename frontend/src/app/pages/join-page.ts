@@ -30,29 +30,6 @@ import { UiIcon } from '../shared/ui-icon';
                     : 'Parlez-nous simplement de vous. Le bureau étudiera votre demande et vous répondra personnellement.'
                 }}
               </p>
-
-              <dl class="enrollment-facts">
-                <div>
-                  <dt><ui-icon name="calendar" /></dt>
-                  <dd>
-                    <strong>{{ isFinalize ? '7 jours' : '5 jours ouvrés' }}</strong
-                    ><span>{{
-                      isFinalize ? 'pour utiliser votre lien' : 'pour recevoir une réponse'
-                    }}</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt><ui-icon [name]="isFinalize ? 'card' : 'location'" /></dt>
-                  <dd>
-                    <strong>{{ isFinalize ? 'Carte numérique' : 'Ancrage local' }}</strong
-                    ><span>{{
-                      isFinalize
-                        ? 'disponible dès l’activation'
-                        : 'un rattachement à votre territoire'
-                    }}</span>
-                  </dd>
-                </div>
-              </dl>
             </div>
 
             <figure class="enrollment-visual">
