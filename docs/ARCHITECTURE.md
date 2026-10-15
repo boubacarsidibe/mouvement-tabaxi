@@ -44,6 +44,15 @@ L'application `programs` (programmes, activités, présences) sera ajoutée avec
 
 Chaque application regroupe ses modèles, son administration, ses routes (`urls.py`), ses vues et ses tests (`tests.py`).
 
+### Territoires
+
+Modèle `territories.Territory` : nom, type (`pays`, `region`, `commune`), territoire parent, actif ou non.
+
+- Une commune est rattachée à une région, une région à un pays, un pays à rien. Vérifié à chaque enregistrement et par une contrainte en base.
+- Un nom est unique parmi les territoires d'un même parent (une commune peut porter le nom de sa région).
+- Un territoire utilisé ne peut pas être supprimé (protection en base) : on le désactive.
+- Territoires de départ chargés par la migration `0002` : le Sénégal, ses 14 régions et 47 communes (chefs-lieux des 46 départements, plus Touba), à compléter par les fondateurs depuis l'administration.
+
 ### Conventions de l'API
 
 - Toutes les routes commencent par `/api/` et se terminent par une barre oblique (`/api/health/`).
