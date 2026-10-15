@@ -1,7 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
+
+from core.models import OneTimeLink
+from core.tokens import new_token
 
 
 class UserManager(BaseUserManager):
@@ -103,3 +109,45 @@ class LoginFailure(models.Model):
 
     def __str__(self):
         return f'{self.email} – {self.created_at:%d/%m/%Y %H:%M}'
+
+
+class AccountLink(OneTimeLink):
+    """Lien personnel lié à un compte : réinitialisation du mot de passe ou invitation au bureau."""
+
+    class Purpose(models.TextChoices):
+        RESET = 'reinitialisation', 'Réinitialisation du mot de passe'
+        INVITATION = 'invitation', 'Invitation au bureau exécutif'
+
+    VALIDITIES = {
+        Purpose.RESET: timedelta(hours=1),
+        Purpose.INVITATION: timedelta(days=7),
+    }
+
+    user = models.ForeignKey(User, verbose_name='compte', on_delete=models.CASCADE, related_name='account_links')
+    purpose = models.CharField('usage', max_length=20, choices=Purpose.choices)
+
+    class Meta(OneTimeLink.Meta):
+        verbose_name = 'lien personnel de compte'
+        verbose_name_plural = 'liens personnels de compte'
+
+    def __str__(self):
+        return f'{self.get_purpose_display()} – {self.user}'
+
+    @classmethod
+    def issue(cls, user, purpose):
+        """Crée un lien ; les liens précédents du même usage cessent de fonctionner."""
+        cls.objects.filter(user=user, purpose=purpose, used_at__isnull=True, expires_at__gt=timezone.now()).update(
+            expires_at=timezone.now()
+        )
+        token, digest = new_token()
+        link = cls.objects.create(
+            user=user, purpose=purpose, token_digest=digest, expires_at=timezone.now() + cls.VALIDITIES[purpose]
+        )
+        return link, token
+
+    @classmethod
+    def find(cls, token, purpose):
+        link = cls.lookup(token)
+        if link is None or link.purpose != purpose:
+            return None
+        return cls.objects.select_related('user').get(pk=link.pk)

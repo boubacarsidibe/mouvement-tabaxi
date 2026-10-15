@@ -98,6 +98,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
         'registration': os.environ.get('REGISTRATION_RATE', '30/hour'),
+        'password_reset': os.environ.get('PASSWORD_RESET_RATE', '10/hour'),
     },
 }
 
