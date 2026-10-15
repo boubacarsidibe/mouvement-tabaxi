@@ -1,14 +1,24 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from . import lockout
+from core.links import LinkProblem
+
+from . import lockout, password_reset
 from .models import User
-from .serializers import LoginSerializer, UserSerializer
+from .serializers import (
+    ForgotPasswordSerializer,
+    LoginSerializer,
+    PasswordChangeSerializer,
+    PasswordResetSerializer,
+    TokenSerializer,
+    UserSerializer,
+)
 
 INVALID_CREDENTIALS = 'Courriel ou mot de passe incorrect.'
 INACTIVE_ACCOUNT = (
@@ -76,3 +86,64 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class PasswordThrottleMixin:
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+
+
+class ForgotPasswordView(PasswordThrottleMixin, APIView):
+    """Demande d'un lien de réinitialisation. Même réponse qu'un compte existe ou non."""
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password_reset.request_reset(serializer.validated_data['email'])
+        return Response({'detail': password_reset.REQUEST_ACKNOWLEDGED})
+
+
+class PasswordResetCheckView(PasswordThrottleMixin, APIView):
+    """Vérifie le lien avant d'afficher le formulaire du nouveau mot de passe."""
+
+    def post(self, request):
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            link = password_reset.check_reset_link(serializer.validated_data['token'])
+        except LinkProblem as problem:
+            return problem.response()
+        return Response({'email': link.user.email, 'expires_at': link.expires_at})
+
+
+class PasswordResetView(PasswordThrottleMixin, APIView):
+    """Nouveau mot de passe choisi avec le lien reçu par courriel."""
+
+    def post(self, request):
+        token = str(request.data.get('token', ''))
+        try:
+            link = password_reset.check_reset_link(token)
+        except LinkProblem as problem:
+            return problem.response()
+        serializer = PasswordResetSerializer(data=request.data, context={'user': link.user})
+        serializer.is_valid(raise_exception=True)
+        try:
+            password_reset.reset_password(token, serializer.validated_data['password'])
+        except LinkProblem as problem:
+            return problem.response()
+        return Response({'detail': 'Votre mot de passe a été changé. Vous pouvez vous connecter.'})
+
+
+class PasswordChangeView(APIView):
+    """Changement du mot de passe par la personne connectée. Ses autres sessions sont fermées."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data, context={'user': request.user})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)  # garde cette session ouverte
+        return Response({'detail': 'Votre mot de passe a été mis à jour.'})

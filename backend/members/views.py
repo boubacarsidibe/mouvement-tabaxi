@@ -7,13 +7,10 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.serializers import UserSerializer
+from core.links import LinkProblem
 
-from .registration import LinkProblem, check_link, complete_registration
+from .registration import check_link, complete_registration
 from .serializers import RegistrationLinkSerializer, RegistrationSerializer
-
-
-def link_problem_response(problem):
-    return Response({'detail': problem.detail, 'code': problem.code}, status=problem.status)
 
 
 class RegistrationCheckView(APIView):
@@ -31,7 +28,7 @@ class RegistrationCheckView(APIView):
         try:
             link = check_link(str(request.data.get('token', '')))
         except LinkProblem as problem:
-            return link_problem_response(problem)
+            return problem.response()
         return Response(RegistrationLinkSerializer(link).data)
 
 
@@ -47,7 +44,7 @@ class RegistrationView(APIView):
         try:
             link = check_link(token)
         except LinkProblem as problem:
-            return link_problem_response(problem)
+            return problem.response()
         serializer = RegistrationSerializer(data=request.data, context={'application': link.application})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -61,7 +58,7 @@ class RegistrationView(APIView):
                 rules_accepted=data['accept_rules'],
             )
         except LinkProblem as problem:
-            return link_problem_response(problem)
+            return problem.response()
         login(request, user)
         return Response(
             {'user': UserSerializer(user).data, 'member_number': user.member.number},

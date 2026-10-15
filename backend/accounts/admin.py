@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import LoginFailure, User
+from .models import AccountLink, LoginFailure, User
 
 
 @admin.register(User)
@@ -30,6 +30,23 @@ class LoginFailureAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'email', 'ip_address')
     search_fields = ('email', 'ip_address')
     date_hierarchy = 'created_at'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AccountLink)
+class AccountLinkAdmin(admin.ModelAdmin):
+    """Liens envoyés (réinitialisation, invitation) : dates seulement, le jeton n'est jamais conservé."""
+
+    list_display = ('user', 'purpose', 'created_at', 'expires_at', 'used_at')
+    list_filter = ('purpose',)
+    search_fields = ('user__email',)
+    fields = ('user', 'purpose', 'created_at', 'expires_at', 'used_at')
+    readonly_fields = fields
 
     def has_add_permission(self, request):
         return False

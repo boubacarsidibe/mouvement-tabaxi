@@ -1,9 +1,9 @@
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 
 from accounts.models import User
+from accounts.serializers import check_new_password
 from territories.serializers import TerritorySummarySerializer
 
 from .photos import prepare_photo
@@ -50,13 +50,8 @@ class RegistrationSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError({'password_confirm': ['Les deux mots de passe ne correspondent pas.']})
         application = self.context['application']
-        # Le mot de passe ne doit pas ressembler au nom ou au courriel de la personne.
+        # Le compte n'existe pas encore : on compare le mot de passe aux données de la demande.
         candidate = User(email=application.email, first_name=application.first_name, last_name=application.last_name)
-        try:
-            validate_password(data['password'], user=candidate)
-        except DjangoValidationError as error:
-            raise serializers.ValidationError({'password': error.messages})
+        check_new_password(data['password'], data['password_confirm'], candidate)
         return data

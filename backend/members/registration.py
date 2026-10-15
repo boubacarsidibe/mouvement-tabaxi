@@ -5,16 +5,9 @@ from django.utils import timezone
 
 from accounts.models import User
 from applications.models import Application, RegistrationLink
+from core.links import LinkProblem
 
 from .models import Member
-
-
-class LinkProblem(Exception):
-    """Le lien ne permet pas (ou plus) de finaliser l'inscription. Le message dit quoi faire."""
-
-    def __init__(self, code, detail, status):
-        super().__init__(detail)
-        self.code, self.detail, self.status = code, detail, status
 
 
 INVALID_LINK = (
