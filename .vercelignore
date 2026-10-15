@@ -1,0 +1,13 @@
+# Fichiers locaux à ne jamais envoyer à Vercel
+.git
+.claude
+.vercel
+**/.env
+**/__pycache__
+backend/.venv
+backend/db.sqlite3
+backend/media
+frontend/node_modules
+frontend/.angular
+frontend/dist
+docs

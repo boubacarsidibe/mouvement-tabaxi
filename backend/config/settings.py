@@ -14,6 +14,7 @@ import os
 import sys
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.csp import CSP
 
@@ -44,6 +45,11 @@ if not DEBUG and not TESTING and (SECRET_KEY in DEV_SECRET_KEYS or len(SECRET_KE
     )
 
 ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h]
+
+# Sur Vercel, l'adresse du déploiement est fournie par la plateforme (VERCEL_URL, sans https://).
+VERCEL_URL = os.environ.get('VERCEL_URL', '')
+if VERCEL_URL:
+    ALLOWED_HOSTS.append(VERCEL_URL)
 
 # Clés de chiffrement des données sensibles en base (voir core/crypto.py), séparées par des
 # virgules : la première chiffre, toutes déchiffrent. Obligatoires en production ; en local
@@ -80,7 +86,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200').split(',') if o]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + ([f'https://{VERCEL_URL}'] if VERCEL_URL else [])
 
 # Noms attendus par défaut par le client HTTP d'Angular : il lit le cookie XSRF-TOKEN
 # et renvoie sa valeur dans l'en-tête X-XSRF-TOKEN pour chaque requête qui modifie.
@@ -104,6 +110,8 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sert les fichiers de l'administration Django sans serveur de fichiers séparé.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -179,11 +187,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# SQLite en local ; en ligne, la base Postgres décrite par DATABASE_URL (Neon sur Vercel).
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        # Hébergement sans serveur : une connexion par requête, rendue aussitôt.
+        conn_max_age=0,
+        ssl_require=bool(os.environ.get('DATABASE_URL')) and not DEBUG,
+    )
 }
 
 
@@ -249,10 +260,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+# Les fichiers de l'administration sont servis directement depuis les applications,
+# sans étape « collectstatic » au déploiement.
+WHITENOISE_USE_FINDERS = True
 
 # Fichiers envoyés (photos de profil). Ils ne sont jamais servis directement : l'API les
 # renvoie après contrôle d'accès. Le dossier est ignoré par Git.
 MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
+
+# Sans disque durable (Vercel), les photos sont gardées en base, chiffrées (core/storage.py).
+STORAGES = {
+    'default': {
+        'BACKEND': 'core.storage.DatabaseStorage'
+        if os.environ.get('DJANGO_FILE_STORAGE') == 'database'
+        else 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
 
 
 # Email
@@ -263,7 +287,23 @@ MAILERS = {
     'default': mailer_from_env(os.environ),
 }
 
+# En production, un courriel « envoyé » dans la console n'arrive à personne : une demande serait
+# marquée « Acceptée » sans que la personne reçoive son lien. Un vrai serveur d'envoi est donc
+# exigé, sauf pour un aperçu de test déclaré (les courriels s'affichent alors dans les journaux).
+if (
+    not DEBUG
+    and not TESTING
+    and not os.environ.get('EMAIL_HOST', '').strip()
+    and not env_flag(os.environ.get('EMAIL_CONSOLE_IN_PRODUCTION', '0'))
+):
+    raise ImproperlyConfigured(
+        'EMAIL_HOST est obligatoire en production. Pour un aperçu de test seulement, '
+        'EMAIL_CONSOLE_IN_PRODUCTION=1 affiche les courriels dans les journaux du serveur.'
+    )
+
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
 
 # Adresse publique du frontend, pour les liens personnels envoyés par courriel.
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+FRONTEND_URL = os.environ.get('FRONTEND_URL') or (
+    f'https://{VERCEL_URL}' if VERCEL_URL else 'http://localhost:4200'
+)
