@@ -14,3 +14,4 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Labels, sprints et issues GitHub.
 - Backend : applications `core`, `territories`, `applications` et `members`, routes sous `/api/` et point de contrôle `/api/health/` (#12).
 - Backend : lecture du fichier `backend/.env` au démarrage (#12).
+- Backend : territoires emboîtés pays, région, commune, avec l'administration et les territoires de départ du Sénégal (#13).
