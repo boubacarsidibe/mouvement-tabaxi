@@ -1,5 +1,5 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { PublicHeader } from '../shared/public-header';
 import { UiIcon } from '../shared/ui-icon';
 
@@ -24,19 +24,25 @@ import { UiIcon } from '../shared/ui-icon';
               <p class="eyebrow">Demande envoyée</p>
               <h1>Merci, votre demande est entre de bonnes mains.</h1>
               <p class="confirmation-lead">
-                Le bureau de TABAXI va maintenant l’examiner. La réponse arrivera par courriel sous
-                cinq jours ouvrés.
+                Le bureau de TABAXI va maintenant l’examiner. Vous recevrez la réponse par courriel.
               </p>
-              <div class="confirmation-reference">
-                <span>Votre référence</span><strong>TAB-2026-00418</strong
-                ><button type="button" aria-label="Copier la référence" (click)="copyReference()">
-                  {{ copied() ? 'Copiée' : 'Copier' }}
-                </button>
-              </div>
+              @if (reference) {
+                <div class="confirmation-reference">
+                  <span>Votre référence</span><strong>{{ reference }}</strong
+                  ><button type="button" aria-label="Copier la référence" (click)="copyReference()">
+                    {{ copied() ? 'Copiée' : 'Copier' }}
+                  </button>
+                </div>
+              }
               <div class="request-timeline" aria-label="Suivi de la demande">
                 <article class="done">
                   <b>✓</b
-                  ><span><strong>Demande reçue</strong><small>15 octobre · 16 h 42</small></span>
+                  ><span
+                    ><strong>Demande reçue</strong>
+                    @if (receivedAt) {
+                      <small>{{ receivedAt }}</small>
+                    }
+                  </span>
                 </article>
                 <article class="active">
                   <b>2</b
@@ -87,9 +93,36 @@ import { UiIcon } from '../shared/ui-icon';
 })
 export class RequestStatusPage {
   protected readonly copied = signal(false);
+  /** Référence et date renvoyées par le serveur au dépôt, gardées dans l'historique du navigateur. */
+  private readonly sent = (inject(Router).currentNavigation()?.extras.state ?? history.state) as {
+    reference?: string;
+    createdAt?: string;
+  } | null;
+  protected readonly reference = this.sent?.reference ?? '';
+  protected readonly receivedAt = formatReceived(this.sent?.createdAt);
 
   protected async copyReference(): Promise<void> {
-    await navigator.clipboard.writeText('TAB-2026-00418');
+    await navigator.clipboard.writeText(this.reference);
     this.copied.set(true);
   }
+}
+
+/** « 15 octobre · 16 h 42 », à l'heure de Dakar. */
+function formatReceived(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const zone = { timeZone: 'Africa/Dakar' } as const;
+  const day = new Intl.DateTimeFormat('fr-FR', { ...zone, day: 'numeric', month: 'long' }).format(
+    date,
+  );
+  const parts = new Intl.DateTimeFormat('fr-FR', {
+    ...zone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((acc, part) => ({ ...acc, [part.type]: part.value }), {});
+  return `${day} · ${parts['hour']} h ${parts['minute']}`;
 }
