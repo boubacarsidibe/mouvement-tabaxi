@@ -96,6 +96,7 @@ class ListTests(ReviewTestCase):
         self.assertIsNotNone(data['next'])
 
     def test_nombre_de_requetes_constant(self):
+        self.client.get('/api/applications/')  # première requête : enregistre l'heure d'activité
         with self.assertNumQueries(4):  # session, utilisateur, comptage, page
             self.client.get('/api/applications/')
 

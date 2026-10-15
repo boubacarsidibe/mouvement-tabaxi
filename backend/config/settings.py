@@ -62,6 +62,7 @@ CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.SessionAuthentication'],
+    'EXCEPTION_HANDLER': 'core.exceptions.api_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
     # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
@@ -79,6 +80,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.BureauInactivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -132,6 +134,9 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# La session d'un membre du bureau se ferme après cette durée sans action (besoin B4).
+BUREAU_INACTIVITY_MINUTES = int(os.environ.get('BUREAU_INACTIVITY_MINUTES', '30'))
 
 # Blocage temporaire de la connexion après plusieurs échecs (voir accounts/lockout.py).
 LOGIN_MAX_FAILURES_PER_ACCOUNT = int(os.environ.get('LOGIN_MAX_FAILURES_PER_ACCOUNT', '5'))

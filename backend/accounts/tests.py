@@ -247,3 +247,50 @@ class LockoutTests(TestCase):
     def test_adresse_x_forwarded_for_ignoree_sans_proxy_de_confiance(self):
         self.login(password='mauvais-mot-de-passe', ip='192.0.2.10', HTTP_X_FORWARDED_FOR='203.0.113.5')
         self.assertEqual(LoginFailure.objects.get().ip_address, '192.0.2.10')
+
+
+class BureauInactivityTests(TestCase):
+    """La session du bureau se ferme après 30 minutes sans action ; celle d'un membre simple non."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.coordonnateur = User.objects.create_user('coord@example.org', PASSWORD, role=User.Role.COORDONNATEUR)
+        cls.fondateur = User.objects.create_user('fondateur@example.org', PASSWORD, role=User.Role.FONDATEUR)
+        cls.membre = User.objects.create_user('membre@example.org', PASSWORD)
+
+    def me_at(self, moment):
+        with mock.patch('django.utils.timezone.now', return_value=moment):
+            return self.client.get('/api/auth/me/')
+
+    def test_session_du_bureau_fermee_apres_30_minutes_sans_action(self):
+        start = timezone.now()
+        self.client.force_login(self.coordonnateur)
+        self.assertEqual(self.me_at(start).status_code, 200)
+        response = self.me_at(start + timedelta(minutes=30, seconds=1))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['code'], 'session_expired')
+        self.assertIn('Reconnectez-vous', response.json()['detail'])
+        # La session est bien fermée, pas seulement refusée une fois.
+        self.assertEqual(self.me_at(start + timedelta(minutes=31)).json()['code'], 'not_authenticated')
+
+    def test_chaque_action_repousse_l_echeance(self):
+        start = timezone.now()
+        self.client.force_login(self.fondateur)
+        for minutes in (0, 25, 50, 75):
+            self.assertEqual(self.me_at(start + timedelta(minutes=minutes)).status_code, 200, minutes)
+
+    def test_29_minutes_sans_action_ne_ferment_pas_la_session(self):
+        start = timezone.now()
+        self.client.force_login(self.fondateur)
+        self.me_at(start)
+        self.assertEqual(self.me_at(start + timedelta(minutes=29)).status_code, 200)
+
+    def test_membre_simple_non_concerne(self):
+        start = timezone.now()
+        self.client.force_login(self.membre)
+        self.me_at(start)
+        self.assertEqual(self.me_at(start + timedelta(hours=3)).status_code, 200)
+
+    def test_code_d_erreur_ordinaire_sans_session(self):
+        response = self.client.get('/api/auth/me/')
+        self.assertEqual(response.json()['code'], 'not_authenticated')
