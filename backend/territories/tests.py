@@ -86,6 +86,65 @@ class StartingTerritoriesTests(TestCase):
         self.assertEqual(communes.count(), 47)
 
 
+def flatten(nodes):
+    for node in nodes:
+        yield node
+        yield from flatten(node['children'])
+
+
+class PublicTerritoryListTests(TestCase):
+    url = '/api/territories/'
+
+    def get_tree(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        return response.json()
+
+    def test_public(self):
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_contient_tous_les_territoires_actifs(self):
+        ids = {node['id'] for node in flatten(self.get_tree())}
+        self.assertEqual(ids, set(Territory.objects.filter(is_active=True).values_list('id', flat=True)))
+
+    def test_hierarchie_pays_region_commune(self):
+        tree = self.get_tree()
+        senegal = next(node for node in tree if node['name'] == 'Sénégal')
+        self.assertEqual(senegal['kind'], 'pays')
+        self.assertEqual(senegal['kind_label'], 'Pays')
+        self.assertEqual(len(senegal['children']), 14)
+        dakar = next(node for node in senegal['children'] if node['name'] == 'Dakar')
+        self.assertEqual(dakar['kind'], 'region')
+        self.assertEqual(
+            [c['name'] for c in dakar['children']], ['Dakar', 'Guédiawaye', 'Keur Massar', 'Pikine', 'Rufisque']
+        )
+        self.assertTrue(all(c['kind'] == 'commune' and c['children'] == [] for c in dakar['children']))
+
+    def test_ordre_alphabetique_francais(self):
+        senegal = next(node for node in self.get_tree() if node['name'] == 'Sénégal')
+        names = [region['name'] for region in senegal['children']]
+        self.assertLess(names.index('Kédougou'), names.index('Kolda'))
+        self.assertLess(names.index('Saint-Louis'), names.index('Sédhiou'))
+
+    def test_territoire_inactif_exclu(self):
+        Territory.objects.filter(name='Touba').update(is_active=False)
+        names = {node['name'] for node in flatten(self.get_tree())}
+        self.assertNotIn('Touba', names)
+        self.assertIn('Mbacké', names)
+
+    def test_region_inactive_exclue_avec_ses_communes(self):
+        Territory.objects.filter(name='Kédougou', kind=Territory.Kind.REGION).update(is_active=False)
+        names = {node['name'] for node in flatten(self.get_tree())}
+        self.assertFalse({'Kédougou', 'Salémata', 'Saraya'} & names)
+
+    def test_une_seule_requete(self):
+        with self.assertNumQueries(1):
+            self.client.get(self.url)
+
+    def test_lecture_seule(self):
+        self.assertEqual(self.client.post(self.url, {}).status_code, 405)
+
+
 class TerritoryAdminTests(TestCase):
     def setUp(self):
         self.client.force_login(User.objects.create_superuser('fondateur@example.org', 'un-mot-de-passe-long'))

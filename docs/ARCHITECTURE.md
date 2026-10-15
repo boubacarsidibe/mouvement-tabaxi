@@ -77,6 +77,7 @@ Modèle `territories.Territory` : nom, type (`pays`, `region`, `commune`), terri
 | `POST /api/auth/login/` | public | Connexion. Corps : `email`, `password`, `remember` (facultatif). Renvoie l'utilisateur (200) ; 400 `invalid_credentials` ; 403 `inactive_account` |
 | `POST /api/auth/logout/` | public | Déconnexion (204) |
 | `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau` ; 401 sinon |
+| `GET /api/territories/` | public | Territoires actifs en arbre pays > région > commune, par ordre alphabétique : `[{"id", "name", "kind", "kind_label", "children": [...]}]`. Un territoire dont un parent est inactif n'apparaît pas |
 
 ## Frontend
 
