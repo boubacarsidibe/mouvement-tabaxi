@@ -1,105 +1,101 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+
+import { ApiService } from '../core/api.service';
 import { PublicHeader } from '../shared/public-header';
-import { UiIcon } from '../shared/ui-icon';
 
 @Component({
   selector: 'app-auth-page',
-  imports: [PublicHeader, RouterLink, UiIcon],
+  imports: [PublicHeader, RouterLink],
   template: `
     <main class="public-canvas auth-canvas">
       <section class="public-frame auth-frame">
         <app-public-header [minimal]="true" />
         <div class="auth-layout">
           <aside class="auth-story">
-            <p class="overline"><span></span>Espace sécurisé</p>
-            <h1>{{ isForgot ? 'Retrouver votre accès.' : 'Heureux de vous revoir.' }}</h1>
+            <p class="eyebrow">Espace sécurisé</p>
+            <h1>{{ isForgot ? 'Retrouvez votre accès.' : 'Votre engagement continue ici.' }}</h1>
+            <span class="auth-story-rule" aria-hidden="true"></span>
             <p>
               {{
                 isForgot
-                  ? 'Indiquez l’adresse courriel associée à votre compte. Nous vous enverrons un lien valable pendant 30 minutes.'
-                  : 'Une seule connexion pour les membres, les coordonnateurs et les fondateurs.'
+                  ? 'Nous vous aidons à retrouver l’accès associé à votre adhésion.'
+                  : 'Retrouvez votre espace membre ou le bureau exécutif depuis un accès unique.'
               }}
             </p>
-            <div class="auth-assurance">
-              <ui-icon name="key" />
-              <span
-                ><strong>Vos accès restent privés</strong>Les droits sont vérifiés selon votre rôle
-                et votre territoire.</span
-              >
-            </div>
-            <blockquote>« Agir près de chez soi, avancer ensemble. »</blockquote>
           </aside>
 
           <section class="auth-panel">
-            @if (submitted()) {
-              <div class="submit-success" role="status">
-                <span>✓</span>
-                <h2>{{ isForgot ? 'Vérifiez votre messagerie' : 'Connexion vérifiée' }}</h2>
-                <p>
-                  {{
-                    isForgot
-                      ? 'Si un compte correspond à cette adresse, un courriel vient d’être envoyé.'
-                      : 'Choisissez l’espace de démonstration à ouvrir.'
-                  }}
+            @if (isForgot) {
+              <div class="auth-form auth-support" role="status">
+                <p class="eyebrow">Accès au compte</p>
+                <h2>Mot de passe oublié ?</h2>
+                <p class="form-intro">
+                  Pour protéger votre compte, contactez votre coordinateur depuis l’adresse liée à
+                  votre adhésion.
                 </p>
-                @if (isForgot) {
-                  <a class="btn btn-green" routerLink="/connexion">Retour à la connexion</a>
-                } @else {
-                  <div class="auth-destinations">
-                    <a class="btn btn-green" routerLink="/membre">Espace membre</a>
-                    <a class="btn btn-outline" routerLink="/bureau">Bureau exécutif</a>
-                  </div>
-                }
+                <p class="auth-support-note">
+                  Le bureau vérifiera votre identité avant de rétablir votre accès.
+                </p>
+                <a class="btn btn-green" routerLink="/connexion">Retour à la connexion</a>
               </div>
             } @else {
-              <form class="auth-form" (submit)="submit($event)">
-                <p class="eyebrow">{{ isForgot ? 'Réinitialisation' : 'Connexion' }}</p>
-                <h2>{{ isForgot ? 'Mot de passe oublié' : 'Accéder à mon espace' }}</h2>
-                <p class="form-intro">
-                  {{
-                    isForgot
-                      ? 'Saisissez votre courriel pour recevoir les instructions.'
-                      : 'Utilisez les identifiants transmis lors de votre adhésion.'
-                  }}
-                </p>
+              <form class="auth-form" (submit)="submit($event)" novalidate>
+                <p class="eyebrow">Connexion</p>
+                <h2>Accéder à mon espace</h2>
+                <p class="form-intro">Utilisez l’adresse associée à votre compte TABAXI.</p>
+
+                @if (errorMessage()) {
+                  <p class="form-error" role="alert">{{ errorMessage() }}</p>
+                }
+
                 <label>
                   Adresse courriel
-                  <span class="input-with-icon"
-                    ><ui-icon name="mail" /><input
-                      type="email"
-                      name="email"
-                      placeholder="prenom.nom@exemple.com"
-                      required
-                  /></span>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="exemple@domaine.com"
+                    autocomplete="email"
+                    required
+                  />
                 </label>
-                @if (!isForgot) {
-                  <label>
-                    Mot de passe
-                    <span class="input-with-icon"
-                      ><ui-icon name="key" /><input
-                        type="password"
-                        name="password"
-                        placeholder="Votre mot de passe"
-                        required
-                        minlength="10"
-                    /></span>
-                  </label>
-                  <div class="form-inline">
-                    <label class="check-row"
-                      ><input type="checkbox" /><span>Rester connecté</span></label
+                <label>
+                  Mot de passe
+                  <span class="password-field">
+                    <input
+                      [type]="showPassword() ? 'text' : 'password'"
+                      name="password"
+                      placeholder="Votre mot de passe"
+                      autocomplete="current-password"
+                      required
+                      minlength="10"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle"
+                      (click)="showPassword.set(!showPassword())"
+                      [attr.aria-label]="
+                        showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+                      "
                     >
-                    <a routerLink="/mot-de-passe-oublie">Mot de passe oublié ?</a>
-                  </div>
-                }
-                <button class="btn btn-green btn-wide" type="submit">
-                  {{ isForgot ? 'Envoyer le lien' : 'Se connecter' }}
+                      {{ showPassword() ? 'Masquer' : 'Afficher' }}
+                    </button>
+                  </span>
+                </label>
+                <div class="form-inline">
+                  <label class="check-row"
+                    ><input type="checkbox" name="remember" /><span>Rester connecté</span></label
+                  >
+                  <a routerLink="/mot-de-passe-oublie">Mot de passe oublié ?</a>
+                </div>
+                <button class="btn btn-green btn-wide" type="submit" [disabled]="submitting()">
+                  {{ submitting() ? 'Connexion en cours…' : 'Se connecter' }}
                 </button>
-                @if (!isForgot) {
-                  <p class="auth-help">
-                    Pas encore membre ? <a routerLink="/adherer">Déposer une demande</a>
-                  </p>
-                }
+                <p class="auth-help">
+                  Un problème d’accès ?
+                  <a routerLink="/mot-de-passe-oublie">Contactez votre coordinateur</a>
+                </p>
               </form>
             }
           </section>
@@ -110,12 +106,63 @@ import { UiIcon } from '../shared/ui-icon';
 })
 export class AuthPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
+
   protected readonly isForgot = this.route.snapshot.data['mode'] === 'forgot';
-  protected readonly submitted = signal(false);
+  protected readonly submitting = signal(false);
+  protected readonly errorMessage = signal('');
+  protected readonly showPassword = signal(false);
 
   protected submit(event: SubmitEvent): void {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
-    if (form.reportValidity()) this.submitted.set(true);
+    if (!form.reportValidity() || this.submitting()) return;
+
+    const data = new FormData(form);
+    this.submitting.set(true);
+    this.errorMessage.set('');
+    this.api
+      .login(
+        String(data.get('email') ?? ''),
+        String(data.get('password') ?? ''),
+        data.get('remember') === 'on',
+      )
+      .subscribe({
+        next: (user) => {
+          const requested = this.route.snapshot.queryParamMap.get('retour');
+          const destination = requested?.startsWith('/')
+            ? requested
+            : user.is_bureau
+              ? '/bureau'
+              : '/membre';
+          void this.router
+            .navigateByUrl(destination)
+            .then((navigated) => {
+              if (!navigated) {
+                this.errorMessage.set(
+                  'La connexion a réussi, mais votre espace n’a pas pu être ouvert. Réessayez.',
+                );
+                this.submitting.set(false);
+              }
+            })
+            .catch(() => {
+              this.errorMessage.set(
+                'La connexion a réussi, mais votre espace n’a pas pu être ouvert. Réessayez.',
+              );
+              this.submitting.set(false);
+            });
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage.set(
+            typeof error.error?.detail === 'string'
+              ? error.error.detail
+              : error.status === 0
+                ? 'Le service est momentanément inaccessible. Réessayez dans quelques instants.'
+                : 'Connexion impossible. Vérifiez vos informations.',
+          );
+          this.submitting.set(false);
+        },
+      });
   }
 }

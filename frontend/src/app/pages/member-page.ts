@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ApiService } from '../core/api.service';
 import { MemberCard } from '../shared/member-card';
 import { DEMO_MEMBER, drawMemberCard } from '../shared/member-card-image';
 import { UiIcon } from '../shared/ui-icon';
@@ -34,7 +35,7 @@ import { UiIcon } from '../shared/ui-icon';
           <a routerLink="/membre/securite" [class.active]="view === 'security'"
             ><ui-icon name="key" />Sécurité du compte</a
           >
-          <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
+          <a routerLink="/" (click)="logout($event)"><ui-icon name="logout" />Se déconnecter</a>
         </div>
       </aside>
 
@@ -412,12 +413,22 @@ import { UiIcon } from '../shared/ui-icon';
 })
 export class MemberPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   protected readonly joined = signal(false);
   protected readonly profileSaved = signal(false);
   protected readonly passwordSaved = signal(false);
   protected readonly cardError = signal('');
+
+  protected logout(event: Event): void {
+    event.preventDefault();
+    this.api.logout().subscribe({
+      next: () => void this.router.navigateByUrl('/connexion'),
+      error: () => void this.router.navigateByUrl('/connexion'),
+    });
+  }
 
   protected async downloadCard(): Promise<void> {
     this.cardError.set('');

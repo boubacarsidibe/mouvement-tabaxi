@@ -1,3 +1,5 @@
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -123,3 +125,36 @@ class RejectSerializer(serializers.Serializer):
         error_messages={'required': REJECTION_REASON_REQUIRED, 'blank': REJECTION_REASON_REQUIRED, 'null': REJECTION_REASON_REQUIRED},
     )
     internal_note = serializers.CharField(label='note interne', max_length=2000, required=False, allow_blank=True, default='')
+
+
+class RegistrationPreviewSerializer(serializers.ModelSerializer):
+    territory = TerritorySummarySerializer(read_only=True)
+
+    class Meta:
+        model = Application
+        fields = ('first_name', 'last_name', 'email', 'territory')
+        read_only_fields = fields
+
+
+class FinalizeRegistrationSerializer(serializers.Serializer):
+    address = serializers.CharField(label='adresse complète', max_length=300)
+    photo = serializers.FileField(label='photo')
+    password = serializers.CharField(label='mot de passe', write_only=True, trim_whitespace=False)
+    password_confirm = serializers.CharField(label='confirmation du mot de passe', write_only=True, trim_whitespace=False)
+
+    def validate_photo(self, photo):
+        if photo.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('La photo ne doit pas dépasser 5 Mo.')
+        content_type = getattr(photo, 'content_type', '')
+        if content_type not in {'image/jpeg', 'image/png', 'image/webp'}:
+            raise serializers.ValidationError('Choisissez une image JPG, PNG ou WebP.')
+        return photo
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({'password_confirm': ['Les deux mots de passe ne correspondent pas.']})
+        try:
+            password_validation.validate_password(attrs['password'])
+        except DjangoValidationError as error:
+            raise serializers.ValidationError({'password': list(error.messages)})
+        return attrs

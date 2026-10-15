@@ -31,13 +31,13 @@ import { UiIcon } from '../shared/ui-icon';
           </div>
 
           <div class="role-row">
-            <a class="role-card role-founder" routerLink="/bureau">
+            <a class="role-card role-founder" routerLink="/connexion">
               <ui-icon name="users" />
               <strong>Membre fondateur</strong>
               <span>Contribuez dès aujourd’hui à bâtir le mouvement.</span>
               <b aria-hidden="true">→</b>
             </a>
-            <a class="role-card role-member" routerLink="/membre">
+            <a class="role-card role-member" routerLink="/connexion">
               <ui-icon name="users" />
               <strong>Membre simple</strong>
               <span>Rejoignez une communauté citoyenne active.</span>

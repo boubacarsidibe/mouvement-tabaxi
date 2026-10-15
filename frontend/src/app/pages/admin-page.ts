@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ApiService, MembershipApplication } from '../core/api.service';
 import { UiIcon } from '../shared/ui-icon';
 
 @Component({
@@ -25,7 +26,7 @@ import { UiIcon } from '../shared/ui-icon';
             <span>BE</span>
             <p><strong>mouvement.tabaxi&#64;gmail.com</strong><small>Membre fondateur</small></p>
           </div>
-          <a routerLink="/"><ui-icon name="logout" />Se déconnecter</a>
+          <a routerLink="/" (click)="logout($event)"><ui-icon name="logout" />Se déconnecter</a>
         </div>
       </aside>
 
@@ -185,22 +186,37 @@ import { UiIcon } from '../shared/ui-icon';
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
+                  #requestSearch
                   [attr.aria-label]="view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'"
+                  (input)="view === 'requests' && loadRequests(requestStatus.value, requestSearch.value)"
                   [placeholder]="
                     view === 'requests'
                       ? 'Rechercher un nom, un email, une localité…'
                       : 'Rechercher un membre…'
                   " /></label
-              ><select aria-label="Filtrer par localité">
-                <option>Localité · Toutes</option></select
-              ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option></select
+              >@if (view !== 'requests') {
+                <select aria-label="Filtrer par localité"><option>Localité · Toutes</option></select>
+              }<select #requestStatus aria-label="Filtrer par statut" (change)="view === 'requests' && loadRequests(requestStatus.value, requestSearch.value)">
+                <option value="">Statut · Tous</option>
+                @if (view === 'requests') {
+                  <option value="a_examiner">À examiner</option>
+                  <option value="acceptee">Acceptée</option>
+                  <option value="rejetee">Rejetée</option>
+                  <option value="inscrite">Inscrite</option>
+                }
+              </select
               >@if (view !== 'requests') {
                 <select aria-label="Filtrer par rôle">
                   <option>Rôle · Tous</option>
                 </select>
-              }<button>Réinitialiser</button>
+              }<button type="button" (click)="requestSearch.value = ''; requestStatus.value = ''; view === 'requests' && loadRequests()">Réinitialiser</button>
             </div>
+            @if (view === 'requests' && requestsLoading()) {
+              <p class="inline-notice" role="status">Chargement des demandes…</p>
+            }
+            @if (view === 'requests' && requestError()) {
+              <p class="inline-error" role="alert">{{ requestError() }}</p>
+            }
             <div class="table-wrap responsive-table">
               <table>
                 <thead>
@@ -262,11 +278,7 @@ import { UiIcon } from '../shared/ui-icon';
                       <td>
                         <a
                           class="row-action"
-                          [routerLink]="
-                            view === 'requests'
-                              ? '/bureau/demandes/awa-ndiaye'
-                              : '/bureau/membres/aminata-ndiaye'
-                          "
+                          [routerLink]="personLink(person)"
                           [attr.aria-label]="'Voir la fiche de ' + person.name"
                           >Voir</a
                         >
@@ -395,75 +407,67 @@ import { UiIcon } from '../shared/ui-icon';
 
           @if (view === 'request-detail') {
             <a class="back-link" routerLink="/bureau/demandes">← Retour aux demandes</a>
-            <section class="review-grid">
-              <article class="panel review-main">
-                <div class="identity-row">
-                  <span class="identity-avatar">AN</span>
-                  <div>
-                    <p class="eyebrow">Demande TAB-2026-00418</p>
-                    <h2>Awa Ndiaye</h2>
-                    <p>Déposée le 12 octobre 2026 à 10 h 24</p>
+            @if (requestsLoading()) {
+              <p class="inline-notice" role="status">Chargement de la demande…</p>
+            }
+            @if (requestError()) {
+              <p class="inline-error" role="alert">{{ requestError() }}</p>
+            }
+            @if (selectedApplication(); as application) {
+              <section class="review-grid">
+                <article class="panel review-main">
+                  <div class="identity-row">
+                    <span class="identity-avatar">{{ initials(application) }}</span>
+                    <div>
+                      <p class="eyebrow">Demande {{ application.reference }}</p>
+                      <h2>{{ application.first_name }} {{ application.last_name }}</h2>
+                      <p>Déposée le {{ formatDate(application.created_at) }}</p>
+                    </div>
+                    <span class="badge" [class.warning]="application.status === 'a_examiner'" [class.success]="application.status === 'acceptee' || application.status === 'inscrite'" [class.danger]="application.status === 'rejetee'">{{ application.status_label }}</span>
                   </div>
-                  <span class="badge warning">À examiner</span>
-                </div>
-                <dl class="detail-list">
-                  <div>
-                    <dt>Adresse courriel</dt>
-                    <dd>awa.ndiaye&#64;gmail.com</dd>
+                  <dl class="detail-list">
+                    <div><dt>Adresse courriel</dt><dd>{{ application.email }}</dd></div>
+                    <div><dt>Profession</dt><dd>{{ application.profession }}</dd></div>
+                    <div><dt>Localité souhaitée</dt><dd>{{ application.territory.path }}</dd></div>
+                    <div><dt>Consentement</dt><dd>Donné le {{ formatDate(application.consent_at) }}</dd></div>
+                  </dl>
+                  <div class="motivation-box">
+                    <h3>Motivation</h3>
+                    <p>{{ application.motivation }}</p>
                   </div>
-                  <div>
-                    <dt>Profession</dt>
-                    <dd>Enseignante</dd>
-                  </div>
-                  <div>
-                    <dt>Localité souhaitée</dt>
-                    <dd>Saint-Louis</dd>
-                  </div>
-                  <div>
-                    <dt>Disponibilité</dt>
-                    <dd>Soirs et week-ends</dd>
-                  </div>
-                </dl>
-                <div class="motivation-box">
-                  <h3>Motivation</h3>
-                  <p>
-                    Je souhaite contribuer aux activités d’éducation civique auprès des jeunes de
-                    Saint-Louis et mettre mon expérience d’enseignante au service du mouvement.
-                  </p>
-                </div>
-              </article>
-              <aside class="panel decision-panel">
-                <p class="eyebrow">Décision du fondateur</p>
-                <h2>Examiner la demande</h2>
-                <p>Chaque décision est datée et ajoutée au journal d’actions.</p>
-                <label
-                  >Note interne<textarea
-                    rows="4"
-                    placeholder="Ajouter une note utile au bureau…"
-                  ></textarea>
-                </label>
-                <button
-                  class="btn btn-green btn-wide"
-                  type="button"
-                  (click)="requestDecision.set('accepted')"
-                >
-                  Accepter la demande
-                </button>
-                <button
-                  class="btn btn-danger-outline btn-wide"
-                  type="button"
-                  (click)="requestDecision.set('rejected')"
-                >
-                  Refuser avec un motif
-                </button>
-                @if (requestDecision() !== 'pending') {
-                  <p class="inline-success" role="status">
-                    ✓ Décision enregistrée :
-                    {{ requestDecision() === 'accepted' ? 'demande acceptée' : 'refus préparé' }}.
-                  </p>
-                }
-              </aside>
-            </section>
+                </article>
+                <aside class="panel decision-panel">
+                  <p class="eyebrow">Décision du fondateur</p>
+                  <h2>Examiner la demande</h2>
+                  <p>La personne reçoit la décision par courriel. Chaque action est datée.</p>
+
+                  @if (application.status === 'a_examiner') {
+                    <label>Note interne<textarea #internalNote rows="4" placeholder="Ajouter une note utile au bureau…"></textarea></label>
+                    @if (rejectMode()) {
+                      <label>Motif communiqué à la personne <em>*</em><textarea #rejectionReason rows="4" required placeholder="Expliquez clairement le refus…"></textarea></label>
+                      <button class="btn btn-danger-outline btn-wide" type="button" [disabled]="decisionLoading()" (click)="decide(application, 'reject', internalNote.value, rejectionReason.value)">
+                        {{ decisionLoading() ? 'Envoi en cours…' : 'Confirmer le refus' }}
+                      </button>
+                      <button class="btn btn-outline btn-wide" type="button" (click)="rejectMode.set(false)">Annuler</button>
+                    } @else {
+                      <button class="btn btn-green btn-wide" type="button" [disabled]="decisionLoading()" (click)="decide(application, 'accept', internalNote.value)">
+                        {{ decisionLoading() ? 'Envoi en cours…' : 'Accepter et envoyer le lien' }}
+                      </button>
+                      <button class="btn btn-danger-outline btn-wide" type="button" (click)="rejectMode.set(true)">Refuser avec un motif</button>
+                    }
+                  } @else {
+                    <p class="inline-success" role="status">Cette demande a déjà été traitée : {{ application.status_label }}.</p>
+                    @if (application.rejection_reason) {
+                      <p><strong>Motif envoyé :</strong> {{ application.rejection_reason }}</p>
+                    }
+                  }
+
+                  @if (requestDecision() !== 'pending') {
+                    <p class="inline-success" role="status">✓ Décision enregistrée et courriel envoyé.</p>
+                  }
+                </aside>
+              </section>
+            }
           }
 
           @if (view === 'member-detail') {
@@ -861,8 +865,10 @@ import { UiIcon } from '../shared/ui-icon';
     </main>
   `,
 })
-export class AdminPage {
+export class AdminPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
   protected readonly view = this.route.snapshot.data['view'] as string;
 
   protected readonly navItems = [
@@ -886,10 +892,100 @@ export class AdminPage {
     { view: 'audit', label: 'Journal des actions', icon: 'clipboard', link: '/bureau/journal' },
   ];
   protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
+  protected readonly realRequests = signal<MembershipApplication[]>([]);
+  protected readonly selectedApplication = signal<MembershipApplication | null>(null);
+  protected readonly requestsLoading = signal(false);
+  protected readonly requestError = signal('');
+  protected readonly rejectMode = signal(false);
+  protected readonly decisionLoading = signal(false);
   protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
   protected readonly formSaved = signal(false);
   protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
   protected readonly sortAsc = signal(false);
+
+  ngOnInit(): void {
+    if (this.view === 'requests') this.loadRequests();
+    if (this.view === 'request-detail') {
+      const id = Number(this.route.snapshot.paramMap.get('id'));
+      if (Number.isInteger(id) && id > 0) this.loadApplication(id);
+      else this.requestError.set('Cette demande est introuvable.');
+    }
+  }
+
+  protected loadRequests(status = '', search = ''): void {
+    this.requestsLoading.set(true);
+    this.requestError.set('');
+    this.api.applications({ status, search }).subscribe({
+      next: (page) => {
+        this.realRequests.set(page.results);
+        this.requestsLoading.set(false);
+      },
+      error: (error) => {
+        this.requestError.set(error.error?.detail ?? 'Les demandes ne peuvent pas être chargées pour le moment.');
+        this.requestsLoading.set(false);
+      },
+    });
+  }
+
+  protected loadApplication(id: number): void {
+    this.requestsLoading.set(true);
+    this.requestError.set('');
+    this.api.application(id).subscribe({
+      next: (application) => {
+        this.selectedApplication.set(application);
+        this.requestsLoading.set(false);
+      },
+      error: (error) => {
+        this.requestError.set(error.error?.detail ?? 'Cette demande ne peut pas être chargée.');
+        this.requestsLoading.set(false);
+      },
+    });
+  }
+
+  protected formatDate(value: string): string {
+    return new Intl.DateTimeFormat('fr-SN', { dateStyle: 'medium' }).format(new Date(value));
+  }
+
+  protected initials(application: MembershipApplication): string {
+    return `${application.first_name.charAt(0)}${application.last_name.charAt(0)}`.toUpperCase();
+  }
+
+  protected decide(
+    application: MembershipApplication,
+    action: 'accept' | 'reject',
+    internalNote: string,
+    reason = '',
+  ): void {
+    if (action === 'reject' && !reason.trim()) {
+      this.requestError.set('Le motif du refus est obligatoire.');
+      return;
+    }
+    this.decisionLoading.set(true);
+    this.requestError.set('');
+    const request =
+      action === 'accept'
+        ? this.api.acceptApplication(application.id, internalNote.trim())
+        : this.api.rejectApplication(application.id, reason.trim(), internalNote.trim());
+    request.subscribe({
+      next: (updated) => {
+        this.selectedApplication.set(updated);
+        this.requestDecision.set(action === 'accept' ? 'accepted' : 'rejected');
+        this.rejectMode.set(false);
+        this.decisionLoading.set(false);
+      },
+      error: (error) => {
+        this.requestError.set(error.error?.detail ?? 'La décision n’a pas pu être enregistrée.');
+        this.decisionLoading.set(false);
+      },
+    });
+  }
+
+  protected personLink(person: object): string | (string | number)[] {
+    const id = 'id' in person && typeof person.id === 'number' ? person.id : 0;
+    return this.view === 'requests' && id
+      ? ['/bureau/demandes', id]
+      : '/bureau/membres/aminata-ndiaye';
+  }
   protected readonly stats = [
     {
       icon: 'users',
@@ -1217,6 +1313,13 @@ export class AdminPage {
     event.preventDefault();
     if ((event.currentTarget as HTMLFormElement).reportValidity()) this.formSaved.set(true);
   }
+  protected logout(event: Event): void {
+    event.preventDefault();
+    this.api.logout().subscribe({
+      next: () => void this.router.navigateByUrl('/connexion'),
+      error: () => void this.router.navigateByUrl('/connexion'),
+    });
+  }
   protected sortBy(key: 'name' | 'place' | 'date'): void {
     if (this.sortKey() === key) this.sortAsc.set(!this.sortAsc());
     else {
@@ -1248,7 +1351,17 @@ export class AdminPage {
       });
   }
   protected get visiblePeople() {
-    if (this.view === 'requests') return this.requests;
+    if (this.view === 'requests')
+      return this.realRequests().map((application) => ({
+        id: application.id,
+        name: `${application.first_name} ${application.last_name}`,
+        city: application.territory.path,
+        email: application.email,
+        job: application.profession,
+        role: 'Membre',
+        date: this.formatDate(application.created_at),
+        status: application.status_label,
+      }));
     if (this.view === 'accounts' || this.view === 'coordinators')
       return this.requests.slice(0, 6).map((person, index) => ({
         ...person,

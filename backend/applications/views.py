@@ -1,25 +1,37 @@
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from accounts.models import User
 from accounts.permissions import IsFounder
 from core.mail import EmailNotSent
+from core.tokens import token_digest
+from members.models import Member
 
 from . import services
-from .models import Application
+from .models import Application, RegistrationLink
 from .serializers import (
     ALREADY_IN_PROGRESS,
     AcceptSerializer,
     ApplicationSerializer,
     ApplicationSubmitSerializer,
+    FinalizeRegistrationSerializer,
+    RegistrationPreviewSerializer,
     RejectSerializer,
 )
+
+LINK_ERRORS = {
+    'invalid': ('Ce lien est inconnu. Vérifiez que vous avez copié toute l’adresse reçue par courriel.', 'invalid_link', status.HTTP_404_NOT_FOUND),
+    'expired': ('Ce lien a expiré. Contactez le bureau du mouvement pour recevoir un nouveau lien.', 'expired_link', status.HTTP_410_GONE),
+    'used': ('Ce lien a déjà été utilisé. Vous pouvez maintenant vous connecter.', 'used_link', status.HTTP_409_CONFLICT),
+}
 
 
 class ApplicationPagination(PageNumberPagination):
@@ -143,4 +155,85 @@ class RejectView(DecisionView):
                 reason=serializer.validated_data['reason'],
                 note=serializer.validated_data['internal_note'],
             )
+        )
+
+
+class FinalizeRegistrationView(APIView):
+    """Valide le lien personnel puis crée le compte et le profil du membre."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _error(self, kind):
+        detail, code, http_status = LINK_ERRORS[kind]
+        return Response({'detail': detail, 'code': code}, status=http_status)
+
+    def _link(self, token, *, lock=False):
+        queryset = RegistrationLink.objects.select_related('application__territory')
+        if lock:
+            queryset = queryset.select_for_update()
+        return queryset.filter(token_digest=token_digest(token)).first()
+
+    def _validate_link(self, link):
+        if link is None:
+            return self._error('invalid')
+        if link.is_used:
+            return self._error('used')
+        if link.is_expired:
+            return self._error('expired')
+        if link.application.status != Application.Status.ACCEPTEE:
+            return self._error('invalid')
+        return None
+
+    def get(self, request):
+        token = request.query_params.get('token', '').strip()
+        link = self._link(token) if token else None
+        if error := self._validate_link(link):
+            return error
+        return Response(RegistrationPreviewSerializer(link.application).data)
+
+    def post(self, request):
+        token = request.data.get('token', '').strip()
+        serializer = FinalizeRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            link = self._link(token, lock=True) if token else None
+            if error := self._validate_link(link):
+                return error
+            application = link.application
+            if User.objects.filter(email__iexact=application.email).exists():
+                return Response(
+                    {'detail': 'Un compte existe déjà pour ce courriel. Connectez-vous.', 'code': 'account_exists'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if not link.mark_used():
+                return self._error('used' if link.is_used else 'expired')
+
+            user = User.objects.create_user(
+                email=application.email,
+                password=serializer.validated_data['password'],
+                first_name=application.first_name,
+                last_name=application.last_name,
+                role=User.Role.MEMBRE,
+            )
+            member = Member.objects.create(
+                user=user,
+                application=application,
+                territory=application.territory,
+                address=serializer.validated_data['address'],
+                photo=serializer.validated_data['photo'],
+            )
+            application.status = Application.Status.INSCRITE
+            application.save(update_fields=('status', 'updated_at'))
+
+        return Response(
+            {
+                'membership_number': member.membership_number,
+                'status': application.status,
+                'status_label': application.get_status_display(),
+                'email': user.email,
+            },
+            status=status.HTTP_201_CREATED,
         )
