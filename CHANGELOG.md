@@ -27,6 +27,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : chiffrement en base des données sensibles des demandes (motivation, motif de refus, note interne), avec changement de clé sans perte (#64).
 - Backend : rattachement des comptes à un territoire et règle d'accès par territoire (un coordonnateur voit son territoire et ceux qui en dépendent, un fondateur voit tout) (#36).
 - Backend : dossier de membre avec numéro TBX-AAAA-NNNNN attribué automatiquement, unique et jamais réutilisé (#34).
+- Backend : finalisation de l'inscription avec le lien personnel (mot de passe, adresse et téléphone chiffrés, photo nettoyée), création du compte membre et passage de la demande à « Inscrite » (#25).
 
 ### Modifié
 
