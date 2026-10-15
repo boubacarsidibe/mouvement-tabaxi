@@ -1,0 +1,12 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+{{ invited_by.get_full_name|default:"Un membre fondateur" }} vous invite à rejoindre le bureau exécutif du Mouvement TABAXI comme {{ user.get_role_display|lower }}{% if user.territory %} ({{ user.territory.name }}){% endif %}.
+
+Pour accepter, choisissez votre mot de passe avec ce lien personnel :
+
+{{ url }}
+
+Ce lien est valable 7 jours, jusqu'au {{ link.expires_at|date:"j F Y à H \h i" }}, et ne sert qu'une seule fois. Ne le transmettez à personne.
+
+Le bureau exécutif du Mouvement TABAXI
+{% endautoescape %}
