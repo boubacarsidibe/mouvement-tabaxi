@@ -24,6 +24,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : blocage temporaire de la connexion après 5 échecs pour un compte ou 20 depuis une adresse (#32).
 - Backend : fermeture de la session du bureau après 30 minutes sans action ; chaque erreur de l'API porte un code stable (#31).
 - Backend : mots de passe en Argon2id, https obligatoire et cookies sécurisés en production, en-têtes de sécurité (CSP), refus de démarrer sans vraie clé secrète (#63).
+- Backend : chiffrement en base des données sensibles des demandes (motivation, motif de refus, note interne), avec changement de clé sans perte (#64).
 
 ### Modifié
 

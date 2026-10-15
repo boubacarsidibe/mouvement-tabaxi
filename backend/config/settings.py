@@ -17,6 +17,8 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.csp import CSP
 
+from core.crypto import dev_key_from_secret
+
 from .env import env_flag, load_env_file, mailer_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,6 +44,18 @@ if not DEBUG and not TESTING and (SECRET_KEY in DEV_SECRET_KEYS or len(SECRET_KE
     )
 
 ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h]
+
+# Clés de chiffrement des données sensibles en base (voir core/crypto.py), séparées par des
+# virgules : la première chiffre, toutes déchiffrent. Obligatoires en production ; en local
+# et pendant les tests, une clé est dérivée de la clé secrète.
+FIELD_ENCRYPTION_KEYS = [k.strip() for k in os.environ.get('FIELD_ENCRYPTION_KEYS', '').split(',') if k.strip()]
+if not FIELD_ENCRYPTION_KEYS:
+    if not DEBUG and not TESTING:
+        raise ImproperlyConfigured(
+            'FIELD_ENCRYPTION_KEYS est obligatoire en production. Générer une clé avec : '
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        )
+    FIELD_ENCRYPTION_KEYS = [dev_key_from_secret(SECRET_KEY)]
 
 
 # Application definition

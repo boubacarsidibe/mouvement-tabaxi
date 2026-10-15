@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -65,6 +66,7 @@ def run_production(*args, **env):
         'DJANGO_SECRET_KEY': secrets.token_urlsafe(64),
         'DJANGO_ALLOWED_HOSTS': 'tabaxi.example.org',
         'EMAIL_HOST': 'smtp.example.org',
+        'FIELD_ENCRYPTION_KEYS': Fernet.generate_key().decode(),
         'PYTHONIOENCODING': 'utf-8',
         **env,
     }
@@ -117,6 +119,11 @@ class ProductionConfigurationTests(SimpleTestCase):
             result = run_production('check', DJANGO_SECRET_KEY=key)
             self.assertNotEqual(result.returncode, 0, key)
             self.assertIn('DJANGO_SECRET_KEY', result.stderr)
+
+    def test_refus_de_demarrer_sans_cle_de_chiffrement(self):
+        result = run_production('check', FIELD_ENCRYPTION_KEYS='')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('FIELD_ENCRYPTION_KEYS est obligatoire en production', result.stderr)
 
     def test_production_par_defaut_sans_variable(self):
         if (BACKEND_DIR / '.env').exists():
