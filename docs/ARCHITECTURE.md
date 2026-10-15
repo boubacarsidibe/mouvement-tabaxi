@@ -25,14 +25,37 @@ flowchart LR
 
 - **Django 6** et **Django REST Framework**.
 - Compte unique `accounts.User` : connexion par courriel, rôle `membre`, `coordonnateur` ou `fondateur`. Le bureau exécutif réunit coordonnateurs et fondateurs.
-- Applications prévues :
-  - `accounts` : comptes et rôles (existe) ;
-  - `territories` : territoires emboîtés pays, région, commune ;
-  - `applications` : demandes d'adhésion et leur examen ;
-  - `members` : membres, cartes, statuts ;
-  - `programs` : programmes, activités, présences.
 - Droits : vérifiés par le serveur à chaque requête, selon le rôle et le territoire.
-- Configuration sensible lue dans l'environnement (`backend/.env.example`).
+- Configuration sensible lue dans l'environnement. En local, `backend/.env` (copie de `backend/.env.example`, jamais versionnée) est chargé au démarrage ; une variable déjà définie dans l'environnement est prioritaire.
+
+### Applications Django
+
+```
+backend/
+  config/        réglages, routes, lecture du fichier .env
+  core/          socle commun : point de contrôle /api/health/
+  accounts/      comptes et rôles
+  territories/   territoires emboîtés pays, région, commune
+  applications/  demandes d'adhésion et leur examen
+  members/       membres, numéros, statuts, cartes
+```
+
+L'application `programs` (programmes, activités, présences) sera ajoutée avec ses fonctionnalités.
+
+Chaque application regroupe ses modèles, son administration, ses routes (`urls.py`), ses vues et ses tests (`tests.py`).
+
+### Conventions de l'API
+
+- Toutes les routes commencent par `/api/` et se terminent par une barre oblique (`/api/health/`).
+- Échanges en JSON uniquement. L'interface navigable de Django REST Framework n'est active qu'en développement (`DJANGO_DEBUG=1`).
+- Par défaut, une route exige une connexion ; les routes publiques le déclarent explicitement.
+- Messages d'erreur en français.
+
+### Routes
+
+| Méthode et route | Accès | Rôle |
+|---|---|---|
+| `GET /api/health/` | public | Contrôle de santé : `{"status": "ready"}` (200), ou `{"status": "unavailable"}` (503) si la base est injoignable |
 
 ## Frontend
 
