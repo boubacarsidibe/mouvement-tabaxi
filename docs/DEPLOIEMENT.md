@@ -1,44 +1,55 @@
 # Déploiement
 
-Aujourd'hui, le site et le serveur Django sont sur Vercel (deux projets liés au même dépôt GitHub), avec une base PostgreSQL Neon. À terme, le serveur Django passera sur Railway et le site restera sur Vercel : la configuration Railway est prête dans le dépôt (voir [Railway](#railway--serveur-django-préparé)), la bascule attend le choix d'un plan Railway.
+Hébergement actuel (16 octobre 2026) : tout est sur Vercel, en production.
 
-## 1. Base de données PostgreSQL
+| Élément | Projet | Adresse |
+|---|---|---|
+| Site Angular | Vercel `mouvement-tabaxi-app` | `https://mouvement-tabaxi-app.vercel.app` |
+| API Django | Vercel `mouvement-tabaxi-api` | `https://mouvement-tabaxi-api.vercel.app`, appelée par le site sous `/api` |
+| Base PostgreSQL | Neon `mouvement-tabaxi-db`, reliée au projet `mouvement-tabaxi-api` | variable `DATABASE_URL` |
 
-Créer une base PostgreSQL (Neon ou Supabase, via la Marketplace de Vercel) et copier son adresse de connexion : elle devient `DATABASE_URL`. Sans elle, Django retombe sur SQLite, qui ne survit pas sur Vercel.
+Le navigateur ne parle qu'au site : `frontend/vercel.json` renvoie `/api/…` vers l'API. Les cookies de session et la protection CSRF restent donc sur un seul domaine.
 
-## 2. Projet backend (Django)
+À terme, l'API passera sur Railway et le site restera sur Vercel. La configuration Railway est prête dans le dépôt (voir [Railway](#railway--serveur-django-préparé)) ; la bascule attend le choix d'un plan Railway.
 
-- Nouveau projet Vercel, dépôt `mouvement-tabaxi`, **Root Directory : `backend`**, Framework : Other.
+Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` répond `{"status": "ready"}` quand l'API et la base répondent.
+
+## Vercel : API Django (`mouvement-tabaxi-api`)
+
+- Dépôt `boubacarsidibe/mouvement-tabaxi`, **Root Directory : `backend`**, préréglage **Django** : Vercel trouve `manage.py` et sert `config.wsgi.application` sans autre fichier.
+- `backend/vercel.json` lance `python manage.py migrate --noinput` pendant chaque construction : les migrations s'appliquent sur la base de `DATABASE_URL` sans que son adresse quitte Vercel.
+- Sans `DATABASE_URL`, la construction et le serveur s'arrêtent avec un message clair (un fichier SQLite serait figé en lecture seule sur Vercel).
+- Les erreurs du serveur sont écrites dans le journal du projet (onglet Logs).
 - Variables d'environnement (Production) :
 
 | Variable | Valeur |
 |---|---|
-| `DJANGO_SECRET_KEY` | longue valeur aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(64))"`) |
-| `FIELD_ENCRYPTION_KEYS` | clé Fernet (voir `backend/.env.example`), à sauvegarder hors de Vercel |
-| `DATABASE_URL` | adresse PostgreSQL |
-| `DJANGO_ALLOWED_HOSTS` | domaine du projet backend, par exemple `mouvement-tabaxi-cye7.vercel.app` |
-| `CORS_ALLOWED_ORIGINS` | adresse https du frontend |
-| `FRONTEND_URL` | adresse https du frontend (liens des courriels) |
+| `DATABASE_URL` | Fournie par l'intégration Neon (base `mouvement-tabaxi-db`). |
+| `DJANGO_SECRET_KEY` | Longue valeur aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(64))"`). |
+| `FIELD_ENCRYPTION_KEYS` | Clé Fernet (voir `backend/.env.example`), à sauvegarder hors de Vercel : la perdre, c'est perdre les données chiffrées. |
+| `DJANGO_ALLOWED_HOSTS` | `mouvement-tabaxi-api.vercel.app` |
+| `CORS_ALLOWED_ORIGINS` | `https://mouvement-tabaxi-app.vercel.app` |
+| `CSRF_TRUSTED_ORIGINS` | Facultatif ; par défaut les origines CORS, plus l'origine de `FRONTEND_URL`. |
+| `FRONTEND_URL` | `https://mouvement-tabaxi-app.vercel.app` (liens des courriels). |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
 | `LOGIN_TRUSTED_PROXIES` | `1` |
 | `DJANGO_MEDIA_ROOT` | `/tmp/media` |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | service SMTP |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Service SMTP. Sans `EMAIL_HOST`, aucun courriel ne part : ils sont seulement écrits dans le journal. |
 
-- Migrations, depuis un poste avec les mêmes variables : `python manage.py migrate`, puis `python manage.py createsuperuser`.
+- Premier compte fondateur : depuis un poste, avec la même `DATABASE_URL` et les mêmes clés que la production, `python manage.py createsuperuser`. Les autres membres du bureau s'invitent ensuite depuis la plateforme (« Comptes d'accès »).
 
-## 3. Projet frontend (Angular)
+## Vercel : site Angular (`mouvement-tabaxi-app`)
 
-- **Root Directory : `frontend`** ; `frontend/vercel.json` règle la compilation (`dist/frontend/browser`) et renvoie toutes les pages vers `index.html`.
-- `frontend/vercel.json` renvoie `/api/…` vers le projet du serveur, `mouvement-tabaxi-cye7` :
-  `{ "source": "/api/(.*)", "destination": "https://mouvement-tabaxi-cye7.vercel.app/api/$1" }`, placé avant la règle de `index.html`.
-- Côté serveur, `CORS_ALLOWED_ORIGINS` doit contenir l'adresse exacte du site (par exemple `https://mouvement-tabaxi-app-git-….vercel.app`) : elle sert aussi à la protection CSRF des formulaires.
-  Le navigateur reste ainsi sur un seul domaine : les cookies de session et la protection CSRF fonctionnent sans réglage.
+- **Root Directory : `frontend`**. `frontend/vercel.json` règle la compilation (`npm ci`, `npm run build`, dossier `dist/frontend/browser`) et deux réécritures, dans cet ordre :
+  - `/api/(.*)` → `https://mouvement-tabaxi-api.vercel.app/api/$1` ;
+  - toutes les autres adresses → `index.html` (routes d'Angular).
+- Si l'adresse du site change (domaine personnalisé), mettre à jour `CORS_ALLOWED_ORIGINS` et `FRONTEND_URL` côté API.
 
 ## Limites à connaître
 
-- **Photos de profil** : le disque de Vercel est temporaire ; les photos envoyées disparaissent. Un stockage d'objets (S3, Vercel Blob…) est nécessaire avant l'ouverture au public.
-- **Blocage de connexion** après échecs : compteur gardé en mémoire de chaque instance, donc moins strict qu'avec un cache partagé.
-- Les fonctions s'endorment : la première requête après une pause est plus lente.
+- **Photos de profil** : le disque de Vercel est temporaire (`/tmp/media`) ; les photos envoyées disparaissent. Un stockage durable (volume Railway, stockage d'objets) est nécessaire avant l'ouverture au public.
+- **Limites d'envoi** (demandes d'adhésion, mot de passe oublié, liens personnels) : comptées dans la mémoire de chaque instance, donc moins strictes quand plusieurs instances tournent. Le blocage de la connexion après des échecs, lui, est enregistré en base et vaut pour toutes les instances.
+- Les fonctions s'endorment, comme la base Neon : la première requête après une pause est plus lente.
 
 ## Railway : serveur Django (préparé)
 

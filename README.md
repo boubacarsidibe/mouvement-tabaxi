@@ -28,18 +28,19 @@ Le détail complet est dans le [cahier des charges](docs/Cahier-des-charges-TABA
 | Élément | État |
 |---|---|
 | Cahier des charges (v1.0) | Rédigé, à valider par les fondateurs |
-| Backend Django | Squelette : configuration, compte utilisateur par courriel avec rôles |
-| Frontend Angular | Squelette : page d'accueil minimale |
+| Backend Django | API REST sous `/api/` : adhésion, examen des demandes, finalisation, connexion, espace membre, bases du bureau, programmes, journal des actions |
+| Frontend Angular | Écrans publics, espace membre et interface du bureau reliés à l'API, sans données fictives |
+| Mise en ligne | En production sur Vercel (site et API) avec une base PostgreSQL Neon ; Railway préparé pour l'API (voir [DEPLOIEMENT.md](docs/DEPLOIEMENT.md)) |
 | Organisation | Sprints, issues et documentation en place |
 
-Rendu prévu le **29 octobre 2026** : connexion, demande d'adhésion et examen par les fondateurs. Le reste est dans le sprint « Après le rendu ».
+Rendu prévu le **29 octobre 2026** : demande d'adhésion, examen par un fondateur, acceptation et courriel, finalisation de l'inscription, espace membre. Le déroulé de la démonstration est dans [DEMONSTRATION.md](docs/DEMONSTRATION.md).
 
 ## Stack technique
 
 - **Backend :** Python 3.12, Django 6, Django REST Framework
 - **Frontend :** Angular, TypeScript
-- **Base de données :** SQLite en local ; base de production à choisir
-- **Hébergement :** à choisir (voir [ARCHITECTURE.md](docs/ARCHITECTURE.md))
+- **Base de données :** SQLite en local ; PostgreSQL (Neon) en ligne
+- **Hébergement :** Vercel pour le site et l'API ; Railway visé pour l'API (voir [DEPLOIEMENT.md](docs/DEPLOIEMENT.md))
 
 ## Structure du dépôt
 
@@ -53,6 +54,8 @@ docs/          documentation du projet
 | Document | Contenu |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Vue d'ensemble technique |
+| [docs/DEMONSTRATION.md](docs/DEMONSTRATION.md) | Parcours de démonstration du rendu |
+| [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md) | Hébergement actuel et mise en ligne |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Feuille de route par sprint |
 | [docs/PLANNING.md](docs/PLANNING.md) | Calendrier détaillé |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Liste priorisée des tâches |
@@ -63,9 +66,9 @@ docs/          documentation du projet
 
 ## Installation et utilisation
 
-Prérequis : Python 3.12 ou plus, Node.js 22 ou plus.
+Prérequis : Python 3.12 ou plus, Node.js 22 ou plus. Lancer d'abord le backend, puis le frontend, chacun dans son terminal.
 
-### Backend (port 8000)
+### 1. Backend (port 8000)
 
 ```powershell
 cd backend
@@ -74,23 +77,43 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py comptes_demo
 python manage.py runserver
 ```
 
-Comptes de démonstration, un par rôle (développement seulement, `DJANGO_DEBUG=1`) : `python manage.py comptes_demo` crée `fondateur.demo@example.org`, `coordonnateur.demo@example.org` (région de Dakar) et `membre.demo@example.org` (Pikine) et affiche leurs mots de passe aléatoires ; `--mot-de-passe MOT` en fixe un commun. La commande peut être relancée pour réinitialiser les mots de passe.
+`backend/.env` contient `DJANGO_DEBUG=1` : sans cette ligne, le serveur se comporte comme en production et refuse de démarrer sans vraie clé secrète.
 
-Le premier compte créé avec `createsuperuser` reçoit le rôle de membre fondateur. L'administration est sur `http://localhost:8000/admin/`. Tests : `python manage.py test`.
+Comptes de démonstration, un par rôle (développement seulement) : `python manage.py comptes_demo` crée `fondateur.demo@example.org`, `coordonnateur.demo@example.org` (région de Dakar) et `membre.demo@example.org` (Pikine) et affiche leurs mots de passe aléatoires ; `--mot-de-passe MOT` en fixe un commun. La commande peut être relancée pour réinitialiser les mots de passe.
 
-### Frontend (port 4200)
+Pour un vrai compte, `python manage.py createsuperuser` : le premier compte créé ainsi reçoit le rôle de membre fondateur. L'administration Django est sur `http://localhost:8000/admin/`.
+
+En local, les courriels (acceptation, liens personnels, mot de passe oublié) s'affichent dans ce terminal au lieu de partir.
+
+### 2. Frontend (port 4200)
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm start
 ```
 
-Le site s'ouvre sur `http://localhost:4200/`. Les appels `/api` sont redirigés vers le backend (`frontend/proxy.conf.json`). Tests : `npm test`.
+Le site s'ouvre sur `http://localhost:4200/`. Les appels `/api` sont redirigés vers le backend (`frontend/proxy.conf.json`).
+
+### Tests
+
+```powershell
+cd backend
+python manage.py test
+python manage.py makemigrations --check --dry-run
+```
+
+```powershell
+cd frontend
+npm run build
+npx ng test --watch=false
+```
+
+Le parcours complet d'adhésion, de la demande à l'espace membre, a son propre test : `python manage.py test applications.tests.test_parcours`.
 
 ## Modifier le cahier des charges
 
