@@ -49,9 +49,29 @@ class DatabaseStorageTests(TestCase):
             self.storage.url('photos/awa.jpg')
 
 
+SHOW_STORAGE = 'from django.conf import settings as s; print(s.STORAGES["default"]["BACKEND"])'
+
+
 class StorageSettingTests(SimpleTestCase):
-    def test_stockage_en_base_choisi_par_variable(self):
-        code = 'from django.conf import settings as s; print(s.STORAGES["default"]["BACKEND"])'
-        result = run_production('shell', '-c', code, DJANGO_FILE_STORAGE='database')
+    """En production, les photos ne sont jamais gardées sur un disque temporaire par défaut."""
+
+    def storage(self, **env):
+        result = run_production('shell', '-c', SHOW_STORAGE, **env)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip().splitlines()[-1], 'core.storage.DatabaseStorage')
+        return result.stdout.strip().splitlines()[-1]
+
+    def test_base_par_defaut_en_production(self):
+        self.assertEqual(self.storage(DJANGO_FILE_STORAGE=''), 'core.storage.DatabaseStorage')
+
+    def test_base_choisie_par_variable(self):
+        self.assertEqual(self.storage(DJANGO_FILE_STORAGE='database'), 'core.storage.DatabaseStorage')
+
+    def test_disque_seulement_si_demande(self):
+        self.assertEqual(
+            self.storage(DJANGO_FILE_STORAGE='filesystem'), 'django.core.files.storage.FileSystemStorage'
+        )
+
+    def test_valeur_inconnue_refusee(self):
+        result = run_production('check', DJANGO_FILE_STORAGE='tmp')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('DJANGO_FILE_STORAGE', result.stderr)

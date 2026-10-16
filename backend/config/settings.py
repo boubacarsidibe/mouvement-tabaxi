@@ -282,12 +282,17 @@ WHITENOISE_USE_FINDERS = True
 # renvoie après contrôle d'accès. Le dossier est ignoré par Git.
 MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
-# Sans disque durable (Vercel), les photos sont gardées en base, chiffrées (core/storage.py) :
-# DJANGO_FILE_STORAGE=database. Sinon, sur le disque (MEDIA_ROOT).
+# Photos : en production, gardées en base, chiffrées (core/storage.py), pour ne jamais dépendre
+# d'un disque que l'hébergeur peut effacer (Vercel efface le sien entre deux appels).
+# DJANGO_FILE_STORAGE=filesystem (disque, MEDIA_ROOT) seulement avec un disque durable ;
+# en développement, le disque est utilisé par défaut.
+FILE_STORAGE = os.environ.get('DJANGO_FILE_STORAGE', '').strip().lower() or ('filesystem' if DEBUG else 'database')
+if FILE_STORAGE not in ('database', 'filesystem'):
+    raise ImproperlyConfigured("DJANGO_FILE_STORAGE doit valoir « database » ou « filesystem ».")
 STORAGES = {
     'default': {
         'BACKEND': 'core.storage.DatabaseStorage'
-        if os.environ.get('DJANGO_FILE_STORAGE') == 'database'
+        if FILE_STORAGE == 'database'
         else 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
