@@ -1,3 +1,5 @@
+import json
+
 from django.db import models
 
 from . import crypto
@@ -23,3 +25,25 @@ class EncryptedTextField(models.TextField):
         if not value:
             return value
         return crypto.encrypt(value)
+
+
+class EncryptedJSONField(EncryptedTextField):
+    """Données structurées (dictionnaire ou liste) chiffrées en base, lues telles quelles par l'application.
+
+    Même protection que ``EncryptedTextField`` : le contenu n'est jamais en clair dans la base, et
+    on ne peut ni chercher ni trier dedans. Une valeur vide se lit ``{}``.
+    """
+
+    description = 'Données JSON chiffrées'
+
+    def from_db_value(self, value, expression, connection):
+        text = super().from_db_value(value, expression, connection)
+        return json.loads(text) if text else {}
+
+    def get_prep_value(self, value):
+        if value is None:
+            return None
+        return super().get_prep_value(json.dumps(value, ensure_ascii=False, sort_keys=True))
+
+    def value_to_string(self, obj):
+        return json.dumps(self.value_from_object(obj), ensure_ascii=False)

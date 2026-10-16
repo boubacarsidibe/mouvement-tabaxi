@@ -73,7 +73,7 @@ export const routes: Routes = [
   bureau('bureau/comptes', 'accounts', 'Comptes d’accès — TABAXI', true),
   bureau('bureau/comptes/inviter', 'invite', 'Inviter un coordonnateur — TABAXI', true),
   bureau('bureau/coordonnateurs', 'coordinators', 'Coordonnateurs — TABAXI'),
-  bureau('bureau/journal', 'audit', 'Journal des actions — TABAXI'),
+  bureau('bureau/journal', 'audit', 'Journal des actions — TABAXI', true),
   bureau('bureau/activites/nouvelle', 'activity-new', 'Planifier une activité — TABAXI'),
   bureau('bureau/activites/brigade-dakar/compte-rendu', 'report', 'Compte rendu — TABAXI'),
   bureau('bureau/activites/brigade-dakar/presences', 'attendance', 'Présences — TABAXI'),

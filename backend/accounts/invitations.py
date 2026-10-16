@@ -11,6 +11,8 @@ from django.conf import settings
 from django.db import transaction
 from django.template.loader import render_to_string
 
+from audit.models import AuditEntry
+from audit.services import person_name, record
 from core.mail import send_email
 from members.models import Member
 
@@ -37,6 +39,15 @@ def invite(*, email, first_name, last_name, role, territory, invited_by):
             territory=territory,
         )
         link, token = InvitationLink.issue(user, invited_by)
+        record(
+            AuditEntry.Action.INVITATION_SENT,
+            actor=invited_by,
+            subject=person_name(user),
+            email=user.email,
+            role=user.role,
+            role_label=user.get_role_display(),
+            territory=territory.name if territory else '',
+        )
         body = render_to_string(
             'accounts/emails/invitation.txt',
             {'user': user, 'link': link, 'url': invitation_url(token), 'invited_by': invited_by},

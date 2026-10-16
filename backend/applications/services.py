@@ -12,6 +12,8 @@ from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from audit.models import AuditEntry
+from audit.services import record
 from core.mail import send_email
 
 from .models import Application, RegistrationLink
@@ -57,6 +59,13 @@ def accept(application, *, by, note=''):
         application = _lock_pending(application)
         _record_decision(application, Application.Status.ACCEPTEE, by, note)
         link, token = RegistrationLink.issue(application)
+        record(
+            AuditEntry.Action.APPLICATION_ACCEPTED,
+            actor=by,
+            subject=f'{application.first_name} {application.last_name}',
+            reference=application.reference,
+            territory=application.territory.name,
+        )
         body = render_to_string(
             'applications/emails/acceptance.txt',
             {'application': application, 'link': link, 'url': registration_url(token)},
@@ -71,6 +80,14 @@ def reject(application, *, by, reason, note=''):
         application = _lock_pending(application)
         application.rejection_reason = reason
         _record_decision(application, Application.Status.REJETEE, by, note)
+        record(
+            AuditEntry.Action.APPLICATION_REJECTED,
+            actor=by,
+            subject=f'{application.first_name} {application.last_name}',
+            reference=application.reference,
+            territory=application.territory.name,
+            reason=reason,
+        )
         body = render_to_string('applications/emails/rejection.txt', {'application': application})
         send_email(to=application.email, subject=DECISION_SUBJECT, body=body)
     return application

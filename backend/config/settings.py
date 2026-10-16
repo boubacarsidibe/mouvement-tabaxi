@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'territories',
     'applications',
     'members',
+    'audit',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

@@ -38,6 +38,7 @@ backend/
   territories/   territoires emboîtés pays, région, commune
   applications/  demandes d'adhésion et leur examen
   members/       membres, numéros, statuts, cartes
+  audit/         journal des actions, non modifiable
 ```
 
 L'application `programs` (programmes, activités, présences) sera ajoutée avec ses fonctionnalités.
@@ -84,6 +85,15 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - Bases du bureau : `GET /api/members/` (membres simples, ou coordonnateurs et fondateurs avec `role=coordonnateur,fondateur`) et la fiche `GET /api/members/<id>/` sont limitées au territoire de la personne connectée (`territories/scope.py`) ; hors périmètre, la fiche répond 404 et une liste filtrée sur un autre territoire reste vide. Un fondateur n'étant rattaché à aucun territoire, seuls les fondateurs le voient dans la base du bureau.
 - Dossier du bureau : chaque compte du bureau a un dossier de membre (numéro, date d'entrée, statut, carte) : à l'acceptation de l'invitation, à la création d'un fondateur par `createsuperuser`, ou depuis l'administration pour un compte créé avec un mot de passe ; la migration `members/0004` ouvre celui des comptes du bureau existants.
 - Photos : vérifiées (vraie image JPG ou PNG, 5 Mo au plus), réenregistrées en JPEG de 800 pixels au plus, sans aucune métadonnée (position GPS comprise), sous un nom aléatoire dans `MEDIA_ROOT/photos/`. Jamais servies directement : seulement par l'API, à la personne concernée.
+
+### Journal des actions
+
+Modèle `audit.AuditEntry` : action, auteur (avec son nom du moment, la ligne reste lisible si le compte change), personne ou liste concernée, détails, date.
+
+- Actions enregistrées automatiquement : acceptation et refus d'une demande (avec le motif), changement de statut d'un membre (avec l'ancien et le nouveau statut et le motif), invitation au bureau, export d'une liste. `audit.services.record` est appelé dans la transaction de l'action : un courriel qui ne part pas annule la décision et sa ligne de journal, et une action refusée n'écrit rien.
+- Non modifiable : `AuditEntry` repose sur `core/append_only.py` (ni `save` sur une ligne existante, ni `delete`, ni `update`/`delete`/`bulk_update` en lot : `ImmutableRecordError`), aucune route n'écrit dans le journal (`GET` seulement, les autres méthodes répondent 405) et l'administration Django le montre en lecture seule, sans ajout, modification ni suppression. Un compte qui a agi ne peut pas être supprimé.
+- Les détails (motifs, courriels, filtres d'export) sont chiffrés en base (`core.fields.EncryptedJSONField`) comme les motifs de refus des demandes ; `manage.py rechiffrer` change la clé du journal sans en modifier le contenu (`AppendOnlyQuerySet.reencrypt`).
+- Consultation réservée aux fondateurs : `GET /api/audit/`, du plus récent au plus ancien, filtres `action`, `actor`, `search`, `date_from`, `date_to`.
 
 ### Courriels
 
@@ -141,6 +151,8 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 | `GET /api/members/me/photo/` | connecté | Photo de profil de la personne connectée (JPEG) ; 404 sans photo |
 | `GET /api/members/` | bureau | Base des membres ou du bureau, limitée au périmètre (territoire du coordonnateur et ceux qui en dépendent ; tout pour un fondateur), par pages de 20. Filtres (`members/filters.py`) : `role` (un ou plusieurs rôles séparés par des virgules : `membre` par défaut, `coordonnateur,fondateur` pour la base des coordonnateurs), `status` (`actif`, `suspendu`, `radie`), `territory` (identifiant : le territoire et tous ceux qui en dépendent), `joined_from` et `joined_to` (date d'adhésion ou d'entrée, `AAAA-MM-JJ`, bornes comprises), `search` (prénom, nom, courriel ou numéro ; plusieurs mots doivent tous correspondre), `ordering` (`name`, `place`, `date`, précédé de `-` pour inverser ; plus récents d'abord par défaut), `page`, `page_size`. Lignes : `id`, `number`, `first_name`, `last_name`, `email`, `role`, `role_label`, `territory`, `joined_on`, `status`, `status_label` ; 400 par champ pour un filtre inconnu (`territory` : « Localité inconnue. », dates : « Saisissez une date valide au format AAAA-MM-JJ. », période à l'envers) ; un territoire hors du périmètre ne donne aucun résultat |
 | `GET /api/members/<id>/` | bureau | Fiche d'un membre : la ligne ci-dessus plus `phone`, `address`, `photo_url` et, pour les fondateurs seulement, `status_history` ; 404 hors périmètre |
+| `GET /api/audit/` | fondateur | Journal des actions, par pages de 20, du plus récent au plus ancien. Filtres : `action` (`demande_acceptee`, `demande_refusee`, `statut_modifie`, `invitation_envoyee`, `liste_exportee`), `actor` (identifiant), `search` (auteur ou personne concernée), `date_from`, `date_to` (`AAAA-MM-JJ`, bornes comprises). Lignes : `id`, `action`, `action_label`, `category`, `category_label`, `subject`, `detail`, `actor` (`id`, `name`), `created_at` ; 400 par champ pour un filtre inconnu ; aucune méthode d'écriture (405) |
+| `GET /api/audit/actors/` | fondateur | Personnes qui ont agi (`id`, `name`), pour le filtre par auteur |
 | `GET /api/members/<id>/photo/` | bureau | Photo d'un membre du périmètre (JPEG) ; 404 sans photo ou hors périmètre |
 | `POST /api/members/<id>/status/` | fondateur | Change le statut. Corps : `status` (`actif`, `suspendu`, `radie`), `reason` (obligatoire pour suspendre ou radier). Renvoie la fiche ; 400 par champ ; 409 `same_status` (déjà dans ce statut) ou `own_status` (son propre statut) ; 403 hors fondateur |
 | `POST /api/applications/<id>/reject/` | fondateur | Refus. Corps : `reason` (obligatoire), `internal_note`. Envoie le motif par courriel. 409 `already_decided` ; 503 `email_not_sent` |
@@ -151,6 +163,7 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - Interface mobile d'abord, en français.
 - Deux espaces : membre et bureau exécutif, ouverts selon le rôle renvoyé après la connexion.
 - Espace membre : le tableau de bord, le profil et la carte numérique lisent `GET /api/members/me/` (`core/profile.service.ts`) ; le profil enregistre l'adresse, le téléphone et la photo par `PATCH /api/members/me/` (formulaire multipart) et le mot de passe se change par `POST /api/auth/password/change/`. La carte (affichage, image téléchargée, impression) est dessinée à partir de ces mêmes données. Un compte sans dossier de membre (bureau seul) voit un message clair.
+- Bureau : « Journal des actions » (`pages/audit-journal.ts`, `core/audit.service.ts`, réservé aux fondateurs) liste les actions du serveur avec recherche, filtres par action, auteur et période, sans aucun bouton de modification ni de suppression.
 - Bureau : « Bases de membres » (`pages/members-base.ts`, `core/members.service.ts`) liste les membres du serveur (recherche par nom, filtre par statut, tri, pages) et ouvre leur fiche ; les fondateurs y voient les boutons Rendre actif, Suspendre et Radier (motif obligatoire pour les deux derniers) et l'historique du statut, les coordonnateurs lisent le statut sans pouvoir le changer. « Coordonnateurs » (le bureau exécutif, fondateurs compris, avec un filtre par fonction) et « Comptes d'accès » (même base, avec les courriels, pour les fondateurs) utilisent la même liste. Filtres : recherche par nom, localité (les territoires du périmètre, du `GET /api/territories/managed/`), statut et période d'adhésion ou d'entrée.
 
 ## Flux principal : demande d'adhésion
@@ -179,9 +192,9 @@ sequenceDiagram
 - En-têtes sur toutes les réponses de Django : politique de contenu (CSP) stricte, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Cross-Origin-Opener-Policy: same-origin`. Le frontend, servi à part, devra avoir les mêmes en-têtes chez son hébergeur.
 - Cookie de session `HttpOnly` (illisible par le JavaScript) et `SameSite=Lax` ; le cookie anti-CSRF reste lisible, car Angular doit le renvoyer.
 - Liens personnels : jeton aléatoire, empreinte seule conservée, valable 7 jours, usage unique.
-- Données sensibles chiffrées en base (`core.fields.EncryptedTextField`, Fernet : AES avec contrôle d'intégrité HMAC-SHA256) : motivation, motif de refus et note interne des demandes ; adresse et téléphone des membres dès qu'ils existeront. Une copie de la base ne suffit pas à les lire. On ne peut ni chercher ni trier sur ces champs.
+- Données sensibles chiffrées en base (`core.fields.EncryptedTextField`, Fernet : AES avec contrôle d'intégrité HMAC-SHA256) : motivation, motif de refus et note interne des demandes, motifs de suspension et de radiation, détails du journal des actions ; adresse et téléphone des membres dès qu'ils existeront. Une copie de la base ne suffit pas à les lire. On ne peut ni chercher ni trier sur ces champs.
 - Clés dans `FIELD_ENCRYPTION_KEYS` (obligatoire en production, jamais versionnée) : la première chiffre, toutes déchiffrent. Changement de clé : `NOUVELLE,ANCIENNE`, puis `python manage.py rechiffrer`, puis retrait de l'ancienne. **Perdre la clé, c'est perdre ces données** : elle doit être sauvegardée à part, hors du serveur et hors de la sauvegarde de la base.
-- Journal des actions importantes (à venir, #42).
+- Journal des actions importantes : voir « Journal des actions » ci-dessus ; lecture seule, réservé aux fondateurs, détails chiffrés.
 - Aucune donnée de membre ni secret dans le dépôt.
 
 ## Décisions à prendre

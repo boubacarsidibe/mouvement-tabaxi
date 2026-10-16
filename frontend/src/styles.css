@@ -3325,8 +3325,13 @@ h3 {
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
-.audit-list article:last-child {
-  border-bottom: 0;
+.audit-list .table-footer {
+  padding: 14px 0 6px;
+}
+.audit-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
 }
 .audit-icon {
   width: 40px;

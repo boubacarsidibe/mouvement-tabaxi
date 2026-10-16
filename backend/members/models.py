@@ -72,7 +72,7 @@ class MemberStatusChange(AppendOnlyModel):
     )
     from_status = models.CharField('ancien statut', max_length=20, choices=Member.Status.choices)
     to_status = models.CharField('nouveau statut', max_length=20, choices=Member.Status.choices)
-    reason = models.TextField('motif', blank=True)
+    reason = EncryptedTextField('motif', blank=True)
     changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name='changé par',

@@ -12,6 +12,8 @@ l'historique ne se contredisent jamais :
 from django.db import transaction
 
 from accounts.sessions import close_sessions
+from audit.models import AuditEntry
+from audit.services import person_name, record
 
 from .models import Member, MemberStatusChange
 
@@ -41,6 +43,17 @@ def change_status(member, new_status, *, by, reason=''):
         )
         member.status = new_status
         member.save(update_fields=['status', 'updated_at'])
+        record(
+            AuditEntry.Action.STATUS_CHANGED,
+            actor=by,
+            subject=person_name(member.user),
+            number=member.number,
+            from_status=previous,
+            to_status=new_status,
+            from_label=Member.Status(previous).label,
+            to_label=Member.Status(new_status).label,
+            reason=reason.strip(),
+        )
         user = member.user
         user.is_active = new_status == Member.Status.ACTIF
         user.save(update_fields=['is_active'])

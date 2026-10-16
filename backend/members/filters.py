@@ -8,17 +8,15 @@ courriel ou numéro ; plusieurs mots doivent tous correspondre) et ``ordering``.
 """
 
 from django.db.models import Q
-from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import User
+from core.filters import read_period
 from territories.models import Territory
 from territories.scope import subtree_ids
 
 from .models import Member
 
-BAD_DATE = 'Saisissez une date valide au format AAAA-MM-JJ.'
-BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date de début.'
 UNKNOWN_TERRITORY = 'Localité inconnue.'
 
 ORDERINGS = {
@@ -27,19 +25,6 @@ ORDERINGS = {
     'date': ('joined_on', 'id'),
 }
 DEFAULT_ORDERING = '-date'
-
-
-def read_date(params, name):
-    value = params.get(name, '').strip()
-    if not value:
-        return None
-    try:
-        parsed = parse_date(value)
-    except ValueError:
-        parsed = None
-    if parsed is None:
-        raise ValidationError({name: [BAD_DATE]})
-    return parsed
 
 
 def read_roles(params):
@@ -70,10 +55,7 @@ def filter_members(queryset, params):
             raise ValidationError({'territory': [UNKNOWN_TERRITORY]})
         queryset = queryset.filter(user__territory__in=subtree_ids(root))
 
-    joined_from = read_date(params, 'joined_from')
-    joined_to = read_date(params, 'joined_to')
-    if joined_from and joined_to and joined_to < joined_from:
-        raise ValidationError({'joined_to': [BAD_PERIOD]})
+    joined_from, joined_to = read_period(params, 'joined_from', 'joined_to')
     if joined_from:
         queryset = queryset.filter(joined_on__gte=joined_from)
     if joined_to:

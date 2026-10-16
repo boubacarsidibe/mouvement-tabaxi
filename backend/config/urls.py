@@ -10,6 +10,7 @@ api_patterns = [
     path('auth/', include('accounts.urls')),
     path('territories/', include('territories.urls')),
     path('applications/', include('applications.urls')),
+    path('audit/', include('audit.urls')),
     path('', include('members.urls')),
 ]
 

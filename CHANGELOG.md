@@ -40,6 +40,9 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Frontend : écran « Bases de membres » relié à l'API (liste, fiche, changement de statut, historique réservé aux fondateurs), sans données fictives ; la page « Demandes d'adhésion » affiche désormais ses erreurs en rouge.
 - Bases du bureau : filtres par territoire (le territoire et ceux qui en dépendent) et par période d'adhésion, recherche par nom, courriel ou numéro, base des coordonnateurs (`role=coordonnateur,fondateur`) avec les mêmes filtres, toutes limitées au territoire de la personne connectée ; chaque compte du bureau a son dossier de membre (fondateur créé par `createsuperuser`, comptes existants par migration) (#38, #39).
 - Frontend : « Bases de membres », « Coordonnateurs » et « Comptes d'accès » affichent les vraies données avec filtres par localité, fonction, statut et période, sans personnes fictives.
+- Journal des actions (`GET /api/audit/`, fondateurs) : acceptations et refus de demandes, changements de statut, invitations enregistrés automatiquement avec leur auteur, leur date et leur motif, dans la transaction de l'action ; les lignes ne se modifient ni ne s'effacent (code, routes, administration), leurs détails sont chiffrés en base, et le changement de clé de chiffrement les rechiffre sans en toucher le contenu (#42).
+- Frontend : écran « Journal des actions » relié à l'API (recherche, filtres par action, auteur et période, pages), réservé aux fondateurs, sans données fictives.
+- Les motifs de suspension et de radiation sont chiffrés en base, comme les motifs de refus.
 
 ### Modifié
 

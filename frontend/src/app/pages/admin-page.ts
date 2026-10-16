@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
+import { AuditJournal } from './audit-journal';
 import { InviteForm } from './invite-form';
 import { MemberDetail, MembersList } from './members-base';
 import { RequestDetail, RequestsList } from './requests-review';
@@ -16,6 +17,7 @@ import { RequestDetail, RequestsList } from './requests-review';
     InviteForm,
     MembersList,
     MemberDetail,
+    AuditJournal,
   ],
   template: `
     <main class="workspace-shell admin-shell">
@@ -333,32 +335,7 @@ import { RequestDetail, RequestsList } from './requests-review';
           }
 
           @if (view === 'audit') {
-            <div class="filter-bar audit-filters">
-              <label
-                ><ui-icon name="search" /><input
-                  aria-label="Rechercher une action"
-                  placeholder="Rechercher une action…" /></label
-              ><select aria-label="Filtrer par action">
-                <option>Action · Toutes</option></select
-              ><select aria-label="Filtrer par auteur">
-                <option>Auteur · Tous</option></select
-              ><select aria-label="Filtrer par période">
-                <option>Période · 30 jours</option></select
-              ><button>Réinitialiser</button>
-            </div>
-            <section class="audit-list panel">
-              @for (entry of auditEntries; track entry.when) {
-                <article>
-                  <span class="audit-icon"><ui-icon [name]="entry.icon" /></span>
-                  <div>
-                    <strong>{{ entry.action }}</strong>
-                    <p>{{ entry.detail }}</p>
-                    <small>{{ entry.author }} · {{ entry.when }}</small>
-                  </div>
-                  <span class="badge">{{ entry.scope }}</span>
-                </article>
-              }
-            </section>
+            <app-audit-journal />
           }
 
           @if (view === 'invite') {
@@ -627,8 +604,8 @@ export class AdminPage {
     { view: 'accounts', label: 'Comptes d’accès', icon: 'key', link: '/bureau/comptes' },
     { view: 'audit', label: 'Journal des actions', icon: 'clipboard', link: '/bureau/journal' },
   ];
-  /** L'examen des demandes et les comptes d'accès sont réservés aux fondateurs. */
-  private readonly founderViews = new Set(['requests', 'accounts']);
+  /** L'examen des demandes, les comptes d'accès et le journal des actions sont réservés aux fondateurs. */
+  private readonly founderViews = new Set(['requests', 'accounts', 'audit']);
   protected readonly visibleNavItems = computed(() =>
     this.navItems.filter((item) => this.auth.isFounder() || !this.founderViews.has(item.view)),
   );
@@ -807,48 +784,6 @@ export class AdminPage {
     { city: 'Tambacounda', region: 'Tambacounda', coordinators: 4, members: 96 },
     { city: 'Kolda', region: 'Kolda', coordinators: 3, members: 84 },
     { city: 'Louga', region: 'Louga', coordinators: 5, members: 100 },
-  ];
-  protected readonly auditEntries = [
-    {
-      icon: 'users',
-      action: 'Demande acceptée',
-      detail: 'Awa Ndiaye · Saint-Louis',
-      author: 'Bureau national',
-      when: 'Aujourd’hui, 10 h 42',
-      scope: 'Adhésion',
-    },
-    {
-      icon: 'download',
-      action: 'Liste exportée',
-      detail: 'Membres actifs de Dakar · 320 lignes',
-      author: 'Mamadou Diop',
-      when: 'Hier, 16 h 18',
-      scope: 'Export',
-    },
-    {
-      icon: 'key',
-      action: 'Coordonnatrice invitée',
-      detail: 'Fatou Sarr · Ziguinchor',
-      author: 'Bureau national',
-      when: '13 octobre, 09 h 05',
-      scope: 'Accès',
-    },
-    {
-      icon: 'calendar',
-      action: 'Activité modifiée',
-      detail: 'Nettoyage citoyen de la plage de Yoff',
-      author: 'Mamadou Diop',
-      when: '12 octobre, 14 h 33',
-      scope: 'Programme',
-    },
-    {
-      icon: 'users',
-      action: 'Membre suspendu',
-      detail: 'Compte de Cheikh Fall',
-      author: 'Bureau national',
-      when: '10 octobre, 11 h 20',
-      scope: 'Statut',
-    },
   ];
   protected readonly attendees = [
     { name: 'Aminata Ndiaye', id: 'TBX-2026-00125', time: '08 h 52', present: true },

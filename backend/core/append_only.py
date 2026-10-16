@@ -27,6 +27,13 @@ class AppendOnlyQuerySet(models.QuerySet):
     def delete(self):
         raise ImmutableRecordError()
 
+    def reencrypt(self, **values):
+        """Réécrit les mêmes valeurs avec la clé de chiffrement actuelle (``manage.py rechiffrer``).
+
+        Seul usage permis d'une écriture sur un historique : le contenu lu est identique avant et après.
+        """
+        return super().update(**values)
+
 
 class AppendOnlyModel(models.Model):
     objects = AppendOnlyQuerySet.as_manager()
