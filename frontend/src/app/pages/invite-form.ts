@@ -3,12 +3,11 @@ import { RouterLink } from '@angular/router';
 import { readProblem } from '../core/api-problem';
 import { InvitationService } from '../core/invitation.service';
 import { TerritoryNode, TerritoryService, regionsOf } from '../core/territories.service';
-import { UiIcon } from '../shared/ui-icon';
 
 /** Formulaire d'invitation d'un coordonnateur (ou d'un fondateur), réservé aux fondateurs. */
 @Component({
   selector: 'app-invite-form',
-  imports: [RouterLink, UiIcon],
+  imports: [RouterLink],
   template: `
     <form class="workspace-form panel admin-form" (submit)="submit($event)">
       <h2>Inviter un coordonnateur</h2>
@@ -61,10 +60,6 @@ import { UiIcon } from '../shared/ui-icon';
             <span class="field-error" role="alert">{{ message }}</span>
           }
         </label>
-      </div>
-      <div class="security-alert compact">
-        <ui-icon name="key" />
-        <p><strong>Accès contrôlé</strong>Seul un fondateur peut envoyer cette invitation.</p>
       </div>
       <div class="form-actions">
         <a class="btn btn-outline" routerLink="/bureau/comptes">Annuler</a>

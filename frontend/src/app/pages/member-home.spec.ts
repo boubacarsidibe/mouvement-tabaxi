@@ -118,10 +118,11 @@ describe('Espace membre : accueil', () => {
         ACTIVITY(3, 'Causerie', 9),
       ]),
     ]);
-    const tiles = Array.from(root.querySelectorAll('.member-stats article')).map((tile) => [
+    const tiles = Array.from(root.querySelectorAll('.member-stats > div')).map((tile) => [
       tile.querySelector('strong')?.textContent,
-      tile.querySelector('p')?.firstChild?.textContent,
+      tile.querySelector('span')?.textContent,
     ]);
+    expect(root.querySelector('.member-stats ui-icon')).toBeNull(); // pas de pictogrammes décoratifs
     expect(tiles).toEqual([
       ['1', 'Programmes'],
       ['2', 'Activités à venir'], // l'activité passée n'est pas comptée

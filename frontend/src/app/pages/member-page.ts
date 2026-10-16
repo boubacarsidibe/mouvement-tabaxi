@@ -15,10 +15,18 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
   imports: [RouterLink, UiIcon, MemberCard, DatePipe, MemberPrograms, MemberActivityPage],
   template: `
     <main class="workspace-shell">
-      <aside class="side-nav">
+      <aside class="side-nav" [class.menu-open]="menuOpen()" (click)="closeMenuOnLink($event)">
         <a class="side-logo" routerLink="/"
           ><img src="logo-tabaxi-sidebar.png" alt="Mouvement TABAXI"
         /></a>
+        <button
+          class="menu-toggle"
+          type="button"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
+        >
+          {{ menuOpen() ? 'Fermer' : 'Menu' }}
+        </button>
         <p class="side-label">Espace membre</p>
         <nav aria-label="Espace membre">
           <a routerLink="/membre" [class.active]="view === 'home'"
@@ -61,39 +69,22 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
             <header class="page-heading">
               <h1>Mon espace</h1>
             </header>
-            <section class="welcome-banner">
-              <img src="hero-tabaxi.jpg" alt="" />
+            <section class="dashboard-summary member-stats" aria-label="Mes chiffres">
               <div>
-                <h2>Bienvenue, {{ auth.user()?.first_name }}</h2>
-                <p>Ensemble pour une citoyenneté active<br />et un avenir meilleur.</p>
-                @if (auth.user()?.territory; as territory) {
-                  <strong><ui-icon name="location" /> {{ territory.name }}</strong>
-                }
+                <strong>{{ homeStats().programs }}</strong>
+                <span>Programmes</span>
+                <small>en cours et à venir dans mon territoire</small>
               </div>
-              <em>Notre engagement<br />pour des communautés<br />plus fortes</em>
-            </section>
-            <section class="stat-grid member-stats" aria-label="Mes chiffres">
-              <article>
-                <span class="stat-icon"><ui-icon name="calendar" /></span>
-                <div>
-                  <strong>{{ homeStats().programs }}</strong>
-                  <p>Programmes<small>en cours et à venir dans mon territoire</small></p>
-                </div>
-              </article>
-              <article>
-                <span class="stat-icon"><ui-icon name="leaf" /></span>
-                <div>
-                  <strong>{{ homeStats().activities }}</strong>
-                  <p>Activités à venir<small>ouvertes aux inscriptions</small></p>
-                </div>
-              </article>
-              <article>
-                <span class="stat-icon"><ui-icon name="users" /></span>
-                <div>
-                  <strong>{{ homeStats().registered }}</strong>
-                  <p>Mes inscriptions<small>à des activités à venir</small></p>
-                </div>
-              </article>
+              <div>
+                <strong>{{ homeStats().activities }}</strong>
+                <span>Activités à venir</span>
+                <small>ouvertes aux inscriptions</small>
+              </div>
+              <div>
+                <strong>{{ homeStats().registered }}</strong>
+                <span>Mes inscriptions</span>
+                <small>à des activités à venir</small>
+              </div>
             </section>
             <section class="member-grid" [class.no-coordinator]="auth.user()?.is_bureau">
               <article class="panel member-card-panel">
@@ -432,6 +423,13 @@ export class MemberPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
+  /** Téléphone et tablette : liste des pages ouverte ou fermée. */
+  protected readonly menuOpen = signal(false);
+
+  /** Un lien du menu a été choisi : on referme la liste. */
+  protected closeMenuOnLink(event: Event): void {
+    if ((event.target as HTMLElement).closest('a')) this.menuOpen.set(false);
+  }
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   private readonly profiles = inject(ProfileService);

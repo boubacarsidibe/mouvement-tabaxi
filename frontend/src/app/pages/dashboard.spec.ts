@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { Dashboard, niceTop } from './dashboard';
+import { Dashboard } from './dashboard';
 
 const TERRITORY = (id: number, name: string, kind = 'commune', kind_label = 'Commune') => ({
   id,
@@ -81,13 +81,16 @@ describe('Tableau de bord', () => {
   it('affiche les chiffres du serveur, sans données fictives', async () => {
     await open();
     const text = root.textContent ?? '';
-    expect(text).toContain('Programmes en cours');
-    expect(text).toContain('tous les territoires');
-    expect(text).toContain('Membres actifs');
+    expect(text).toContain('programmes en cours');
+    expect(text).toContain('tout le mouvement');
     expect(text).toContain('128');
-    expect(text).toContain('dont 6 adhésion(s) ce mois-ci');
-    expect(text).toContain('Coordonnateurs actifs');
-    expect(text).toContain('Demandes à examiner');
+    expect(text).toContain('membres actifs');
+    expect(text).toContain('dont 6 ce mois-ci');
+    expect(text).toContain('coordonnateurs');
+    expect(text).toContain('demandes à examiner');
+    // Aucun pictogramme décoratif ni flèche dans les chiffres clés.
+    expect(root.querySelector('.dashboard-summary ui-icon')).toBeNull();
+    expect(root.querySelector('.dashboard-summary')?.textContent).not.toContain('→');
     expect(text).not.toMatch(/1 248|\+12%|Éducation civique/); // les anciennes valeurs d'exemple
   });
 
@@ -95,8 +98,7 @@ describe('Tableau de bord', () => {
     await open();
     const rows = Array.from(root.querySelectorAll('.territory-panel li')).map((li) => li.textContent?.replace(/\s+/g, ' ').trim());
     expect(rows[0]).toContain('Pikine');
-    expect(rows[0]).toContain('80 membre(s)');
-    expect(rows[0]).toContain('2 coordonnateur(s)');
+    expect(rows[0]).toContain('80 membres, 2 coordonnateurs');
     expect(rows[1]).toContain('Mbour');
     expect(rows[1]).not.toContain('coordonnateur'); // aucun coordonnateur : rien à dire
     expect(rows[2]).toContain('Région');
@@ -104,26 +106,25 @@ describe('Tableau de bord', () => {
     expect(bars).toEqual(['100%', '50%', '0%']);
   });
 
-  it('trace la courbe des douze derniers mois avec une échelle adaptée', async () => {
+  it('montre les adhésions des douze derniers mois en barres', async () => {
     await open();
-    expect(root.querySelectorAll('.line-chart circle').length).toBe(12);
-    const ticks = Array.from(root.querySelectorAll('.chart-y span')).map((span) => span.textContent);
-    expect(ticks).toEqual(['8', '6', '4', '2', '0']); // le plus grand mois compte 6 adhésions
-    const months = Array.from(root.querySelectorAll('.chart-months span')).map((span) => span.textContent);
+    const bars = Array.from(root.querySelectorAll('.bar-chart .bar'));
+    expect(bars.length).toBe(12);
+    const months = bars.map((bar) => bar.querySelector('.bar-month')!.textContent);
     expect(months[0]).toBe('nov.');
     expect(months[11]).toBe('oct.');
-    const label = root.querySelector('.line-chart')!.getAttribute('aria-label');
-    expect(label).toContain('0 en nov. 2025');
-    expect(label).toContain('6 en oct. 2026');
-    // Le dernier mois (6 sur 8) est tracé aux trois quarts de la hauteur.
-    const last = Array.from(root.querySelectorAll('.line-chart circle')).pop()!;
-    expect(Number(last.getAttribute('cy'))).toBeCloseTo(50, 5);
+    // Le mois le plus fort (6 adhésions, octobre) occupe toute la hauteur ; un mois vide n'a pas de barre.
+    expect((bars[11].querySelector('i') as HTMLElement).style.height).toBe('100%');
+    expect((bars[0].querySelector('i') as HTMLElement).style.height).toBe('0%');
+    expect(bars[11].querySelector('.bar-value')!.textContent).toBe('6');
+    const label = root.querySelector('.bar-chart')!.getAttribute('aria-label');
+    expect(label).toContain('de nov. 2025 à oct. 2026');
   });
 
   it('propose les demandes à examiner et les dernières actions aux fondateurs', async () => {
     await open();
     expect(root.textContent).toContain('Omar Niang');
-    expect(root.textContent).toContain('Statut modifié · Aminata Ndiaye');
+    expect(root.textContent).toContain('Statut modifié : Aminata Ndiaye');
     expect(root.textContent).toContain('Ibrahima Sow');
     expect(root.querySelector('a[href="/bureau/demandes/11"]')).not.toBeNull();
     expect(root.querySelector('a[href="/bureau/journal"]')).not.toBeNull();
@@ -149,9 +150,9 @@ describe('Tableau de bord', () => {
       recent_actions: null,
     });
     const text = root.textContent ?? '';
-    expect(text).toContain('Périmètre : Dakar et les territoires qui en dépendent');
+    expect(text).toContain('Chiffres de Dakar et des localités qui en dépendent.');
     expect(text).toContain('dans votre périmètre');
-    expect(text).not.toContain('Voir les demandes');
+    expect(text).not.toContain('Examiner les demandes');
     expect(root.querySelector('a[href="/bureau/journal"]')).toBeNull();
     expect(root.querySelector('a[href="/bureau/demandes"]')).toBeNull();
   });
@@ -161,8 +162,9 @@ describe('Tableau de bord', () => {
     expect(root.textContent).toContain('Aucun programme prévu ou en cours.');
     expect(root.textContent).toContain('Aucun membre actif dans ce périmètre.');
     expect(root.textContent).toContain('Aucune demande en attente.');
-    const ticks = Array.from(root.querySelectorAll('.chart-y span')).map((span) => span.textContent);
-    expect(ticks).toEqual(['4', '3', '2', '1', '0']);
+    // Pas de graphique vide : une phrase le dit.
+    expect(root.querySelector('.bar-chart')).toBeNull();
+    expect(root.textContent).toContain('Aucune nouvelle adhésion sur les douze derniers mois.');
   });
 
   it('affiche l’erreur du serveur', async () => {
@@ -178,9 +180,4 @@ describe('Tableau de bord', () => {
     expect(root.textContent).not.toContain('Chargement');
   });
 
-  it('choisit une échelle ronde pour chaque ordre de grandeur', () => {
-    expect([0, 1, 4, 5, 8, 9, 20, 21, 40, 41, 80, 81, 200, 201, 4000].map(niceTop)).toEqual([
-      4, 4, 4, 8, 8, 20, 20, 40, 40, 80, 80, 200, 200, 400, 4000,
-    ]);
-  });
 });
