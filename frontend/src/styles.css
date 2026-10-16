@@ -3575,8 +3575,16 @@ h3 {
     align-items: stretch;
     flex-direction: column;
   }
+  /* Liens côte à côte, sur deux lignes au besoin, au lieu d'une colonne très espacée. */
+  .public-footer {
+    gap: 16px;
+    padding-block: 32px 24px;
+  }
   .public-footer nav {
-    display: grid;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 24px;
   }
   .auth-story h1,
   .status-main h1,
