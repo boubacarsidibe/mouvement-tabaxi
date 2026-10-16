@@ -6,7 +6,7 @@ import { MemberPage } from './pages/member-page';
 import { PrivacyPage } from './pages/privacy-page';
 import { PublicPage } from './pages/public-page';
 import { RequestStatusPage } from './pages/request-status-page';
-import { bureauGuard, founderGuard, memberGuard } from './core/auth.guards';
+import { auditGuard, bureauGuard, founderGuard, memberGuard } from './core/auth.guards';
 
 export const routes: Routes = [
   { path: '', component: PublicPage, title: 'TABAXI — La voix de nos territoires' },
@@ -31,7 +31,13 @@ export const routes: Routes = [
     title: 'Mot de passe oublié — TABAXI',
   },
   { path: 'confidentialite', component: PrivacyPage, title: 'Confidentialité — TABAXI' },
-  { path: 'membre', component: MemberPage, canActivate: [memberGuard], data: { view: 'home' }, title: 'Mon espace — TABAXI' },
+  {
+    path: 'membre',
+    component: MemberPage,
+    canActivate: [memberGuard],
+    data: { view: 'home' },
+    title: 'Mon espace — TABAXI',
+  },
   {
     path: 'membre/programmes',
     component: MemberPage,
@@ -126,7 +132,7 @@ export const routes: Routes = [
   {
     path: 'bureau/journal',
     component: AdminPage,
-    canActivate: [bureauGuard],
+    canActivate: [auditGuard],
     data: { view: 'audit' },
     title: 'Journal des actions — TABAXI',
   },

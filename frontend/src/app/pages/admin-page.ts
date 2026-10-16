@@ -1,11 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService, MembershipApplication } from '../core/api.service';
+import { Capability, hasCapability } from '../core/access-control';
 import { UiIcon } from '../shared/ui-icon';
+import { WorkspaceTopbar } from '../shared/workspace-topbar';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [RouterLink, UiIcon],
+  imports: [RouterLink, UiIcon, WorkspaceTopbar],
   template: `
     <main class="workspace-shell admin-shell">
       <aside class="side-nav">
@@ -21,28 +23,25 @@ import { UiIcon } from '../shared/ui-icon';
           }
         </nav>
         <div class="side-profile">
-          <a routerLink="/membre"><ui-icon name="users" />Changer de profil</a>
+          <a routerLink="/membre"><ui-icon name="users" />Espace membre</a>
           <div class="side-user">
-            <span>BE</span>
-            <p><strong>mouvement.tabaxi&#64;gmail.com</strong><small>Membre fondateur</small></p>
+            <span>{{ userInitials }}</span>
+            <p>
+              <strong>{{ currentUser()?.email }}</strong
+              ><small>{{ currentUser()?.role_label }}</small>
+            </p>
           </div>
           <a routerLink="/" (click)="logout($event)"><ui-icon name="logout" />Se déconnecter</a>
         </div>
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <label class="top-search"
-            ><ui-icon name="search" /><input
-              aria-label="Rechercher dans la plateforme"
-              placeholder="Rechercher dans la plateforme…"
-          /></label>
-          <button class="icon-button" aria-label="Notifications">
-            <ui-icon name="bell" /><i></i>
-          </button>
-          <button class="profile-chip" aria-label="Menu du profil">BE</button
-          ><span class="chevron" aria-hidden="true">⌄</span>
-        </header>
+        <app-workspace-topbar
+          context="Bureau exécutif"
+          [initials]="userInitials"
+          [name]="userName"
+          [role]="currentUser()?.role_label ?? ''"
+        />
 
         <div class="workspace-content admin-content">
           <header class="page-heading">
@@ -50,20 +49,20 @@ import { UiIcon } from '../shared/ui-icon';
               <h1>{{ pageTitle }}</h1>
               <p>{{ pageSubtitle }}</p>
             </div>
-            @if (hasPrimaryAction) {
+            @if (showPrimaryAction) {
               <a class="btn btn-green" [routerLink]="actionLink"
                 ><ui-icon name="plus" />{{ actionLabel }}</a
               >
             } @else if (view === 'dashboard') {
-              <button class="date-button">
+              <span class="date-button">
                 <ui-icon name="calendar" />1 jan. 2026 – 31 déc. 2026
-              </button>
+              </span>
             }
           </header>
 
           @if (view === 'dashboard') {
             <section class="stat-grid admin-stats">
-              @for (stat of stats; track stat.label) {
+              @for (stat of dashboardStats; track stat.label) {
                 <article>
                   <span class="stat-icon"><ui-icon [name]="stat.icon" /></span>
                   <div>
@@ -103,7 +102,13 @@ import { UiIcon } from '../shared/ui-icon';
                         </linearGradient>
                       </defs>
                       @for (tick of chartTicks; track tick) {
-                        <line class="grid-line" x1="0" x2="500" [attr.y1]="200 - tick" [attr.y2]="200 - tick" />
+                        <line
+                          class="grid-line"
+                          x1="0"
+                          x2="500"
+                          [attr.y1]="200 - tick"
+                          [attr.y2]="200 - tick"
+                        />
                       }
                       <path class="area" [attr.d]="chartArea" />
                       <path [attr.d]="chartLine" />
@@ -119,23 +124,25 @@ import { UiIcon } from '../shared/ui-icon';
                   </div>
                 </figure>
               </article>
-              <article class="panel recent-panel">
-                <div class="panel-title">
-                  <h2>Demandes récentes</h2>
-                  <a routerLink="/bureau/demandes">Voir tout →</a>
-                </div>
-                @for (person of requests.slice(0, 4); track person.name) {
-                  <div>
-                    <span class="list-avatar"><ui-icon name="users" /></span>
-                    <p>
-                      <strong>{{ person.name }}</strong
-                      ><small>{{ person.city }}</small>
-                    </p>
-                    <time>Il y a {{ $index + 2 }} h</time
-                    ><span class="badge warning">À examiner</span>
+              @if (has('reviewApplications')) {
+                <article class="panel recent-panel">
+                  <div class="panel-title">
+                    <h2>Demandes récentes</h2>
+                    <a routerLink="/bureau/demandes">Voir tout →</a>
                   </div>
-                }
-              </article>
+                  @for (person of requests.slice(0, 4); track person.name) {
+                    <div>
+                      <span class="list-avatar"><ui-icon name="users" /></span>
+                      <p>
+                        <strong>{{ person.name }}</strong
+                        ><small>{{ person.city }}</small>
+                      </p>
+                      <time>Il y a {{ $index + 2 }} h</time
+                      ><span class="badge warning">À examiner</span>
+                    </div>
+                  }
+                </article>
+              }
               <article class="panel small-panel">
                 <div class="panel-title">
                   <h2>Programmes à venir</h2>
@@ -149,13 +156,25 @@ import { UiIcon } from '../shared/ui-icon';
               </article>
               <article class="panel small-panel">
                 <div class="panel-title">
-                  <h2>Dernières activités</h2>
-                  <a routerLink="/bureau/journal">Voir tout →</a>
+                  <h2>{{ has('viewAudit') ? 'Dernières actions' : 'Activité à suivre' }}</h2>
+                  <a
+                    [routerLink]="
+                      has('viewAudit')
+                        ? '/bureau/journal'
+                        : '/bureau/programmes/brigades-citoyennes'
+                    "
+                    >Ouvrir →</a
+                  >
                 </div>
                 <p>
-                  <ui-icon name="users" /><span
-                    ><strong>Nouvelle demande d’adhésion</strong><small>Par Awa Ndiaye</small></span
-                  ><time>Il y a 2 h</time>
+                  <ui-icon [name]="has('viewAudit') ? 'users' : 'leaf'" /><span
+                    ><strong>{{
+                      has('viewAudit')
+                        ? 'Nouvelle demande d’adhésion'
+                        : 'Nettoyage citoyen de la plage de Yoff'
+                    }}</strong
+                    ><small>{{ has('viewAudit') ? 'Par Awa Ndiaye' : 'Dakar' }}</small></span
+                  ><time>{{ has('viewAudit') ? 'Il y a 2 h' : '24 oct. 2026' }}</time>
                 </p>
               </article>
             </section>
@@ -167,49 +186,78 @@ import { UiIcon } from '../shared/ui-icon';
             view === 'accounts' ||
             view === 'coordinators'
           ) {
-            @if (view === 'members') {
-              <nav class="tabs">
-                <a class="active">Tous les membres (1 248)</a><a>Membres fondateurs (12)</a
-                ><a>Coordonnateurs (86)</a><a>Par localité</a>
-              </nav>
-            }
-            @if (view === 'accounts') {
+            @if (view === 'accounts' && has('manageAccounts')) {
               <div class="security-alert">
                 <ui-icon name="key" />
                 <p>
                   <strong>Sécurité</strong>Veillez à n’accorder des accès qu’aux personnes de
                   confiance. Les comptes inactifs doivent être désactivés.
                 </p>
-                <button type="button" aria-label="Fermer l’avertissement">×</button>
               </div>
             }
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
-                  #requestSearch
-                  [attr.aria-label]="view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'"
-                  (input)="view === 'requests' && loadRequests(requestStatus.value, requestSearch.value)"
+                  [attr.aria-label]="
+                    view === 'requests'
+                      ? 'Rechercher une demande'
+                      : view === 'accounts'
+                        ? 'Rechercher un compte'
+                        : 'Rechercher un membre'
+                  "
+                  [value]="peopleQuery()"
+                  (input)="updatePeopleQuery($any($event.target).value)"
                   [placeholder]="
                     view === 'requests'
                       ? 'Rechercher un nom, un email, une localité…'
-                      : 'Rechercher un membre…'
-                  " /></label
-              >@if (view !== 'requests') {
-                <select aria-label="Filtrer par localité"><option>Localité · Toutes</option></select>
-              }<select #requestStatus aria-label="Filtrer par statut" (change)="view === 'requests' && loadRequests(requestStatus.value, requestSearch.value)">
+                      : view === 'accounts'
+                        ? 'Rechercher un compte…'
+                        : 'Rechercher un membre…'
+                  "
+              /></label>
+              @if (view === 'members' || view === 'coordinators') {
+                <select
+                  aria-label="Filtrer par localité"
+                  [value]="peoplePlace()"
+                  (change)="peoplePlace.set($any($event.target).value)"
+                >
+                  <option value="">Localité · Toutes</option>
+                  @for (territory of territories; track territory.city) {
+                    <option [value]="territory.city">{{ territory.city }}</option>
+                  }
+                </select>
+              }
+              <select
+                aria-label="Filtrer par statut"
+                [value]="peopleStatus()"
+                (change)="updatePeopleStatus($any($event.target).value)"
+              >
                 <option value="">Statut · Tous</option>
                 @if (view === 'requests') {
                   <option value="a_examiner">À examiner</option>
                   <option value="acceptee">Acceptée</option>
                   <option value="rejetee">Rejetée</option>
                   <option value="inscrite">Inscrite</option>
+                } @else if (view === 'accounts') {
+                  <option value="Actif">Actif</option>
+                  <option value="Inactif">Inactif</option>
+                } @else {
+                  <option value="Actif">Actif</option>
+                  <option value="Suspendu">Suspendu</option>
                 }
-              </select
-              >@if (view !== 'requests') {
-                <select aria-label="Filtrer par rôle">
-                  <option>Rôle · Tous</option>
+              </select>
+              @if (view === 'accounts') {
+                <select
+                  aria-label="Filtrer par rôle"
+                  [value]="peopleRole()"
+                  (change)="peopleRole.set($any($event.target).value)"
+                >
+                  <option value="">Rôle · Tous</option>
+                  <option value="Membre">Membre</option>
+                  <option value="Coordonnateur">Coordonnateur</option>
                 </select>
-              }<button type="button" (click)="requestSearch.value = ''; requestStatus.value = ''; view === 'requests' && loadRequests()">Réinitialiser</button>
+              }
+              <button type="button" (click)="resetPeopleFilters()">Réinitialiser</button>
             </div>
             @if (view === 'requests' && requestsLoading()) {
               <p class="inline-notice" role="status">Chargement des demandes…</p>
@@ -232,7 +280,9 @@ import { UiIcon } from '../shared/ui-icon';
                         <span aria-hidden="true">{{ sortIndicator('place') }}</span>
                       </button>
                     </th>
-                    <th>{{ view === 'requests' ? 'Profession' : 'Rôle' }}</th>
+                    @if (view !== 'members') {
+                      <th>{{ view === 'requests' ? 'Profession' : 'Rôle' }}</th>
+                    }
                     <th [attr.aria-sort]="ariaSort('date')">
                       <button class="th-sort" type="button" (click)="sortBy('date')">
                         {{ view === 'requests' ? 'Date de demande' : 'Date d’adhésion' }}
@@ -252,9 +302,11 @@ import { UiIcon } from '../shared/ui-icon';
                       <td [attr.data-label]="view === 'accounts' ? 'Email' : 'Localité'">
                         {{ view === 'accounts' ? person.email : person.city }}
                       </td>
-                      <td [attr.data-label]="view === 'requests' ? 'Profession' : 'Rôle'">
-                        {{ view === 'requests' ? person.job : person.role }}
-                      </td>
+                      @if (view !== 'members') {
+                        <td [attr.data-label]="view === 'requests' ? 'Profession' : 'Rôle'">
+                          {{ view === 'requests' ? person.job : person.role }}
+                        </td>
+                      }
                       <td [attr.data-label]="view === 'requests' ? 'Demande' : 'Adhésion'">
                         {{ person.date }}
                       </td>
@@ -280,7 +332,7 @@ import { UiIcon } from '../shared/ui-icon';
                           class="row-action"
                           [routerLink]="personLink(person)"
                           [attr.aria-label]="'Voir la fiche de ' + person.name"
-                          >Voir</a
+                          >Ouvrir</a
                         >
                       </td>
                     </tr>
@@ -294,31 +346,42 @@ import { UiIcon } from '../shared/ui-icon';
           }
 
           @if (view === 'programs') {
-            <nav class="tabs">
-              <a class="active">Tous (18)</a><a>En cours (10)</a><a>À venir (5)</a
-              ><a>Terminés (3)</a>
-            </nav>
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
                   aria-label="Rechercher un programme"
-                  placeholder="Rechercher un programme…" /></label
-              ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option></select
-              ><select aria-label="Filtrer par localité">
-                <option>Localité · Toutes</option></select
-              ><button>Réinitialiser</button>
+                  placeholder="Rechercher un programme…"
+                  [value]="programQuery()"
+                  (input)="programQuery.set($any($event.target).value)" /></label
+              ><select
+                aria-label="Filtrer par statut"
+                [value]="programStatus()"
+                (change)="programStatus.set($any($event.target).value)"
+              >
+                <option value="">Statut · Tous</option>
+                <option value="En cours">En cours</option>
+                <option value="À venir">À venir</option>
+                <option value="Terminé">Terminé</option></select
+              ><select
+                aria-label="Filtrer par localité"
+                [value]="programPlace()"
+                (change)="programPlace.set($any($event.target).value)"
+              >
+                <option value="">Localité · Toutes</option>
+                @for (territory of territories; track territory.city) {
+                  <option [value]="territory.city">{{ territory.city }}</option>
+                }</select
+              ><button type="button" (click)="resetProgramFilters()">Réinitialiser</button>
             </div>
             <section class="admin-program-grid">
-              @for (program of programs; track program.name) {
-                <article class="panel" routerLink="/bureau/programmes/brigades-citoyennes">
+              @for (program of visiblePrograms; track program.name) {
+                <article class="panel">
                   <header>
                     <ui-icon [name]="program.icon" />
                     <div>
                       <h2>{{ program.name }}</h2>
                       <p>{{ program.description }}</p>
                     </div>
-                    <button type="button" [attr.aria-label]="'Plus d’actions pour ' + program.name">•••</button>
                   </header>
                   <p class="program-city"><ui-icon name="location" />{{ program.city }}</p>
                   <div class="progress"><i [style.width.%]="program.progress"></i></div>
@@ -330,9 +393,13 @@ import { UiIcon } from '../shared/ui-icon';
                       [class.success]="program.status !== 'À venir'"
                       [class.warning]="program.status === 'À venir'"
                       >{{ program.status }}</span
+                    ><a class="row-action" routerLink="/bureau/programmes/brigades-citoyennes"
+                      >Ouvrir</a
                     >
                   </footer>
                 </article>
+              } @empty {
+                <p class="empty-state">Aucun programme ne correspond à ces filtres.</p>
               }
             </section>
           }
@@ -352,16 +419,7 @@ import { UiIcon } from '../shared/ui-icon';
                 <p>Membres</p>
               </article>
             </section>
-            <section class="territory-layout">
-              <div class="territory-map-card">
-                <img src="hero-tabaxi.jpg" alt="Carte illustrée du Sénégal" /><span
-                  class="map-city city-one"
-                ></span
-                ><span class="map-city city-two"></span><span class="map-city city-three"></span>
-                <div>
-                  <strong>Dakar</strong><small>24 membres<br />3 coordonnateurs</small>
-                </div>
-              </div>
+            <section class="territory-layout territory-list-only">
               <div class="table-wrap responsive-table">
                 <table>
                   <thead>
@@ -370,7 +428,6 @@ import { UiIcon } from '../shared/ui-icon';
                       <th>Région</th>
                       <th>Coordonnateurs</th>
                       <th>Membres</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -382,21 +439,6 @@ import { UiIcon } from '../shared/ui-icon';
                         <td data-label="Région">{{ territory.region }}</td>
                         <td data-label="Coordonnateurs">{{ territory.coordinators }}</td>
                         <td data-label="Membres">{{ territory.members }}</td>
-                        <td>
-                          <button
-                            class="row-action"
-                            type="button"
-                            [attr.aria-label]="'Voir ' + territory.city + ' sur la carte'"
-                          >
-                            ◉</button
-                          ><button
-                            class="row-action"
-                            type="button"
-                            [attr.aria-label]="'Plus d’actions pour ' + territory.city"
-                          >
-                            •••
-                          </button>
-                        </td>
                       </tr>
                     }
                   </tbody>
@@ -423,13 +465,33 @@ import { UiIcon } from '../shared/ui-icon';
                       <h2>{{ application.first_name }} {{ application.last_name }}</h2>
                       <p>Déposée le {{ formatDate(application.created_at) }}</p>
                     </div>
-                    <span class="badge" [class.warning]="application.status === 'a_examiner'" [class.success]="application.status === 'acceptee' || application.status === 'inscrite'" [class.danger]="application.status === 'rejetee'">{{ application.status_label }}</span>
+                    <span
+                      class="badge"
+                      [class.warning]="application.status === 'a_examiner'"
+                      [class.success]="
+                        application.status === 'acceptee' || application.status === 'inscrite'
+                      "
+                      [class.danger]="application.status === 'rejetee'"
+                      >{{ application.status_label }}</span
+                    >
                   </div>
                   <dl class="detail-list">
-                    <div><dt>Adresse courriel</dt><dd>{{ application.email }}</dd></div>
-                    <div><dt>Profession</dt><dd>{{ application.profession }}</dd></div>
-                    <div><dt>Localité souhaitée</dt><dd>{{ application.territory.path }}</dd></div>
-                    <div><dt>Consentement</dt><dd>Donné le {{ formatDate(application.consent_at) }}</dd></div>
+                    <div>
+                      <dt>Adresse courriel</dt>
+                      <dd>{{ application.email }}</dd>
+                    </div>
+                    <div>
+                      <dt>Profession</dt>
+                      <dd>{{ application.profession }}</dd>
+                    </div>
+                    <div>
+                      <dt>Localité souhaitée</dt>
+                      <dd>{{ application.territory.path }}</dd>
+                    </div>
+                    <div>
+                      <dt>Consentement</dt>
+                      <dd>Donné le {{ formatDate(application.consent_at) }}</dd>
+                    </div>
                   </dl>
                   <div class="motivation-box">
                     <h3>Motivation</h3>
@@ -442,28 +504,70 @@ import { UiIcon } from '../shared/ui-icon';
                   <p>La personne reçoit la décision par courriel. Chaque action est datée.</p>
 
                   @if (application.status === 'a_examiner') {
-                    <label>Note interne<textarea #internalNote rows="4" placeholder="Ajouter une note utile au bureau…"></textarea></label>
+                    <label
+                      >Note interne<textarea
+                        #internalNote
+                        rows="4"
+                        placeholder="Ajouter une note utile au bureau…"
+                      ></textarea>
+                    </label>
                     @if (rejectMode()) {
-                      <label>Motif communiqué à la personne <em>*</em><textarea #rejectionReason rows="4" required placeholder="Expliquez clairement le refus…"></textarea></label>
-                      <button class="btn btn-danger-outline btn-wide" type="button" [disabled]="decisionLoading()" (click)="decide(application, 'reject', internalNote.value, rejectionReason.value)">
+                      <label
+                        >Motif communiqué à la personne <em>*</em
+                        ><textarea
+                          #rejectionReason
+                          rows="4"
+                          required
+                          placeholder="Expliquez clairement le refus…"
+                        ></textarea>
+                      </label>
+                      <button
+                        class="btn btn-danger-outline btn-wide"
+                        type="button"
+                        [disabled]="decisionLoading()"
+                        (click)="
+                          decide(application, 'reject', internalNote.value, rejectionReason.value)
+                        "
+                      >
                         {{ decisionLoading() ? 'Envoi en cours…' : 'Confirmer le refus' }}
                       </button>
-                      <button class="btn btn-outline btn-wide" type="button" (click)="rejectMode.set(false)">Annuler</button>
+                      <button
+                        class="btn btn-outline btn-wide"
+                        type="button"
+                        (click)="rejectMode.set(false)"
+                      >
+                        Annuler
+                      </button>
                     } @else {
-                      <button class="btn btn-green btn-wide" type="button" [disabled]="decisionLoading()" (click)="decide(application, 'accept', internalNote.value)">
+                      <button
+                        class="btn btn-green btn-wide"
+                        type="button"
+                        [disabled]="decisionLoading()"
+                        (click)="decide(application, 'accept', internalNote.value)"
+                      >
                         {{ decisionLoading() ? 'Envoi en cours…' : 'Accepter et envoyer le lien' }}
                       </button>
-                      <button class="btn btn-danger-outline btn-wide" type="button" (click)="rejectMode.set(true)">Refuser avec un motif</button>
+                      <button
+                        class="btn btn-danger-outline btn-wide"
+                        type="button"
+                        (click)="rejectMode.set(true)"
+                      >
+                        Refuser avec un motif
+                      </button>
                     }
                   } @else {
-                    <p class="inline-success" role="status">Cette demande a déjà été traitée : {{ application.status_label }}.</p>
+                    <p class="inline-success" role="status">
+                      Cette demande a déjà été traitée : {{ application.status_label }}.
+                    </p>
                     @if (application.rejection_reason) {
                       <p><strong>Motif envoyé :</strong> {{ application.rejection_reason }}</p>
                     }
                   }
 
                   @if (requestDecision() !== 'pending') {
-                    <p class="inline-success" role="status">✓ Décision enregistrée et courriel envoyé.</p>
+                    <p class="inline-success" role="status">
+                      ✓ Décision enregistrée et courriel envoyé.
+                    </p>
                   }
                 </aside>
               </section>
@@ -472,7 +576,10 @@ import { UiIcon } from '../shared/ui-icon';
 
           @if (view === 'member-detail') {
             <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
-            <section class="review-grid member-detail-grid">
+            <section
+              class="review-grid member-detail-grid"
+              [class.single-column]="!has('manageMemberStatus')"
+            >
               <article class="panel member-record">
                 <div class="identity-row">
                   <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
@@ -521,53 +628,41 @@ import { UiIcon } from '../shared/ui-icon';
                   >
                 </div>
               </article>
-              <aside class="panel decision-panel">
-                <p class="eyebrow">Statut du compte</p>
-                <h2>Gérer l’accès</h2>
-                <p>
-                  Une suspension ou une radiation bloque immédiatement la connexion sans effacer
-                  l’historique.
-                </p>
-                <button
-                  class="btn btn-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Actif')"
-                >
-                  Rendre actif
-                </button>
-                <button
-                  class="btn btn-gold-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Suspendu')"
-                >
-                  Suspendre
-                </button>
-                <button
-                  class="btn btn-danger-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Radié')"
-                >
-                  Radier
-                </button>
-              </aside>
+              @if (has('manageMemberStatus')) {
+                <aside class="panel decision-panel">
+                  <p class="eyebrow">Statut du compte</p>
+                  <h2>Gérer l’accès</h2>
+                  <p>
+                    Une suspension ou une radiation bloque immédiatement la connexion sans effacer
+                    l’historique.
+                  </p>
+                  <button
+                    class="btn btn-outline btn-wide"
+                    type="button"
+                    (click)="memberStatus.set('Actif')"
+                  >
+                    Rendre actif
+                  </button>
+                  <button
+                    class="btn btn-gold-outline btn-wide"
+                    type="button"
+                    (click)="memberStatus.set('Suspendu')"
+                  >
+                    Suspendre
+                  </button>
+                  <button
+                    class="btn btn-danger-outline btn-wide"
+                    type="button"
+                    (click)="memberStatus.set('Radié')"
+                  >
+                    Radier
+                  </button>
+                </aside>
+              }
             </section>
           }
 
           @if (view === 'audit') {
-            <div class="filter-bar audit-filters">
-              <label
-                ><ui-icon name="search" /><input
-                  aria-label="Rechercher une action"
-                  placeholder="Rechercher une action…"
-              /></label
-              ><select aria-label="Filtrer par action">
-                <option>Action · Toutes</option></select
-              ><select aria-label="Filtrer par auteur">
-                <option>Auteur · Tous</option></select
-              ><select aria-label="Filtrer par période">
-                <option>Période · 30 jours</option></select
-              ><button>Réinitialiser</button>
-            </div>
             <section class="audit-list panel">
               @for (entry of auditEntries; track entry.when) {
                 <article>
@@ -630,6 +725,16 @@ import { UiIcon } from '../shared/ui-icon';
                     </select></label
                   >
                 </div>
+                <label
+                  >État
+                  <select required>
+                    <option value="">Sélectionner un état</option>
+                    <option>Prévu</option>
+                    <option>En cours</option>
+                    <option>Terminé</option>
+                    <option>Annulé</option>
+                  </select></label
+                >
                 <div class="field-grid">
                   <label>Date de début <input type="date" required /></label
                   ><label>Date de fin <input type="date" required /></label>
@@ -686,15 +791,6 @@ import { UiIcon } from '../shared/ui-icon';
                     required
                   ></textarea>
                 </label>
-                <label
-                  >Photos ou document
-                  <span class="upload-field"
-                    ><ui-icon name="plus" /><span
-                      ><strong>Ajouter des fichiers</strong
-                      ><small>JPG, PNG ou PDF · 10 Mo maximum</small></span
-                    ></span
-                  ></label
-                >
               } @else {
                 <p class="eyebrow">Compte d’accès</p>
                 <h2>Inviter un coordonnateur</h2>
@@ -723,12 +819,6 @@ import { UiIcon } from '../shared/ui-icon';
                       <option>Saint-Louis</option>
                     </select></label
                   >
-                </div>
-                <div class="security-alert compact">
-                  <ui-icon name="key" />
-                  <p>
-                    <strong>Accès contrôlé</strong>Seul un fondateur peut envoyer cette invitation.
-                  </p>
                 </div>
               }
               <div class="form-actions">
@@ -855,8 +945,7 @@ import { UiIcon } from '../shared/ui-icon';
                 </tbody>
               </table>
               <footer class="table-footer">
-                <span>Liste enregistrée automatiquement</span
-                ><button class="btn btn-green" type="button">Valider les présences</button>
+                <span>Chaque présence est enregistrée dès sa modification.</span>
               </footer>
             </div>
           }
@@ -869,27 +958,72 @@ export class AdminPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  protected readonly currentUser = this.api.currentUser;
   protected readonly view = this.route.snapshot.data['view'] as string;
 
-  protected readonly navItems = [
-    { view: 'dashboard', label: 'Tableau de bord', icon: 'home', link: '/bureau' },
-    { view: 'requests', label: 'Demandes d’adhésion', icon: 'users', link: '/bureau/demandes' },
-    { view: 'members', label: 'Bases de membres', icon: 'grid', link: '/bureau/membres' },
+  private readonly allNavItems: Array<{
+    view: string;
+    label: string;
+    icon: string;
+    link: string;
+    capability: Capability;
+  }> = [
+    {
+      view: 'dashboard',
+      label: 'Tableau de bord',
+      icon: 'home',
+      link: '/bureau',
+      capability: 'bureauSpace',
+    },
+    {
+      view: 'requests',
+      label: 'Demandes d’adhésion',
+      icon: 'users',
+      link: '/bureau/demandes',
+      capability: 'reviewApplications',
+    },
+    {
+      view: 'members',
+      label: 'Membres',
+      icon: 'grid',
+      link: '/bureau/membres',
+      capability: 'viewMembers',
+    },
     {
       view: 'coordinators',
       label: 'Coordonnateurs',
       icon: 'users',
       link: '/bureau/coordonnateurs',
+      capability: 'viewMembers',
     },
-    { view: 'programs', label: 'Programmes', icon: 'calendar', link: '/bureau/programmes' },
+    {
+      view: 'programs',
+      label: 'Programmes',
+      icon: 'calendar',
+      link: '/bureau/programmes',
+      capability: 'viewPrograms',
+    },
     {
       view: 'territories',
-      label: 'Localités de coordination',
+      label: 'Territoires',
       icon: 'location',
       link: '/bureau/territoires',
+      capability: 'viewTerritories',
     },
-    { view: 'accounts', label: 'Comptes d’accès', icon: 'key', link: '/bureau/comptes' },
-    { view: 'audit', label: 'Journal des actions', icon: 'clipboard', link: '/bureau/journal' },
+    {
+      view: 'accounts',
+      label: 'Comptes d’accès',
+      icon: 'key',
+      link: '/bureau/comptes',
+      capability: 'viewAccounts',
+    },
+    {
+      view: 'audit',
+      label: 'Journal des actions',
+      icon: 'clipboard',
+      link: '/bureau/journal',
+      capability: 'viewAudit',
+    },
   ];
   protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
   protected readonly realRequests = signal<MembershipApplication[]>([]);
@@ -902,6 +1036,32 @@ export class AdminPage implements OnInit {
   protected readonly formSaved = signal(false);
   protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
   protected readonly sortAsc = signal(false);
+  protected readonly peopleQuery = signal('');
+  protected readonly peopleStatus = signal('');
+  protected readonly peoplePlace = signal('');
+  protected readonly peopleRole = signal('');
+  protected readonly programQuery = signal('');
+  protected readonly programStatus = signal('');
+  protected readonly programPlace = signal('');
+
+  protected get navItems() {
+    return this.allNavItems.filter((item) => this.has(item.capability));
+  }
+
+  protected has(capability: Capability): boolean {
+    return hasCapability(this.currentUser(), capability);
+  }
+
+  protected get userName(): string {
+    const user = this.currentUser();
+    return user ? `${user.first_name} ${user.last_name}`.trim() || user.email : '';
+  }
+
+  protected get userInitials(): string {
+    const user = this.currentUser();
+    if (!user) return 'BE';
+    return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase() || 'BE';
+  }
 
   ngOnInit(): void {
     if (this.view === 'requests') this.loadRequests();
@@ -921,7 +1081,9 @@ export class AdminPage implements OnInit {
         this.requestsLoading.set(false);
       },
       error: (error) => {
-        this.requestError.set(error.error?.detail ?? 'Les demandes ne peuvent pas être chargées pour le moment.');
+        this.requestError.set(
+          error.error?.detail ?? 'Les demandes ne peuvent pas être chargées pour le moment.',
+        );
         this.requestsLoading.set(false);
       },
     });
@@ -1016,6 +1178,12 @@ export class AdminPage implements OnInit {
       delta: '+5%',
     },
   ];
+
+  protected get dashboardStats() {
+    return this.has('reviewApplications')
+      ? this.stats
+      : this.stats.filter((stat) => stat.label !== 'Demandes à examiner');
+  }
   protected readonly requests = [
     {
       name: 'Awa Ndiaye',
@@ -1227,8 +1395,7 @@ export class AdminPage implements OnInit {
     x: ((index + 0.5) * 500) / this.chartValues.length,
     y: 200 - value,
   }));
-  protected readonly chartLine =
-    'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
+  protected readonly chartLine = 'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
   protected readonly chartArea =
     this.chartLine +
     ` L${this.chartDots[this.chartDots.length - 1].x} 200 L${this.chartDots[0].x} 200Z`;
@@ -1239,9 +1406,9 @@ export class AdminPage implements OnInit {
       {
         dashboard: 'Tableau de bord',
         requests: 'Demandes d’adhésion',
-        members: 'Bases de membres',
+        members: 'Membres',
         programs: 'Programmes',
-        territories: 'Localités de coordination',
+        territories: 'Territoires',
         accounts: 'Comptes d’accès',
         coordinators: 'Coordonnateurs',
         audit: 'Journal des actions',
@@ -1261,10 +1428,14 @@ export class AdminPage implements OnInit {
       {
         dashboard: 'Vue d’ensemble des activités du Mouvement TABAXI',
         requests: 'Liste des personnes qui souhaitent rejoindre le Mouvement TABAXI',
-        members: 'Gestion des membres du Mouvement TABAXI',
+        members: 'Rechercher et consulter les membres autorisés.',
         programs: 'Suivi des initiatives du Mouvement TABAXI',
-        territories: 'Gestion des localités et de leurs coordonnateurs',
-        accounts: 'Gestion des utilisateurs et des accès à la plateforme',
+        territories: this.has('manageTerritories')
+          ? 'Organiser les pays, régions et communes.'
+          : 'Consulter les territoires de votre périmètre.',
+        accounts: this.has('manageAccounts')
+          ? 'Gérer les utilisateurs autorisés à accéder à la plateforme.'
+          : 'Consulter les comptes de votre périmètre.',
         coordinators: 'Membres du bureau exécutif et territoires rattachés',
         audit: 'Historique des décisions et opérations sensibles',
         'request-detail': 'Décider avec les informations utiles et garder une trace',
@@ -1284,8 +1455,7 @@ export class AdminPage implements OnInit {
         {
           members: 'Ajouter un membre',
           programs: 'Nouveau programme',
-          territories: 'Ajouter une localité',
-          accounts: 'Créer un compte',
+          accounts: 'Inviter un membre du bureau',
           coordinators: 'Inviter un coordonnateur',
         } as Record<string, string>
       )[this.view] || 'Ajouter'
@@ -1298,16 +1468,15 @@ export class AdminPage implements OnInit {
           members: '/bureau/membres/aminata-ndiaye',
           coordinators: '/bureau/comptes/inviter',
           programs: '/bureau/programmes/nouveau',
-          territories: '/bureau/territoires',
           accounts: '/bureau/comptes/inviter',
         } as Record<string, string>
       )[this.view] || '/bureau'
     );
   }
-  protected get hasPrimaryAction(): boolean {
-    return ['members', 'coordinators', 'programs', 'territories', 'accounts'].includes(
-      this.view,
-    );
+  protected get showPrimaryAction(): boolean {
+    if (this.view === 'programs') return this.has('managePrograms');
+    if (this.view === 'accounts' || this.view === 'coordinators') return this.has('manageAccounts');
+    return false;
   }
   protected completeForm(event: SubmitEvent): void {
     event.preventDefault();
@@ -1319,6 +1488,26 @@ export class AdminPage implements OnInit {
       next: () => void this.router.navigateByUrl('/connexion'),
       error: () => void this.router.navigateByUrl('/connexion'),
     });
+  }
+  protected updatePeopleQuery(value: string): void {
+    this.peopleQuery.set(value);
+    if (this.view === 'requests') this.loadRequests(this.peopleStatus(), value);
+  }
+  protected updatePeopleStatus(value: string): void {
+    this.peopleStatus.set(value);
+    if (this.view === 'requests') this.loadRequests(value, this.peopleQuery());
+  }
+  protected resetPeopleFilters(): void {
+    this.peopleQuery.set('');
+    this.peopleStatus.set('');
+    this.peoplePlace.set('');
+    this.peopleRole.set('');
+    if (this.view === 'requests') this.loadRequests();
+  }
+  protected resetProgramFilters(): void {
+    this.programQuery.set('');
+    this.programStatus.set('');
+    this.programPlace.set('');
   }
   protected sortBy(key: 'name' | 'place' | 'date'): void {
     if (this.sortKey() === key) this.sortAsc.set(!this.sortAsc());
@@ -1362,15 +1551,40 @@ export class AdminPage implements OnInit {
         date: this.formatDate(application.created_at),
         status: application.status_label,
       }));
-    if (this.view === 'accounts' || this.view === 'coordinators')
-      return this.requests.slice(0, 6).map((person, index) => ({
-        ...person,
-        role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
-        status: index === 5 ? 'Inactif' : 'Actif',
-      }));
-    return this.requests.map((person, index) => ({
-      ...person,
-      status: index === 6 ? 'Suspendu' : 'Actif',
-    }));
+    const people =
+      this.view === 'accounts' || this.view === 'coordinators'
+        ? this.requests.slice(0, 6).map((person, index) => ({
+            ...person,
+            role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
+            status: index === 5 ? 'Inactif' : 'Actif',
+          }))
+        : this.requests.map((person, index) => ({
+            ...person,
+            status: index === 6 ? 'Suspendu' : 'Actif',
+          }));
+    const query = this.peopleQuery().trim().toLocaleLowerCase('fr');
+    const status = this.peopleStatus();
+    const place = this.peoplePlace();
+    const role = this.peopleRole();
+    return people.filter(
+      (person) =>
+        (!query || `${person.name} ${person.email}`.toLocaleLowerCase('fr').includes(query)) &&
+        (!status || person.status === status) &&
+        (!place || person.city === place) &&
+        (!role || person.role === role),
+    );
+  }
+
+  protected get visiblePrograms() {
+    const query = this.programQuery().trim().toLocaleLowerCase('fr');
+    const status = this.programStatus();
+    const place = this.programPlace();
+    return this.programs.filter(
+      (program) =>
+        (!query ||
+          `${program.name} ${program.description}`.toLocaleLowerCase('fr').includes(query)) &&
+        (!status || program.status === status) &&
+        (!place || program.city === place),
+    );
   }
 }

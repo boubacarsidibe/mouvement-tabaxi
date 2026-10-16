@@ -12,20 +12,7 @@ import { PublicHeader } from '../shared/public-header';
     <main class="public-canvas auth-canvas">
       <section class="public-frame auth-frame">
         <app-public-header [minimal]="true" />
-        <div class="auth-layout">
-          <aside class="auth-story">
-            <p class="eyebrow">Espace sécurisé</p>
-            <h1>{{ isForgot ? 'Retrouvez votre accès.' : 'Votre engagement continue ici.' }}</h1>
-            <span class="auth-story-rule" aria-hidden="true"></span>
-            <p>
-              {{
-                isForgot
-                  ? 'Nous vous aidons à retrouver l’accès associé à votre adhésion.'
-                  : 'Retrouvez votre espace membre ou le bureau exécutif depuis un accès unique.'
-              }}
-            </p>
-          </aside>
-
+        <div class="auth-layout auth-layout-focused">
           <section class="auth-panel">
             @if (isForgot) {
               <div class="auth-form auth-support" role="status">
@@ -44,7 +31,6 @@ import { PublicHeader } from '../shared/public-header';
               <form class="auth-form" (submit)="submit($event)" novalidate>
                 <p class="eyebrow">Connexion</p>
                 <h2>Accéder à mon espace</h2>
-                <p class="form-intro">Utilisez l’adresse associée à votre compte TABAXI.</p>
 
                 @if (errorMessage()) {
                   <p class="form-error" role="alert">{{ errorMessage() }}</p>
@@ -92,10 +78,6 @@ import { PublicHeader } from '../shared/public-header';
                 <button class="btn btn-green btn-wide" type="submit" [disabled]="submitting()">
                   {{ submitting() ? 'Connexion en cours…' : 'Se connecter' }}
                 </button>
-                <p class="auth-help">
-                  Un problème d’accès ?
-                  <a routerLink="/mot-de-passe-oublie">Contactez votre coordinateur</a>
-                </p>
               </form>
             }
           </section>

@@ -58,6 +58,7 @@ docs/          documentation du projet
 | [docs/BACKLOG.md](docs/BACKLOG.md) | Liste priorisée des tâches |
 | [docs/GLOSSAIRE.md](docs/GLOSSAIRE.md) | Termes du projet |
 | [docs/HYPOTHESES.md](docs/HYPOTHESES.md) | Hypothèses prises |
+| [docs/MATRICE-ACCES.md](docs/MATRICE-ACCES.md) | Accès et actions autorisées par rôle |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Façon de travailler |
 | [CHANGELOG.md](CHANGELOG.md) | Journal des modifications |
 

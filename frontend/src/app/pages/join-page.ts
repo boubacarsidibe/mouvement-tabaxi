@@ -191,9 +191,8 @@ import { UiIcon } from '../shared/ui-icon';
                   <label class="enrollment-consent">
                     <input type="checkbox" name="terms" required />
                     <span
-                      >J’accepte les
-                      <a routerLink="/confidentialite">statuts et le règlement intérieur</a> du
-                      Mouvement TABAXI.</span
+                      >J’accepte la
+                      <a routerLink="/confidentialite">politique de confidentialité</a>.</span
                     >
                   </label>
                 } @else {

@@ -4,10 +4,11 @@ import { ApiService } from '../core/api.service';
 import { MemberCard } from '../shared/member-card';
 import { DEMO_MEMBER, drawMemberCard } from '../shared/member-card-image';
 import { UiIcon } from '../shared/ui-icon';
+import { WorkspaceTopbar } from '../shared/workspace-topbar';
 
 @Component({
   selector: 'app-member-page',
-  imports: [RouterLink, UiIcon, MemberCard],
+  imports: [RouterLink, UiIcon, MemberCard, WorkspaceTopbar],
   template: `
     <main class="workspace-shell">
       <aside class="side-nav">
@@ -30,8 +31,13 @@ import { UiIcon } from '../shared/ui-icon';
           >
         </nav>
         <div class="side-profile">
-          <img src="member-aminata.jpg" alt="" />
-          <span><strong>Aminata Ndiaye</strong><small>Dakar</small></span>
+          <div class="side-user">
+            <span>{{ userInitials }}</span>
+            <p>
+              <strong>{{ userName }}</strong
+              ><small>{{ currentUser()?.role_label }}</small>
+            </p>
+          </div>
           <a routerLink="/membre/securite" [class.active]="view === 'security'"
             ><ui-icon name="key" />Sécurité du compte</a
           >
@@ -40,77 +46,38 @@ import { UiIcon } from '../shared/ui-icon';
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <label class="top-search"
-            ><ui-icon name="search" /><input
-              aria-label="Rechercher une activité ou un programme"
-              placeholder="Rechercher une activité, un programme…"
-          /></label>
-          <button class="icon-button" aria-label="Notifications">
-            <ui-icon name="bell" /><i></i>
-          </button>
-          <button class="profile-chip" aria-label="Menu du profil">AA</button
-          ><span class="chevron" aria-hidden="true">⌄</span>
-        </header>
+        <app-workspace-topbar
+          context="Espace membre"
+          [initials]="userInitials"
+          [name]="userName"
+          [role]="currentUser()?.role_label ?? ''"
+        />
 
         @if (view === 'home') {
           <div class="workspace-content member-home">
             <header class="page-heading">
               <div>
                 <h1>Mon espace</h1>
-                <p>Bienvenue dans votre espace membre du Mouvement TABAXI</p>
+                <p>Vos prochaines actions et votre carte de membre.</p>
               </div>
             </header>
             <section class="welcome-banner">
               <img src="hero-tabaxi.jpg" alt="" />
               <div>
-                <h2>Bienvenue, Aminata</h2>
-                <p>Ensemble pour une citoyenneté active<br />et un avenir meilleur.</p>
+                <h2>Bienvenue, {{ currentUser()?.first_name || 'membre' }}</h2>
+                <p>Retrouvez les activités organisées dans votre territoire.</p>
                 <strong
                   ><ui-icon name="location" /> Dakar <span>12 activités ce mois-ci</span></strong
                 >
               </div>
-              <em>Notre engagement<br />pour des communautés<br />plus fortes</em>
+              <em>Dakar</em>
             </section>
-            <section class="stat-grid">
-              @for (stat of stats; track stat.label) {
-                <article>
-                  <span class="stat-icon"><ui-icon [name]="stat.icon" /></span>
-                  <div>
-                    <strong>{{ stat.value }}</strong>
-                    <p>
-                      {{ stat.label }}<small>{{ stat.note }}</small>
-                    </p>
-                  </div>
-                  <b>{{ stat.delta }}</b>
-                </article>
-              }
-            </section>
-            <section class="member-grid">
+            <section class="member-grid member-grid-focused">
               <article class="panel member-card-panel">
                 <h2>Votre carte de membre</h2>
                 <app-member-card /><a routerLink="/membre/carte"
                   >Voir ma carte numérique <span>→</span></a
                 >
-              </article>
-              <article class="panel profile-panel">
-                <div class="panel-title">
-                  <h2>Mon profil</h2>
-                  <a routerLink="/membre/profil"><ui-icon name="plus" />Modifier</a>
-                </div>
-                <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
-                <h3>Aminata Ndiaye</h3>
-                <span class="badge success">Membre actif</span>
-                <dl>
-                  <dt>N° d’adhérent</dt>
-                  <dd>TBX-2026-00125</dd>
-                  <dt>Localité</dt>
-                  <dd>Dakar</dd>
-                  <dt>Rôle</dt>
-                  <dd>Membre</dd>
-                  <dt>Date d’adhésion</dt>
-                  <dd>12 mars 2026</dd>
-                </dl>
               </article>
               <article class="panel coordinator-panel">
                 <h2>Mon coordonnateur</h2>
@@ -122,10 +89,12 @@ import { UiIcon } from '../shared/ui-icon';
                   <li><ui-icon name="mail" />m.diop&#64;tabaxi.org</li>
                   <li><ui-icon name="location" />Dakar</li>
                 </ul>
-                <button class="btn btn-green"><ui-icon name="mail" />Contacter</button>
+                <a class="btn btn-green" href="mailto:m.diop@tabaxi.org"
+                  ><ui-icon name="mail" />Écrire</a
+                >
               </article>
             </section>
-            <section class="activity-grid">
+            <section class="activity-grid activity-grid-focused">
               <article class="panel upcoming-panel">
                 <div class="panel-title">
                   <h2>Mes prochaines activités</h2>
@@ -146,21 +115,6 @@ import { UiIcon } from '../shared/ui-icon';
                   }
                 </div>
               </article>
-              <article class="panel news-panel">
-                <div class="panel-title">
-                  <h2>Actualités du mouvement</h2>
-                  <a routerLink="/" fragment="actualites">Voir tout →</a>
-                </div>
-                @for (item of news; track item.title) {
-                  <div class="news-row">
-                    <span></span>
-                    <div>
-                      <strong>{{ item.title }}</strong
-                      ><small>{{ item.date }}</small>
-                    </div>
-                  </div>
-                }
-              </article>
             </section>
           </div>
         }
@@ -170,29 +124,28 @@ import { UiIcon } from '../shared/ui-icon';
             <header class="page-heading">
               <div>
                 <h1>Programmes & activités</h1>
-                <p>Découvrez et participez aux initiatives du Mouvement TABAXI</p>
+                <p>Les initiatives proposées dans votre territoire.</p>
               </div>
-              <button class="btn btn-green"><ui-icon name="plus" />Nouvelle recherche</button>
             </header>
-            <nav class="tabs">
-              <a class="active">Toutes (18)</a><a>En cours (10)</a><a>À venir (5)</a
-              ><a>Terminées (3)</a>
-            </nav>
             <div class="filter-bar">
               <label
                 ><ui-icon name="search" /><input
                   aria-label="Rechercher une activité"
-                  placeholder="Rechercher une activité…" /></label
-              ><select aria-label="Filtrer par localité">
-                <option>Localité · Toutes</option></select
-              ><select aria-label="Filtrer par catégorie">
-                <option>Catégorie · Toutes</option></select
-              ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option></select
-              ><button>Réinitialiser</button>
+                  placeholder="Rechercher une activité…"
+                  [value]="programQuery()"
+                  (input)="programQuery.set($any($event.target).value)" /></label
+              ><select
+                aria-label="Filtrer par statut"
+                [value]="programStatus()"
+                (change)="programStatus.set($any($event.target).value)"
+              >
+                <option value="">Statut · Tous</option>
+                <option value="En cours">En cours</option>
+                <option value="À venir">À venir</option></select
+              ><button type="button" (click)="resetProgramFilters()">Réinitialiser</button>
             </div>
             <section class="program-list">
-              @for (program of programs; track program.name) {
+              @for (program of visibleMemberPrograms; track program.name) {
                 <article>
                   <span
                     class="program-icon"
@@ -215,6 +168,8 @@ import { UiIcon } from '../shared/ui-icon';
                     >Voir l’activité</a
                   >
                 </article>
+              } @empty {
+                <p class="empty-state">Aucune activité ne correspond à ces filtres.</p>
               }
             </section>
           </div>
@@ -262,7 +217,10 @@ import { UiIcon } from '../shared/ui-icon';
                 <div>
                   <h2>Photo de profil</h2>
                   <p>JPG ou PNG, 5 Mo maximum.</p>
-                  <button class="btn btn-outline" type="button">Choisir une photo</button>
+                  <label class="btn btn-outline photo-picker"
+                    >Choisir une photo
+                    <input type="file" accept="image/jpeg,image/png" aria-label="Photo de profil"
+                  /></label>
                 </div>
               </section>
               <div class="field-grid">
@@ -343,7 +301,7 @@ import { UiIcon } from '../shared/ui-icon';
                 <div class="contact-row">
                   <img src="coordinator-mamadou.jpg" alt="" /><span
                     ><strong>Mamadou Diop</strong><small>Coordonnateur · Dakar</small></span
-                  ><button class="btn btn-outline">Contacter</button>
+                  ><a class="btn btn-outline" href="mailto:m.diop@tabaxi.org">Écrire</a>
                 </div>
               </article>
               <aside class="panel registration-panel">
@@ -378,7 +336,7 @@ import { UiIcon } from '../shared/ui-icon';
                 <p>Gérez votre mot de passe et vos connexions actives.</p>
               </div>
             </header>
-            <section class="settings-stack">
+            <section class="settings-stack settings-stack-focused">
               <form class="workspace-form panel" (submit)="savePassword($event)">
                 <h2>Changer mon mot de passe</h2>
                 <p>Utilisez au moins 10 caractères, avec une lettre et un chiffre.</p>
@@ -397,13 +355,6 @@ import { UiIcon } from '../shared/ui-icon';
                   <p class="inline-success" role="status">✓ Mot de passe mis à jour.</p>
                 }
               </form>
-              <article class="panel session-panel">
-                <div>
-                  <h2>Session active</h2>
-                  <p><strong>Windows · Codex</strong><small>Dakar · maintenant</small></p>
-                </div>
-                <span class="badge success">Cette session</span>
-              </article>
             </section>
           </div>
         }
@@ -415,12 +366,26 @@ export class MemberPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  protected readonly currentUser = this.api.currentUser;
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   protected readonly joined = signal(false);
   protected readonly profileSaved = signal(false);
   protected readonly passwordSaved = signal(false);
   protected readonly cardError = signal('');
+  protected readonly programQuery = signal('');
+  protected readonly programStatus = signal('');
+
+  protected get userName(): string {
+    const user = this.currentUser();
+    return user ? `${user.first_name} ${user.last_name}`.trim() || user.email : '';
+  }
+
+  protected get userInitials(): string {
+    const user = this.currentUser();
+    if (!user) return 'ME';
+    return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase() || 'ME';
+  }
 
   protected logout(event: Event): void {
     event.preventDefault();
@@ -458,19 +423,6 @@ export class MemberPage {
     event.preventDefault();
     if ((event.currentTarget as HTMLFormElement).reportValidity()) this.passwordSaved.set(true);
   }
-
-  protected readonly stats = [
-    { icon: 'users', value: '1 248', label: 'Membres', note: 'dans le mouvement', delta: '+12%' },
-    {
-      icon: 'location',
-      value: '86',
-      label: 'Coordonnateurs',
-      note: 'à votre service',
-      delta: '+3%',
-    },
-    { icon: 'calendar', value: '24', label: 'Activités', note: 'ce mois-ci', delta: '+5%' },
-    { icon: 'users', value: '18', label: 'Programmes', note: 'en cours', delta: '+5%' },
-  ];
   protected readonly programs = [
     {
       name: 'Brigades citoyennes',
@@ -527,9 +479,24 @@ export class MemberPage {
       color: 'red',
     },
   ];
-  protected readonly news = [
-    { title: 'Lancement du programme de reboisement', date: '5 octobre 2026' },
-    { title: 'Ateliers de citoyenneté dans les écoles', date: '26 septembre 2026' },
-    { title: 'Le mouvement TABAXI grandit à Dakar', date: '15 septembre 2026' },
-  ];
+
+  protected get memberPrograms() {
+    return this.programs.filter((program) => program.city === 'Dakar');
+  }
+
+  protected get visibleMemberPrograms() {
+    const query = this.programQuery().trim().toLocaleLowerCase('fr');
+    const status = this.programStatus();
+    return this.memberPrograms.filter(
+      (program) =>
+        (!query ||
+          `${program.name} ${program.description}`.toLocaleLowerCase('fr').includes(query)) &&
+        (!status || program.status === status),
+    );
+  }
+
+  protected resetProgramFilters(): void {
+    this.programQuery.set('');
+    this.programStatus.set('');
+  }
 }
