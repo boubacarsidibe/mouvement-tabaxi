@@ -13,7 +13,7 @@ import {
   MemberStatus,
   MembersService,
 } from '../core/members.service';
-import { TerritoryService } from '../core/territories.service';
+import { TerritoryService, territoryChoices } from '../core/territories.service';
 import { ExportButton } from '../shared/export-button';
 
 const STATUSES: { value: MemberStatus | ''; label: string }[] = [
@@ -287,15 +287,7 @@ export class MembersList implements OnInit {
   /** Territoires du périmètre, présentés en arbre par un retrait : les communes sous leur région. */
   private async loadTerritories() {
     try {
-      const list = await this.territories.managed();
-      const depth = (path: string) => path.split(' › ').length;
-      const top = Math.min(...list.map((item) => depth(item.path)));
-      this.territoryOptions.set(
-        list.map((item) => ({
-          id: item.id,
-          label: `${'  '.repeat(depth(item.path) - top)}${item.name}${item.is_active ? '' : ' (inactif)'}`,
-        })),
-      );
+      this.territoryOptions.set(territoryChoices(await this.territories.managed()));
     } catch {
       this.territoryOptions.set([]); // sans la liste, on filtre quand même par nom, statut et date
     }

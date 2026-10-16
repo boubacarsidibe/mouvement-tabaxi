@@ -48,6 +48,18 @@ Le cahier des charges (D5) demande un bouton de changement de statut, sans en pr
 - Un export reprend les colonnes affichées par la liste plus le courriel ; l'adresse et le téléphone des membres, la motivation et les notes des demandes restent hors des fichiers (données sensibles, chiffrées en base).
 - Un coordonnateur peut exporter les listes de son territoire ; les demandes et le journal restent réservés aux fondateurs.
 
+## Programmes et activités
+
+Le cahier des charges (C3, C4, E1 à E4) laisse ces points ouverts ; choix retenus :
+
+- Un membre voit les programmes de son territoire et de ceux dont il dépend : le programme d'une région concerne les membres de ses communes, celui d'une commune ne concerne que ses membres. Les programmes annulés ne lui sont pas montrés.
+- Le responsable d'un programme est un fondateur ou un coordonnateur actif qui gère la localité du programme ; il peut rester non désigné.
+- Une activité se déroule pendant la période de son programme ; la date, le lieu et la description sont obligatoires, l'heure de fin ne l'est pas.
+- Le compte rendu et les présences se renseignent une fois l'activité commencée (« après une activité »). Le compte rendu n'est visible que du bureau du territoire.
+- On peut cocher, parmi les présents, les membres inscrits et les membres actifs de la localité du programme.
+- L'inscription est gratuite et sans limite de places ; le membre s'inscrit et se désinscrit lui-même jusqu'au début de l'activité.
+- Un programme ou une activité ne se supprime pas : le programme se termine ou s'annule.
+
 ## Technique
 
 - Backend Django avec Django REST Framework, frontend Angular, base SQLite en développement.

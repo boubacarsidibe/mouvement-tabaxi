@@ -1,4 +1,12 @@
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import { LOCALE_ID } from '@angular/core';
 import { CurrentUser } from './auth.service';
+
+registerLocaleData(localeFr);
+
+/** Dates en français dans les tests, comme dans l'application. */
+export const FRENCH = { provide: LOCALE_ID, useValue: 'fr' };
 
 /** Comptes d'essai pour les tests (aucune donnée réelle). */
 export const TEST_MEMBER: CurrentUser = {

@@ -53,6 +53,14 @@ export function niceTop(max: number): number {
           </div>
         </article>
         <article>
+          <span class="stat-icon"><ui-icon name="calendar" /></span>
+          <div>
+            <p>Programmes en cours</p>
+            <strong>{{ d.programs_in_progress }}</strong>
+            <small><a routerLink="/bureau/programmes">Voir les programmes →</a></small>
+          </div>
+        </article>
+        <article>
           <span class="stat-icon"><ui-icon name="clipboard" /></span>
           <div>
             <p>Demandes à examiner</p>
@@ -161,8 +169,28 @@ export function niceTop(max: number): number {
             }
           </article>
         }
+        <article class="panel small-panel upcoming-programs">
+          <div class="panel-title">
+            <h2>Programmes à venir</h2>
+            <a routerLink="/bureau/programmes">Voir tout →</a>
+          </div>
+          @for (program of d.upcoming_programs; track program.id) {
+            <p>
+              <ui-icon name="calendar" /><span
+                ><strong
+                  ><a [routerLink]="['/bureau/programmes', program.id]">{{ program.name }}</a></strong
+                ><small>{{ program.territory }}</small></span
+              ><time>{{ program.start_date | date: 'dd/MM/yyyy' }}</time
+              ><b class="badge" [class.success]="program.status === 'en_cours'" [class.warning]="program.status === 'prevu'">{{
+                program.status_label
+              }}</b>
+            </p>
+          } @empty {
+            <p class="audit-empty">Aucun programme prévu ou en cours.</p>
+          }
+        </article>
         @if (d.recent_actions; as actions) {
-          <article class="panel small-panel">
+          <article class="panel small-panel wide-panel">
             <div class="panel-title">
               <h2>Dernières actions</h2>
               <a routerLink="/bureau/journal">Voir tout →</a>

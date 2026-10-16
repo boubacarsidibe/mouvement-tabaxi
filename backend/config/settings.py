@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'members',
     'audit',
     'dashboard',
+    'programs',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

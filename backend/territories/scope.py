@@ -24,6 +24,15 @@ def subtree_ids(territory):
     return ids
 
 
+def ancestor_ids(territory):
+    """Identifiants du territoire et de tous ceux dont il dépend (une commune, sa région, son pays)."""
+    ids = []
+    while territory is not None:
+        ids.append(territory.pk)
+        territory = territory.parent
+    return ids
+
+
 def visible_territory_ids(user):
     """Territoires que l'utilisateur peut voir au bureau ; None signifie « tous »."""
     if not user.is_authenticated:

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.cache import cache
 from django.test import TestCase
@@ -10,6 +10,7 @@ from applications.tests.helpers import make_application
 from audit.models import AuditEntry
 from audit.services import record
 from members.models import Member
+from programs.models import Program
 from territories.models import Territory
 
 from .services import month_starts
@@ -39,7 +40,7 @@ class DashboardTestCase(TestCase):
 
         def person(email, first, last, role, place, joined, status=Member.Status.ACTIF):
             user = User.objects.create_user(email, PASSWORD, first_name=first, last_name=last, role=role, territory=place)
-            member = Member.objects.create(user=user, joined_on=joined, status=status)
+            Member.objects.create(user=user, joined_on=joined, status=status)
             if status != Member.Status.ACTIF:
                 user.is_active = False
                 user.save()
@@ -206,3 +207,50 @@ class PanelsAndAccessTests(DashboardTestCase):
     def test_lecture_seule(self):
         self.client.force_login(self.founder)
         self.assertEqual(self.client.post(URL, {}, content_type='application/json').status_code, 405)
+
+
+class ProgramsFiguresTests(DashboardTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        today = timezone.localdate()
+
+        def program(name, place, status, start, end):
+            return Program.objects.create(
+                name=name, objective='Objectif.', territory=place, status=status,
+                start_date=today + timedelta(days=start), end_date=today + timedelta(days=end),
+            )
+
+        cls.p1 = program('Brigades', cls.pikine, Program.Status.ONGOING, -30, 30)
+        cls.p2 = program('Santé', cls.dakar, Program.Status.PLANNED, 10, 60)
+        cls.p3 = program('Éducation', cls.mbour, Program.Status.ONGOING, -5, 90)
+        cls.p4 = program('Ancien', cls.pikine, Program.Status.DONE, -90, -30)
+        cls.p5 = program('Abandonné', cls.rufisque, Program.Status.CANCELLED, 5, 20)
+        cls.p6 = program('Sans suite', cls.rufisque, Program.Status.PLANNED, -60, -10)  # prévu mais déjà fini
+
+    def test_programmes_en_cours_dans_le_perimetre(self):
+        self.assertEqual(self.get(self.founder)['programs_in_progress'], 2)
+        self.assertEqual(self.get(self.coord_dakar)['programs_in_progress'], 1)  # Brigades (Pikine)
+        self.assertEqual(self.get(self.coord_thies)['programs_in_progress'], 1)  # Éducation (Mbour)
+
+    def test_les_chiffres_correspondent_a_la_liste(self):
+        for user in (self.founder, self.coord_dakar, self.coord_thies):
+            data = self.get(user)
+            self.assertEqual(data['programs_in_progress'], self.count('/api/programs/', status='en_cours'))
+
+    def test_prochains_programmes(self):
+        rows = self.get(self.founder)['upcoming_programs']
+        self.assertEqual([row['name'] for row in rows], ['Brigades', 'Éducation', 'Santé'])  # par début, sans terminé, annulé ni fini
+        self.assertEqual(rows[0]['territory'], 'Pikine')
+        self.assertEqual((rows[2]['status'], rows[2]['status_label']), ('prevu', 'Prévu'))
+        self.assertEqual([row['name'] for row in self.get(self.coord_dakar)['upcoming_programs']], ['Brigades', 'Santé'])
+        self.assertEqual([row['name'] for row in self.get(self.coord_thies)['upcoming_programs']], ['Éducation'])
+
+    def test_quatre_programmes_au_plus(self):
+        today = timezone.localdate()
+        for index in range(6):
+            Program.objects.create(
+                name=f'Extra {index}', objective='x', territory=self.pikine, start_date=today + timedelta(days=100 + index),
+                end_date=today + timedelta(days=130 + index),
+            )
+        self.assertEqual(len(self.get(self.founder)['upcoming_programs']), 4)

@@ -4557,3 +4557,156 @@ textarea[aria-invalid='true'] {
   margin: 10px 0 0;
   text-align: left;
 }
+/* Programmes et activités : onglets, cartes du membre, présences. */
+.tabs button {
+  padding: 8px 12px 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #55645b;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tabs button.active {
+  border-bottom-color: var(--green-700);
+  color: var(--green-800);
+  font-weight: 800;
+}
+.member-filter {
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+}
+.member-program-list {
+  display: grid;
+  gap: 14px;
+}
+.member-program {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+}
+.member-program header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.member-program h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.member-program p {
+  margin: 0;
+  color: #4d5d54;
+}
+.program-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 13px;
+}
+.program-meta ui-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--green-700);
+}
+.member-activities {
+  display: grid;
+  gap: 0;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.member-activities li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.member-activities li > div {
+  display: grid;
+  gap: 2px;
+}
+.member-activities small {
+  color: #616c65;
+}
+.member-activities a {
+  color: var(--green-800);
+}
+.registration-control {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.registration-panel .registration-control {
+  justify-items: stretch;
+  margin-top: 16px;
+}
+.registration-panel .registration-control .btn {
+  width: 100%;
+}
+.pager {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.pager button {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid #d4ddd7;
+  border-radius: 6px;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pager button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.member-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+.member-upcoming {
+  grid-template-columns: 1fr;
+}
+.activity-row {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.activity-row > span {
+  flex: 1;
+}
+.attendance-panel {
+  padding: 28px;
+  max-width: 1000px;
+}
+.attendance-tools {
+  grid-template-columns: minmax(200px, 1fr) auto auto;
+  margin-top: 16px;
+}
+.attendance-panel .table-footer .btn {
+  min-height: 36px;
+}
+@media (max-width: 600px) {
+  .member-stats {
+    grid-template-columns: 1fr;
+  }
+  .member-activities li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .registration-control {
+    justify-items: start;
+  }
+}
+.dashboard-balanced > .wide-panel {
+  grid-column: 1 / -1;
+}
+.small-panel > p.audit-empty {
+  display: block;
+}

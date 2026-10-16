@@ -19,6 +19,8 @@ export interface MemberProfile {
   phone: string;
   /** Adresse de la photo (réservée à son propriétaire), ou `null` s'il n'y en a pas. */
   photo_url: string | null;
+  /** Coordonnateur le plus proche : celui du territoire du membre, sinon d'un territoire dont il dépend. */
+  coordinator: { first_name: string; last_name: string; email: string; territory: string } | null;
 }
 
 export interface PasswordChange {

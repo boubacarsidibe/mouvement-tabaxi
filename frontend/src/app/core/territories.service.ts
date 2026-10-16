@@ -42,3 +42,19 @@ export class TerritoryService {
 export function regionsOf(tree: TerritoryNode[]): TerritoryNode[] {
   return tree.flatMap((country) => (country.kind === 'pays' ? country.children : [country]));
 }
+
+/** Territoire proposé dans une liste déroulante : les communes sont décalées sous leur région. */
+export interface TerritoryChoice {
+  id: number;
+  label: string;
+}
+
+/** Territoires du périmètre en liste déroulante, présentés en arbre par un retrait (inactifs signalés). */
+export function territoryChoices(list: ManagedTerritory[]): TerritoryChoice[] {
+  const depth = (path: string) => path.split(' › ').length;
+  const top = Math.min(...list.map((item) => depth(item.path)));
+  return list.map((item) => ({
+    id: item.id,
+    label: `${'\u00a0\u00a0'.repeat(depth(item.path) - top)}${item.name}${item.is_active ? '' : ' (inactif)'}`,
+  }));
+}

@@ -1,26 +1,32 @@
 import { Routes } from '@angular/router';
 import { authGuard, bureauGuard, founderGuard, guestGuard } from './core/auth.guards';
-import { AdminPage } from './pages/admin-page';
 import { ResetPasswordPage } from './pages/reset-password-page';
 import { AuthPage } from './pages/auth-page';
 import { FinalizePage } from './pages/finalize-page';
 import { InvitationPage } from './pages/invitation-page';
 import { JoinPage } from './pages/join-page';
-import { MemberPage } from './pages/member-page';
 import { PrivacyPage } from './pages/privacy-page';
 import { PublicPage } from './pages/public-page';
 import { RequestStatusPage } from './pages/request-status-page';
 
 /** Espace membre : toute personne connectée. */
 function member(path: string, view: string, title: string) {
-  return { path, component: MemberPage, canActivate: [authGuard], data: { view }, title };
+  // Chargé à la demande : l'espace membre n'alourdit pas la page d'accueil.
+  return {
+    path,
+    loadComponent: () => import('./pages/member-page').then((module) => module.MemberPage),
+    canActivate: [authGuard],
+    data: { view },
+    title,
+  };
 }
 
 /** Interface du bureau exécutif : coordonnateurs et fondateurs (ou fondateurs seuls). */
 function bureau(path: string, view: string, title: string, foundersOnly = false) {
   return {
     path,
-    component: AdminPage,
+    // Chargé à la demande : l'interface du bureau n'alourdit pas la page d'accueil.
+    loadComponent: () => import('./pages/admin-page').then((module) => module.AdminPage),
     canActivate: [foundersOnly ? founderGuard : bureauGuard],
     data: { view },
     title,
@@ -59,7 +65,7 @@ export const routes: Routes = [
   member('membre/carte', 'card', 'Ma carte — TABAXI'),
   member('membre/profil', 'profile', 'Mon profil — TABAXI'),
   member('membre/securite', 'security', 'Sécurité du compte — TABAXI'),
-  member('membre/activites/brigades-citoyennes', 'activity', 'Brigades citoyennes — TABAXI'),
+  member('membre/activites/:id', 'activity', 'Activité — TABAXI'),
 
   bureau('bureau', 'dashboard', 'Tableau de bord — TABAXI'),
   bureau('bureau/demandes', 'requests', 'Demandes d’adhésion — TABAXI', true),
@@ -68,14 +74,17 @@ export const routes: Routes = [
   bureau('bureau/membres/:id', 'member-detail', 'Fiche membre — TABAXI'),
   bureau('bureau/programmes', 'programs', 'Programmes — TABAXI'),
   bureau('bureau/programmes/nouveau', 'program-new', 'Nouveau programme — TABAXI'),
-  bureau('bureau/programmes/brigades-citoyennes', 'program-detail', 'Brigades citoyennes — TABAXI'),
+  bureau('bureau/programmes/:id', 'program-detail', 'Fiche du programme — TABAXI'),
+  bureau('bureau/programmes/:id/modifier', 'program-edit', 'Modifier le programme — TABAXI'),
+  bureau('bureau/programmes/:programId/activites/nouvelle', 'activity-new', 'Planifier une activité — TABAXI'),
+  bureau('bureau/activites/:id', 'activity-detail', 'Fiche de l’activité — TABAXI'),
+  bureau('bureau/activites/:id/modifier', 'activity-edit', 'Modifier l’activité — TABAXI'),
+  bureau('bureau/activites/:id/compte-rendu', 'report', 'Compte rendu — TABAXI'),
+  bureau('bureau/activites/:id/presences', 'attendance', 'Présences — TABAXI'),
   bureau('bureau/territoires', 'territories', 'Localités — TABAXI'),
   bureau('bureau/comptes', 'accounts', 'Comptes d’accès — TABAXI', true),
   bureau('bureau/comptes/inviter', 'invite', 'Inviter un coordonnateur — TABAXI', true),
   bureau('bureau/coordonnateurs', 'coordinators', 'Coordonnateurs — TABAXI'),
   bureau('bureau/journal', 'audit', 'Journal des actions — TABAXI', true),
-  bureau('bureau/activites/nouvelle', 'activity-new', 'Planifier une activité — TABAXI'),
-  bureau('bureau/activites/brigade-dakar/compte-rendu', 'report', 'Compte rendu — TABAXI'),
-  bureau('bureau/activites/brigade-dakar/presences', 'attendance', 'Présences — TABAXI'),
   { path: '**', redirectTo: '' },
 ];

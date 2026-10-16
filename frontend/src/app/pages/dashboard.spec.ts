@@ -26,6 +26,11 @@ const FOUNDER_DATA = {
   joined_this_month: 6,
   coordinators: 9,
   pending_applications: 4,
+  programs_in_progress: 2,
+  upcoming_programs: [
+    { id: 7, name: 'Brigades citoyennes', territory: 'Pikine', start_date: '2026-09-15', end_date: '2026-12-20', status: 'en_cours', status_label: 'En cours' },
+    { id: 8, name: 'Santé communautaire', territory: 'Dakar', start_date: '2026-11-01', end_date: '2027-01-31', status: 'prevu', status_label: 'Prévu' },
+  ],
   territories: [
     { territory: TERRITORY(4, 'Pikine'), members: 80, coordinators: 2 },
     { territory: TERRITORY(5, 'Mbour'), members: 40, coordinators: 0 },
@@ -76,6 +81,7 @@ describe('Tableau de bord', () => {
   it('affiche les chiffres du serveur, sans données fictives', async () => {
     await open();
     const text = root.textContent ?? '';
+    expect(text).toContain('Programmes en cours');
     expect(text).toContain('tous les territoires');
     expect(text).toContain('Membres actifs');
     expect(text).toContain('128');
@@ -123,6 +129,18 @@ describe('Tableau de bord', () => {
     expect(root.querySelector('a[href="/bureau/journal"]')).not.toBeNull();
   });
 
+  it('liste les programmes à venir', async () => {
+    await open();
+    const rows = Array.from(root.querySelectorAll('.upcoming-programs p')).map((p) => p.textContent?.replace(/\s+/g, ' ').trim());
+    expect(rows[0]).toContain('Brigades citoyennes');
+    expect(rows[0]).toContain('Pikine');
+    expect(rows[0]).toContain('15/09/2026');
+    expect(rows[0]).toContain('En cours');
+    expect(rows[1]).toContain('Santé communautaire');
+    expect(rows[1]).toContain('Prévu');
+    expect(root.querySelector('a[href="/bureau/programmes/7"]')).not.toBeNull();
+  });
+
   it('un coordonnateur voit son territoire, sans demandes ni journal', async () => {
     await open({
       ...FOUNDER_DATA,
@@ -139,7 +157,8 @@ describe('Tableau de bord', () => {
   });
 
   it('dit quand aucun membre n’est actif', async () => {
-    await open({ ...FOUNDER_DATA, active_members: 0, territories: [], monthly_joined: MONTHLY.map((m) => ({ ...m, count: 0 })), recent_applications: [] });
+    await open({ ...FOUNDER_DATA, active_members: 0, territories: [], monthly_joined: MONTHLY.map((m) => ({ ...m, count: 0 })), recent_applications: [], upcoming_programs: [] });
+    expect(root.textContent).toContain('Aucun programme prévu ou en cours.');
     expect(root.textContent).toContain('Aucun membre actif dans ce périmètre.');
     expect(root.textContent).toContain('Aucune demande en attente.');
     const ticks = Array.from(root.querySelectorAll('.chart-y span')).map((span) => span.textContent);

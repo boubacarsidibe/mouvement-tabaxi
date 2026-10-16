@@ -1,11 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
 import { AuditJournal } from './audit-journal';
+import { ActivityAttendance, ActivityDetail, ActivityForm, ActivityReport } from './activities-bureau';
 import { Dashboard } from './dashboard';
 import { InviteForm } from './invite-form';
 import { MemberDetail, MembersList } from './members-base';
+import { ProgramDetail, ProgramForm, ProgramsList } from './programs-bureau';
 import { RequestDetail, RequestsList } from './requests-review';
 
 @Component({
@@ -20,6 +22,13 @@ import { RequestDetail, RequestsList } from './requests-review';
     MemberDetail,
     AuditJournal,
     Dashboard,
+    ProgramsList,
+    ProgramForm,
+    ProgramDetail,
+    ActivityForm,
+    ActivityDetail,
+    ActivityReport,
+    ActivityAttendance,
   ],
   template: `
     <main class="workspace-shell admin-shell">
@@ -116,50 +125,33 @@ import { RequestDetail, RequestsList } from './requests-review';
             <app-members-list kind="accounts" />
           }
 
+
           @if (view === 'programs') {
-            <nav class="tabs">
-              <a class="active">Tous (18)</a><a>En cours (10)</a><a>À venir (5)</a
-              ><a>Terminés (3)</a>
-            </nav>
-            <div class="filter-bar">
-              <label
-                ><ui-icon name="search" /><input
-                  aria-label="Rechercher un programme"
-                  placeholder="Rechercher un programme…" /></label
-              ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option></select
-              ><select aria-label="Filtrer par localité">
-                <option>Localité · Toutes</option></select
-              ><button>Réinitialiser</button>
-            </div>
-            <section class="admin-program-grid">
-              @for (program of programs; track program.name) {
-                <article class="panel" routerLink="/bureau/programmes/brigades-citoyennes">
-                  <header>
-                    <ui-icon [name]="program.icon" />
-                    <div>
-                      <h2>{{ program.name }}</h2>
-                      <p>{{ program.description }}</p>
-                    </div>
-                    <button type="button" [attr.aria-label]="'Plus d’actions pour ' + program.name">
-                      •••
-                    </button>
-                  </header>
-                  <p class="program-city"><ui-icon name="location" />{{ program.city }}</p>
-                  <div class="progress"><i [style.width.%]="program.progress"></i></div>
-                  <footer>
-                    <span><ui-icon name="calendar" />{{ program.date }}</span
-                    ><b>{{ program.progress }}%</b
-                    ><span
-                      class="badge"
-                      [class.success]="program.status !== 'À venir'"
-                      [class.warning]="program.status === 'À venir'"
-                      >{{ program.status }}</span
-                    >
-                  </footer>
-                </article>
-              }
-            </section>
+            <app-programs-list />
+          }
+
+          @if (view === 'program-new' || view === 'program-edit') {
+            <app-program-form />
+          }
+
+          @if (view === 'program-detail') {
+            <app-program-detail />
+          }
+
+          @if (view === 'activity-new' || view === 'activity-edit') {
+            <app-activity-form />
+          }
+
+          @if (view === 'activity-detail') {
+            <app-activity-detail />
+          }
+
+          @if (view === 'report') {
+            <app-activity-report />
+          }
+
+          @if (view === 'attendance') {
+            <app-activity-attendance />
           }
 
           @if (view === 'territories') {
@@ -238,237 +230,8 @@ import { RequestDetail, RequestsList } from './requests-review';
             <app-invite-form />
           }
 
-          @if (view === 'program-new' || view === 'activity-new' || view === 'report') {
-            <a
-              class="back-link"
-              routerLink="/bureau/programmes"
-              >← Retour</a
-            >
-            <form class="workspace-form panel admin-form" (submit)="completeForm($event)">
-              @if (view === 'program-new') {
-                <p class="eyebrow">Programme</p>
-                <h2>Créer un nouveau programme</h2>
-                <p>
-                  Cadrez l’objectif, le territoire et la période avant de planifier les activités.
-                </p>
-                <label
-                  >Nom du programme <input placeholder="Ex. Lecture pour tous" required
-                /></label>
-                <label
-                  >Objectif
-                  <textarea
-                    rows="4"
-                    placeholder="Quel changement ce programme doit-il produire ?"
-                    required
-                  ></textarea>
-                </label>
-                <div class="field-grid">
-                  <label
-                    >Territoire
-                    <select required>
-                      <option value="">Sélectionner un territoire</option>
-                      <option>Dakar</option>
-                      <option>Thiès</option>
-                      <option>Saint-Louis</option>
-                    </select></label
-                  ><label
-                    >Responsable
-                    <select required>
-                      <option value="">Sélectionner un responsable</option>
-                      <option>Mamadou Diop</option>
-                      <option>Fatou Sarr</option>
-                    </select></label
-                  >
-                </div>
-                <div class="field-grid">
-                  <label>Date de début <input type="date" required /></label
-                  ><label>Date de fin <input type="date" required /></label>
-                </div>
-              } @else if (view === 'activity-new') {
-                <p class="eyebrow">Activité</p>
-                <h2>Planifier une activité</h2>
-                <p>Ajoutez les informations pratiques visibles par les membres du territoire.</p>
-                <label
-                  >Programme
-                  <select required>
-                    <option value="">Sélectionner un programme</option>
-                    <option>Brigades citoyennes</option>
-                    <option>Éducation civique</option>
-                  </select></label
-                >
-                <label
-                  >Nom de l’activité
-                  <input placeholder="Ex. Nettoyage citoyen de la plage" required
-                /></label>
-                <div class="field-grid">
-                  <label>Date <input type="date" required /></label
-                  ><label>Horaires <input placeholder="09 h 00 – 12 h 00" required /></label>
-                </div>
-                <label>Lieu précis <input placeholder="Point de rendez-vous" required /></label>
-                <label
-                  >Description
-                  <textarea
-                    rows="4"
-                    placeholder="Déroulement, matériel et consignes…"
-                    required
-                  ></textarea>
-                </label>
-                <label>Nombre de places <input type="number" value="50" min="1" required /></label>
-              } @else if (view === 'report') {
-                <p class="eyebrow">Brigades citoyennes · 24 octobre 2026</p>
-                <h2>Ajouter le compte rendu</h2>
-                <p>Conservez une trace utile, concise et vérifiable de l’activité.</p>
-                <label
-                  >Résumé
-                  <textarea rows="5" placeholder="Ce qui a été réalisé…" required></textarea>
-                </label>
-                <div class="field-grid">
-                  <label
-                    >Participants présents
-                    <input type="number" value="42" min="0" required /></label
-                  ><label>Sacs collectés <input type="number" value="68" min="0" /></label>
-                </div>
-                <label
-                  >Résultats et suites
-                  <textarea
-                    rows="4"
-                    placeholder="Résultats observés et prochaines étapes…"
-                    required
-                  ></textarea>
-                </label>
-                <label
-                  >Photos ou document
-                  <span class="upload-field"
-                    ><ui-icon name="plus" /><span
-                      ><strong>Ajouter des fichiers</strong
-                      ><small>JPG, PNG ou PDF · 10 Mo maximum</small></span
-                    ></span
-                  ></label
-                >
-              }
-              <div class="form-actions">
-                <a
-                  class="btn btn-outline"
-                  routerLink="/bureau/programmes"
-                  >Annuler</a
-                ><button class="btn btn-green" type="submit">
-                  {{ view === 'report' ? 'Publier le compte rendu' : 'Enregistrer' }}
-                </button>
-              </div>
-              @if (formSaved()) {
-                <p class="inline-success" role="status">✓ Les informations ont été enregistrées.</p>
-              }
-            </form>
-          }
 
-          @if (view === 'program-detail') {
-            <a class="back-link" routerLink="/bureau/programmes">← Retour aux programmes</a>
-            <section class="program-overview panel">
-              <div>
-                <p class="eyebrow">Programme · Dakar</p>
-                <h2>Brigades citoyennes</h2>
-                <p>
-                  Mobiliser les jeunes autour d’actions concrètes de salubrité et de solidarité.
-                </p>
-              </div>
-              <span class="badge success">En cours</span>
-              <div class="progress"><i style="width: 70%"></i></div>
-              <dl>
-                <div>
-                  <dt>Responsable</dt>
-                  <dd>Mamadou Diop</dd>
-                </div>
-                <div>
-                  <dt>Période</dt>
-                  <dd>Janvier – décembre 2026</dd>
-                </div>
-                <div>
-                  <dt>Progression</dt>
-                  <dd>70 %</dd>
-                </div>
-              </dl>
-            </section>
-            <div class="section-heading">
-              <div>
-                <h2>Activités du programme</h2>
-                <p>3 activités planifiées · 96 participations</p>
-              </div>
-              <a class="btn btn-green" routerLink="/bureau/activites/nouvelle"
-                ><ui-icon name="plus" />Planifier une activité</a
-              >
-            </div>
-            <section class="activity-admin-list">
-              <article class="panel">
-                <span class="date-tile"><b>24</b>OCT</span>
-                <div>
-                  <h3>Nettoyage citoyen de la plage de Yoff</h3>
-                  <p>09 h 00 – 12 h 00 · Plage de Yoff · 42 inscrits</p>
-                </div>
-                <span class="badge success">Terminée</span
-                ><a routerLink="/bureau/activites/brigade-dakar/presences">Présences</a
-                ><a routerLink="/bureau/activites/brigade-dakar/compte-rendu">Compte rendu</a>
-              </article>
-              <article class="panel">
-                <span class="date-tile"><b>12</b>NOV</span>
-                <div>
-                  <h3>Réhabilitation de l’aire de jeux</h3>
-                  <p>08 h 30 – 13 h 00 · Parc Hann · 31 inscrits</p>
-                </div>
-                <span class="badge warning">À venir</span
-                ><a routerLink="/bureau/activites/brigade-dakar/presences">Gérer</a>
-              </article>
-            </section>
-          }
 
-          @if (view === 'attendance') {
-            <a class="back-link" routerLink="/bureau/programmes/brigades-citoyennes"
-              >← Retour au programme</a
-            >
-            <section class="attendance-heading panel">
-              <div>
-                <p class="eyebrow">24 octobre 2026 · Plage de Yoff</p>
-                <h2>Présences — Nettoyage citoyen</h2>
-                <p>Cochez les membres présents. Les changements sont conservés avec leur auteur.</p>
-              </div>
-              <strong>8 / 10 présents</strong>
-            </section>
-            <div class="table-wrap attendance-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Présent</th>
-                    <th>Membre</th>
-                    <th>N° d’adhérent</th>
-                    <th>Territoire</th>
-                    <th>Arrivée</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (person of attendees; track person.name) {
-                    <tr>
-                      <td>
-                        <input
-                          type="checkbox"
-                          [checked]="person.present"
-                          [attr.aria-label]="'Présence de ' + person.name"
-                        />
-                      </td>
-                      <td>
-                        <strong>{{ person.name }}</strong>
-                      </td>
-                      <td>{{ person.id }}</td>
-                      <td>Dakar</td>
-                      <td>{{ person.time }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-              <footer class="table-footer">
-                <span>Liste enregistrée automatiquement</span
-                ><button class="btn btn-green" type="button">Valider les présences</button>
-              </footer>
-            </div>
-          }
         </div>
       </section>
     </main>
@@ -510,63 +273,6 @@ export class AdminPage {
     await this.auth.logout();
     await this.router.navigateByUrl('/connexion');
   }
-  protected readonly formSaved = signal(false);
-  protected readonly programs = [
-    {
-      name: 'Brigades citoyennes',
-      description: 'Mobilisation des jeunes pour des actions citoyennes.',
-      city: 'Dakar',
-      date: '15 sept. 2026',
-      progress: 70,
-      status: 'En cours',
-      icon: 'leaf',
-    },
-    {
-      name: 'Éducation civique',
-      description: 'Sensibilisation dans les écoles et communautés.',
-      city: 'Thiès',
-      date: '22 nov. 2026',
-      progress: 45,
-      status: 'À venir',
-      icon: 'users',
-    },
-    {
-      name: 'Santé communautaire',
-      description: 'Actions de prévention et de soutien sanitaire.',
-      city: 'Saint-Louis',
-      date: '10 août 2026',
-      progress: 80,
-      status: 'En cours',
-      icon: 'heart',
-    },
-    {
-      name: 'Environnement propre',
-      description: 'Campagnes de reboisement et de salubrité.',
-      city: 'Ziguinchor',
-      date: '5 déc. 2026',
-      progress: 30,
-      status: 'À venir',
-      icon: 'leaf',
-    },
-    {
-      name: 'Autonomisation des femmes',
-      description: 'Formations et appui aux activités génératrices de revenus.',
-      city: 'Kaolack',
-      date: '12 sept. 2026',
-      progress: 60,
-      status: 'En cours',
-      icon: 'chart',
-    },
-    {
-      name: 'Jeunesse et leadership',
-      description: 'Renforcement des capacités des jeunes leaders.',
-      city: 'Tambacounda',
-      date: '20 janv. 2026',
-      progress: 100,
-      status: 'Terminé',
-      icon: 'book',
-    },
-  ];
   protected readonly territories = [
     { city: 'Dakar', region: 'Dakar', coordinators: 3, members: 320 },
     { city: 'Thiès', region: 'Thiès', coordinators: 8, members: 210 },
@@ -577,14 +283,6 @@ export class AdminPage {
     { city: 'Kolda', region: 'Kolda', coordinators: 3, members: 84 },
     { city: 'Louga', region: 'Louga', coordinators: 5, members: 100 },
   ];
-  protected readonly attendees = [
-    { name: 'Aminata Ndiaye', id: 'TBX-2026-00125', time: '08 h 52', present: true },
-    { name: 'Moussa Faye', id: 'TBX-2026-00133', time: '08 h 57', present: true },
-    { name: 'Adama Sow', id: 'TBX-2026-00141', time: '09 h 03', present: true },
-    { name: 'Marième Diallo', id: 'TBX-2026-00154', time: '—', present: false },
-    { name: 'Cheikh Fall', id: 'TBX-2026-00161', time: '09 h 08', present: true },
-  ];
-  /** Nouveaux membres par mois, de novembre 2025 à octobre 2026 (données de démonstration). */
 
   protected get pageTitle(): string {
     return (
@@ -600,8 +298,11 @@ export class AdminPage {
         'request-detail': 'Examiner la demande',
         'member-detail': 'Fiche membre',
         'program-new': 'Nouveau programme',
-        'program-detail': 'Détail du programme',
+        'program-edit': 'Modifier le programme',
+        'program-detail': 'Fiche du programme',
         'activity-new': 'Planifier une activité',
+        'activity-edit': 'Modifier l’activité',
+        'activity-detail': 'Fiche de l’activité',
         report: 'Compte rendu',
         attendance: 'Présences',
         invite: 'Inviter un coordonnateur',
@@ -621,9 +322,12 @@ export class AdminPage {
         audit: 'Historique des décisions et opérations sensibles',
         'request-detail': 'Décider avec les informations utiles et garder une trace',
         'member-detail': 'Coordonnées, statut du compte et historique',
-        'program-new': 'Définir un objectif, un territoire et une période',
+        'program-new': 'Définir un objectif, une localité et une période',
+        'program-edit': 'Mettre à jour le programme, son responsable et son état',
         'program-detail': 'Suivre les activités, la participation et l’avancement',
         'activity-new': 'Préparer une activité visible par les membres du territoire',
+        'activity-edit': 'Corriger la date, le lieu ou la description',
+        'activity-detail': 'Informations, compte rendu et inscrits',
         report: 'Documenter les résultats d’une activité terminée',
         attendance: 'Enregistrer les membres effectivement présents',
         invite: 'Donner un accès au bureau exécutif',
@@ -658,9 +362,5 @@ export class AdminPage {
     // Inviter au bureau est réservé aux fondateurs ; le reste de la page reste lisible par les coordonnateurs.
     if (this.view === 'coordinators' || this.view === 'accounts') return this.auth.isFounder();
     return ['programs', 'territories'].includes(this.view);
-  }
-  protected completeForm(event: SubmitEvent): void {
-    event.preventDefault();
-    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.formSaved.set(true);
   }
 }

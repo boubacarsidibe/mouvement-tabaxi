@@ -12,6 +12,17 @@ export interface TerritoryFigures {
   coordinators: number;
 }
 
+/** Programme prévu ou en cours, pour la liste « Programmes à venir ». */
+export interface UpcomingProgram {
+  id: number;
+  name: string;
+  territory: string;
+  start_date: string;
+  end_date: string;
+  status: 'prevu' | 'en_cours' | 'termine' | 'annule';
+  status_label: string;
+}
+
 export interface RecentApplication {
   id: number;
   reference: string;
@@ -28,6 +39,8 @@ export interface DashboardData {
   joined_this_month: number;
   coordinators: number;
   pending_applications: number;
+  programs_in_progress: number;
+  upcoming_programs: UpcomingProgram[];
   territories: TerritoryFigures[];
   /** Nouveaux membres par mois sur douze mois : `month` au format AAAA-MM. */
   monthly_joined: { month: string; count: number }[];

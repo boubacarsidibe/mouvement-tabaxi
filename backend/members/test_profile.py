@@ -97,3 +97,20 @@ class MemberProfileTests(TestCase):
 
     def test_pas_de_remplacement_complet(self):
         self.assertEqual(self.client.put(URL, {}, content_type='application/json').status_code, 405)
+
+    def test_coordonnateur_le_plus_proche(self):
+        self.assertIsNone(self.client.get(URL).json()['coordinator'])
+        region = Territory.objects.get(name='Dakar', kind=Territory.Kind.REGION)
+        far = User.objects.create_user('region@example.org', 'un-mot-de-passe-long', first_name='Mamadou', last_name='Diop',
+                                       role=User.Role.COORDONNATEUR, territory=region)
+        coordinator = self.client.get(URL).json()['coordinator']
+        self.assertEqual(coordinator, {'first_name': 'Mamadou', 'last_name': 'Diop', 'email': 'region@example.org', 'territory': 'Dakar'})
+        near = User.objects.create_user('commune@example.org', 'un-mot-de-passe-long', first_name='Rokhaya', last_name='Gueye',
+                                        role=User.Role.COORDONNATEUR, territory=self.dakar)
+        self.assertEqual(self.client.get(URL).json()['coordinator']['last_name'], 'Gueye')  # celui de sa commune d'abord
+        near.is_active = False
+        near.save()
+        self.assertEqual(self.client.get(URL).json()['coordinator']['last_name'], 'Diop')  # un compte désactivé ne compte pas
+        far.is_active = False
+        far.save()
+        self.assertIsNone(self.client.get(URL).json()['coordinator'])

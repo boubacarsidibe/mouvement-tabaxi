@@ -15,6 +15,8 @@ from applications.models import Application
 from audit.models import AuditEntry
 from members.filters import scoped_members
 from members.models import Member
+from programs.models import Program
+from programs.rules import bureau_programs
 from territories.models import Territory
 from territories.scope import scope_queryset
 from territories.serializers import territory_path
@@ -22,6 +24,7 @@ from territories.serializers import territory_path
 BUREAU_ROLES = (User.Role.COORDONNATEUR, User.Role.FONDATEUR)
 MONTHS = 12
 RECENT = 5
+UPCOMING = 4
 
 
 def month_starts(today, count=MONTHS):
@@ -92,6 +95,23 @@ def monthly_joined(members, today):
     return [{'month': start.strftime('%Y-%m'), 'count': counts.get(start, 0)} for start in starts]
 
 
+def upcoming_programs(programs, today):
+    """Prochains programmes du périmètre : prévus ou en cours, pas encore finis, du plus proche au plus lointain."""
+    rows = programs.filter(status__in=Program.OPEN, end_date__gte=today).order_by('start_date', 'id')[:UPCOMING]
+    return [
+        {
+            'id': program.pk,
+            'name': program.name,
+            'territory': program.territory.name,
+            'start_date': program.start_date,
+            'end_date': program.end_date,
+            'status': program.status,
+            'status_label': program.get_status_display(),
+        }
+        for program in rows
+    ]
+
+
 def build(user):
     """Tableau de bord de la personne connectée. Les demandes et le journal ne sont montrés qu'aux fondateurs."""
     today = timezone.localdate()
@@ -101,6 +121,7 @@ def build(user):
         Application.objects.filter(status=Application.Status.A_EXAMINER), user, 'territory'
     )
     month_start = date(today.year, today.month, 1)
+    programs = bureau_programs(user)
 
     data = {
         'scope': scope_of(user),
@@ -108,6 +129,8 @@ def build(user):
         'joined_this_month': members.filter(user__role=User.Role.MEMBRE, joined_on__gte=month_start).count(),
         'coordinators': active.filter(user__role__in=BUREAU_ROLES).count(),
         'pending_applications': pending.count(),
+        'programs_in_progress': programs.filter(status=Program.Status.ONGOING).count(),
+        'upcoming_programs': upcoming_programs(programs, today),
         'territories': territory_breakdown(active),
         'monthly_joined': monthly_joined(members, today),
         'recent_applications': None,

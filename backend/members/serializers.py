@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from accounts.models import User
 from accounts.serializers import check_new_password
+from territories.scope import ancestor_ids
 from territories.serializers import TerritorySummarySerializer
 
 from .models import Member, MemberStatusChange
@@ -77,18 +78,41 @@ class MemberProfileSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True, validators=[PHONE_FORMAT])
     photo = serializers.FileField(write_only=True, required=False)
     photo_url = serializers.SerializerMethodField()
+    coordinator = serializers.SerializerMethodField()
 
     class Meta:
         model = Member
         fields = (
             'number', 'joined_on', 'first_name', 'last_name', 'email', 'role', 'role_label', 'territory',
-            'address', 'phone', 'photo', 'photo_url',
+            'address', 'phone', 'photo', 'photo_url', 'coordinator',
         )
         read_only_fields = ('number', 'joined_on')
         extra_kwargs = {'address': {'max_length': 255}}
 
     def get_photo_url(self, member):
         return '/api/members/me/photo/' if member.photo else None
+
+    def get_coordinator(self, member):
+        """Coordonnateur le plus proche du membre : celui de son territoire, sinon de celui dont il dépend."""
+        user = member.user
+        if user.territory is None:
+            return None
+        for territory_id in ancestor_ids(user.territory):
+            coordinator = (
+                User.objects.filter(role=User.Role.COORDONNATEUR, territory_id=territory_id, is_active=True)
+                .exclude(pk=user.pk)
+                .select_related('territory')
+                .order_by('date_joined', 'id')
+                .first()
+            )
+            if coordinator:
+                return {
+                    'first_name': coordinator.first_name,
+                    'last_name': coordinator.last_name,
+                    'email': coordinator.email,
+                    'territory': coordinator.territory.name,
+                }
+        return None
 
     def validate(self, data):
         locked = [name for name in LOCKED_FIELDS if name in self.initial_data]

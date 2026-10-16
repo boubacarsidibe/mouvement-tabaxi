@@ -12,6 +12,7 @@ api_patterns = [
     path('applications/', include('applications.urls')),
     path('audit/', include('audit.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('', include('programs.urls')),
     path('', include('members.urls')),
 ]
 
