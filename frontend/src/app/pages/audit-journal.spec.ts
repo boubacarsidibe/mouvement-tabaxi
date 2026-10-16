@@ -38,7 +38,10 @@ describe('Journal des actions', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
   async function open(results: unknown[] = [ENTRY]) {
     harness = await RouterTestingHarness.create();
@@ -80,7 +83,7 @@ describe('Journal des actions', () => {
   it('n’offre aucun moyen de modifier ou d’effacer une ligne', async () => {
     await open();
     const labels = Array.from(root.querySelectorAll('button')).map((b) => b.textContent?.trim());
-    expect(labels).toEqual(['Rechercher', 'Réinitialiser']);
+    expect(labels).toEqual(['Rechercher', 'Réinitialiser', 'Exporter en Excel']);
     expect(root.querySelector('article a, article button, article input')).toBeNull();
   });
 
@@ -150,5 +153,27 @@ describe('Journal des actions', () => {
     );
     await settle();
     expect(root.textContent).toContain('Seuls les membres fondateurs');
+  });
+
+  it('exporte le journal affiché, avec ses filtres', async () => {
+    const saved: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    await open();
+    choose(select('Filtrer par action'), 'liste_exportee');
+    next().flush(PAGE([ENTRY]));
+    await settle();
+    Array.from(root.querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter'))!.click();
+    const request = http.expectOne((req) => req.url === '/api/audit/export/');
+    expect(request.request.params.get('action')).toBe('liste_exportee');
+    request.flush(new Blob(['x']), {
+      headers: { 'Content-Disposition': 'attachment; filename="journal-2026-10-16.xlsx"' },
+    });
+    await settle();
+    expect(saved).toEqual(['journal-2026-10-16.xlsx']);
+    expect(root.textContent).toContain('noté dans le journal des actions');
   });
 });

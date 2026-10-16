@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TerritorySummary } from './auth.service';
+import { Download, fetchFile } from './download';
 
 export type ApplicationStatus = 'a_examiner' | 'acceptee' | 'rejetee' | 'inscrite';
 
@@ -44,11 +45,21 @@ export class ReviewService {
   private readonly http = inject(HttpClient);
 
   list(filters: ApplicationFilters = {}): Promise<ApplicationPage> {
+    let params = this.params(filters);
+    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
+    return firstValueFrom(this.http.get<ApplicationPage>('/api/applications/', { params }));
+  }
+
+  /** Fichier Excel de la liste affichée : les mêmes filtres, sans les pages. */
+  exportList(filters: ApplicationFilters = {}): Promise<Download> {
+    return fetchFile(this.http, '/api/applications/export/', this.params(filters));
+  }
+
+  private params(filters: ApplicationFilters): HttpParams {
     let params = new HttpParams();
     if (filters.status) params = params.set('status', filters.status);
     if (filters.search?.trim()) params = params.set('search', filters.search.trim());
-    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
-    return firstValueFrom(this.http.get<ApplicationPage>('/api/applications/', { params }));
+    return params;
   }
 
   get(id: number): Promise<ReviewedApplication> {

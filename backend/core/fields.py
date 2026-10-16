@@ -43,7 +43,7 @@ class EncryptedJSONField(EncryptedTextField):
     def get_prep_value(self, value):
         if value is None:
             return None
-        return super().get_prep_value(json.dumps(value, ensure_ascii=False, sort_keys=True))
+        return super().get_prep_value(json.dumps(value, ensure_ascii=False))
 
     def value_to_string(self, obj):
         return json.dumps(self.value_from_object(obj), ensure_ascii=False)

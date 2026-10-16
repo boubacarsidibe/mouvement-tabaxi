@@ -43,7 +43,10 @@ describe('Examen des demandes', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
   async function open(url: string) {
     harness = await RouterTestingHarness.create();
@@ -108,5 +111,34 @@ describe('Examen des demandes', () => {
       );
     await settle();
     expect(root.textContent).toContain('Le courriel n’a pas pu être envoyé');
+  });
+
+  it('exporte la liste des demandes affichée, avec son statut', async () => {
+    const saved: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    await open('/bureau/demandes');
+    http.expectOne('/api/applications/').flush({ count: 0, next: null, previous: null, results: [] });
+    await settle();
+    const select = root.querySelector('select') as HTMLSelectElement;
+    select.value = 'rejetee';
+    select.dispatchEvent(new Event('change'));
+    http
+      .expectOne((req) => req.url === '/api/applications/' && req.params.get('status') === 'rejetee')
+      .flush({ count: 0, next: null, previous: null, results: [] });
+    await settle();
+    Array.from(root.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Exporter'))!
+      .click();
+    const request = http.expectOne((req) => req.url === '/api/applications/export/');
+    expect(request.request.params.get('status')).toBe('rejetee');
+    request.flush(new Blob(['x']), {
+      headers: { 'Content-Disposition': 'attachment; filename="demandes-2026-10-16.xlsx"' },
+    });
+    await settle();
+    expect(saved).toEqual(['demandes-2026-10-16.xlsx']);
   });
 });

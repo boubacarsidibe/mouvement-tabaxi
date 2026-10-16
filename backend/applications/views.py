@@ -1,5 +1,4 @@
 from django.db import IntegrityError
-from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
@@ -9,9 +8,11 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.permissions import IsFounder
+from audit.exports import export_list
 from core.mail import EmailNotSent
 
 from . import services
+from .filters import describe_filters, filter_applications
 from .models import Application
 from .serializers import (
     ALREADY_IN_PROGRESS,
@@ -58,21 +59,7 @@ class ApplicationListCreateView(generics.ListCreateAPIView):
         return ApplicationSerializer
 
     def get_queryset(self):
-        queryset = founders_queryset()
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            if status_filter not in Application.Status.values:
-                raise ValidationError({'status': ['Statut inconnu.']})
-            queryset = queryset.filter(status=status_filter)
-        search = self.request.query_params.get('search', '').strip()
-        if search:
-            queryset = queryset.filter(
-                Q(first_name__icontains=search)
-                | Q(last_name__icontains=search)
-                | Q(email__icontains=search)
-                | Q(reference__icontains=search)
-            )
-        return queryset
+        return filter_applications(founders_queryset(), self.request.query_params)
 
     def perform_create(self, serializer):
         try:
@@ -80,6 +67,47 @@ class ApplicationListCreateView(generics.ListCreateAPIView):
         except IntegrityError:
             # Deux envois simultanés avec le même courriel : la base garde le premier.
             raise ValidationError({'email': [ALREADY_IN_PROGRESS]})
+
+
+class ApplicationExportView(APIView):
+    """Export Excel de la liste des demandes affichée (mêmes filtres), noté dans le journal.
+
+    La motivation et les notes, données sensibles, ne sont pas exportées.
+    """
+
+    permission_classes = [IsFounder]
+
+    def get(self, request):
+        params = request.query_params
+        applications = filter_applications(founders_queryset(), params)
+        rows = (
+            (
+                application.reference,
+                application.last_name,
+                application.first_name,
+                application.email,
+                application.territory.name,
+                application.profession,
+                application.get_status_display(),
+                application.created_at,
+                application.decided_at,
+                (application.decided_by.get_full_name().strip() or application.decided_by.email)
+                if application.decided_by
+                else None,
+            )
+            for application in applications
+        )
+        return export_list(
+            request,
+            base_name='demandes',
+            subject="Demandes d'adhésion",
+            headers=[
+                'Référence', 'Nom', 'Prénom', 'Courriel', 'Localité souhaitée', 'Profession', 'Statut',
+                'Date de la demande', 'Date de la décision', 'Décidée par',
+            ],
+            rows=rows,
+            filters=describe_filters(params),
+        )
 
 
 class ApplicationDetailView(generics.RetrieveAPIView):

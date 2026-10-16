@@ -43,6 +43,8 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Journal des actions (`GET /api/audit/`, fondateurs) : acceptations et refus de demandes, changements de statut, invitations enregistrés automatiquement avec leur auteur, leur date et leur motif, dans la transaction de l'action ; les lignes ne se modifient ni ne s'effacent (code, routes, administration), leurs détails sont chiffrés en base, et le changement de clé de chiffrement les rechiffre sans en toucher le contenu (#42).
 - Frontend : écran « Journal des actions » relié à l'API (recherche, filtres par action, auteur et période, pages), réservé aux fondateurs, sans données fictives.
 - Les motifs de suspension et de radiation sont chiffrés en base, comme les motifs de refus.
+- Export Excel des listes (`GET /api/members/export/`, `/api/applications/export/`, `/api/audit/export/`) : le fichier contient exactement la liste filtrée, dans le périmètre de la personne connectée, sans adresse, téléphone ni motivation ; les textes sont écrits comme du texte (aucune formule exécutée) ; chaque export est noté dans le journal des actions avec ses filtres et son nombre de lignes (#43).
+- Frontend : bouton « Exporter en Excel » sous chaque liste du bureau, qui exporte la liste telle qu'elle est affichée.
 
 ### Modifié
 

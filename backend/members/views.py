@@ -7,11 +7,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from accounts.models import User
 from accounts.permissions import IsBureau, IsFounder
 from accounts.serializers import UserSerializer
+from audit.exports import export_list
 from territories.scope import scope_queryset
 
-from .filters import filter_members, order_members
+from .filters import describe_filters, filter_members, order_members, read_roles
 from .models import Member
 from .registration import LinkProblem, check_link, complete_registration
 from .serializers import (
@@ -138,6 +140,42 @@ class MemberListView(generics.ListAPIView):
         params = self.request.query_params
         queryset = filter_members(scoped_members(self.request.user), params)
         return order_members(queryset, params)
+
+
+class MemberExportView(APIView):
+    """Export Excel de la liste affichée : mêmes filtres, même périmètre, même ordre ; noté dans le journal.
+
+    Le fichier reprend les colonnes de la liste et le courriel. L'adresse et le téléphone ne sont pas exportés.
+    """
+
+    permission_classes = [IsBureau]
+
+    def get(self, request):
+        params = request.query_params
+        members = order_members(filter_members(scoped_members(request.user), params), params)
+        is_members_base = User.Role.MEMBRE in read_roles(params)
+        date_header = "Date d'adhésion" if is_members_base else "Date d'entrée"
+        rows = (
+            (
+                member.number,
+                member.user.last_name,
+                member.user.first_name,
+                member.user.email,
+                member.user.get_role_display(),
+                member.user.territory.name if member.user.territory else 'Tous les territoires',
+                member.joined_on,
+                member.get_status_display(),
+            )
+            for member in members
+        )
+        return export_list(
+            request,
+            base_name='membres' if is_members_base else 'coordonnateurs',
+            subject='Base des membres' if is_members_base else 'Base des coordonnateurs',
+            headers=["N° d'adhérent", 'Nom', 'Prénom', 'Courriel', 'Fonction', 'Localité', date_header, 'Statut'],
+            rows=rows,
+            filters=describe_filters(params),
+        )
 
 
 class MemberDetailView(generics.RetrieveAPIView):

@@ -78,3 +78,21 @@ def order_members(queryset, params):
         raise ValidationError({'ordering': ['Tri inconnu.']})
     descending = ordering.startswith('-')
     return queryset.order_by(*(f'-{field}' if descending else field for field in ORDERINGS[key]))
+
+
+def describe_filters(params):
+    """Filtres appliqués, en clair, pour le journal des exports : ``{'Localité': 'Dakar', 'Statut': 'Actif'}``."""
+    labels = {}
+    roles = read_roles(params)
+    labels['Fonction'] = ', '.join(User.Role(role).label for role in roles)
+    if params.get('status'):
+        labels['Statut'] = Member.Status(params['status']).label
+    if params.get('territory', '').strip():
+        labels['Localité'] = Territory.objects.get(pk=int(params['territory'])).name
+    if params.get('joined_from', '').strip():
+        labels['Du'] = params['joined_from'].strip()
+    if params.get('joined_to', '').strip():
+        labels['Au'] = params['joined_to'].strip()
+    if params.get('search', '').strip():
+        labels['Recherche'] = params['search'].strip()
+    return labels

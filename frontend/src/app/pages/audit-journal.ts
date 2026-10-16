@@ -6,9 +6,11 @@ import {
   AuditAction,
   AuditCategory,
   AuditEntry,
+  AuditFilters,
   AuditPage,
   AuditService,
 } from '../core/audit.service';
+import { ExportButton } from '../shared/export-button';
 import { UiIcon } from '../shared/ui-icon';
 
 const ACTIONS: { value: AuditAction | ''; label: string }[] = [
@@ -31,7 +33,7 @@ const BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date 
 /** Journal des actions : acceptations, refus, changements de statut, invitations et exports. Aucune modification possible. */
 @Component({
   selector: 'app-audit-journal',
-  imports: [FormsModule, DatePipe, UiIcon],
+  imports: [FormsModule, DatePipe, UiIcon, ExportButton],
   template: `
     <div class="filter-bar filter-bar-wide audit-filters">
       <label
@@ -107,6 +109,7 @@ const BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date 
         } @else {
           <span>{{ page()?.count ?? 0 }} action(s) · le journal ne peut être ni modifié ni effacé</span>
         }
+        <app-export-button [run]="exportRun" />
         @if (page()?.previous || page()?.next) {
           <span>
             <button type="button" [disabled]="!page()?.previous" (click)="go(-1)">Précédent</button>
@@ -130,6 +133,9 @@ export class AuditJournal implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   private current = 1;
+  /** Filtres de la liste affichée : l'export les reprend tels quels. */
+  private applied: AuditFilters = {};
+  protected readonly exportRun = () => this.audit.exportList(this.applied);
 
   ngOnInit() {
     this.audit.actors().then(
@@ -169,17 +175,16 @@ export class AuditJournal implements OnInit {
     }
     this.loading.set(true);
     this.error.set('');
+    const filters: AuditFilters = {
+      action: this.action(),
+      actor: this.actor() ? Number(this.actor()) : '',
+      search: this.search(),
+      date_from: this.from(),
+      date_to: this.to(),
+    };
     try {
-      this.page.set(
-        await this.audit.list({
-          action: this.action(),
-          actor: this.actor() ? Number(this.actor()) : '',
-          search: this.search(),
-          date_from: this.from(),
-          date_to: this.to(),
-          page: this.current,
-        }),
-      );
+      this.page.set(await this.audit.list({ ...filters, page: this.current }));
+      this.applied = filters;
     } catch (error) {
       const problem = readProblem(error);
       this.error.set(Object.values(problem.fields)[0] ?? problem.message);

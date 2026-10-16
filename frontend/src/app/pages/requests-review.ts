@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { readProblem } from '../core/api-problem';
 import {
+  ApplicationFilters,
   ApplicationPage,
   ApplicationStatus,
   ReviewService,
   ReviewedApplication,
 } from '../core/review.service';
+import { ExportButton } from '../shared/export-button';
 
 const STATUSES: { value: ApplicationStatus | ''; label: string }[] = [
   { value: '', label: 'Statut · Tous' },
@@ -29,7 +31,7 @@ function badgeClass(status: ApplicationStatus) {
 /** Liste des demandes d'adhésion, filtrable par statut et par recherche. */
 @Component({
   selector: 'app-requests-list',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, ExportButton],
   template: `
     <div class="filter-bar">
       <label
@@ -100,6 +102,7 @@ function badgeClass(status: ApplicationStatus) {
         } @else {
           <span>{{ page()?.count ?? 0 }} résultat(s)</span>
         }
+        <app-export-button [run]="exportRun" />
         @if (page()?.previous || page()?.next) {
           <span>
             <button type="button" [disabled]="!page()?.previous" (click)="go(-1)">Précédent</button>
@@ -119,6 +122,9 @@ export class RequestsList implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   private current = 1;
+  /** Filtres de la liste affichée : l'export les reprend tels quels. */
+  private applied: ApplicationFilters = {};
+  protected readonly exportRun = () => this.review.exportList(this.applied);
 
   ngOnInit() {
     void this.load();
@@ -147,14 +153,10 @@ export class RequestsList implements OnInit {
   private async load() {
     this.loading.set(true);
     this.error.set('');
+    const filters: ApplicationFilters = { status: this.status(), search: this.search() };
     try {
-      this.page.set(
-        await this.review.list({
-          status: this.status(),
-          search: this.search(),
-          page: this.current,
-        }),
-      );
+      this.page.set(await this.review.list({ ...filters, page: this.current }));
+      this.applied = filters;
     } catch (error) {
       this.error.set(readProblem(error).message);
     } finally {

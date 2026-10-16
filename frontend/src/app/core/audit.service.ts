@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { Download, fetchFile } from './download';
 
 export type AuditAction =
   | 'demande_acceptee'
@@ -47,14 +48,24 @@ export class AuditService {
   private readonly http = inject(HttpClient);
 
   list(filters: AuditFilters = {}): Promise<AuditPage> {
+    let params = this.params(filters);
+    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
+    return firstValueFrom(this.http.get<AuditPage>('/api/audit/', { params }));
+  }
+
+  /** Fichier Excel du journal affiché : les mêmes filtres, sans les pages. */
+  exportList(filters: AuditFilters = {}): Promise<Download> {
+    return fetchFile(this.http, '/api/audit/export/', this.params(filters));
+  }
+
+  private params(filters: AuditFilters): HttpParams {
     let params = new HttpParams();
     if (filters.action) params = params.set('action', filters.action);
     if (filters.actor) params = params.set('actor', filters.actor);
     if (filters.search?.trim()) params = params.set('search', filters.search.trim());
     if (filters.date_from) params = params.set('date_from', filters.date_from);
     if (filters.date_to) params = params.set('date_to', filters.date_to);
-    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
-    return firstValueFrom(this.http.get<AuditPage>('/api/audit/', { params }));
+    return params;
   }
 
   /** Personnes qui ont agi, pour le filtre par auteur. */

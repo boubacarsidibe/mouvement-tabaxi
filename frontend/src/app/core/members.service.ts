@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TerritorySummary } from './auth.service';
+import { Download, fetchFile } from './download';
 
 export type MemberStatus = 'actif' | 'suspendu' | 'radie';
 export type MemberOrdering = 'name' | '-name' | 'place' | '-place' | 'date' | '-date';
@@ -68,6 +69,17 @@ export class MembersService {
   private readonly http = inject(HttpClient);
 
   list(filters: MemberFilters = {}): Promise<MemberPage> {
+    let params = this.params(filters);
+    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
+    return firstValueFrom(this.http.get<MemberPage>('/api/members/', { params }));
+  }
+
+  /** Fichier Excel de la liste affichée : les mêmes filtres, sans les pages. */
+  exportList(filters: MemberFilters = {}): Promise<Download> {
+    return fetchFile(this.http, '/api/members/export/', this.params(filters));
+  }
+
+  private params(filters: MemberFilters): HttpParams {
     let params = new HttpParams();
     if (filters.role) params = params.set('role', filters.role);
     if (filters.status) params = params.set('status', filters.status);
@@ -77,8 +89,7 @@ export class MembersService {
     if (filters.search?.trim()) params = params.set('search', filters.search.trim());
     if (filters.ordering && filters.ordering !== '-date')
       params = params.set('ordering', filters.ordering);
-    if (filters.page && filters.page > 1) params = params.set('page', filters.page);
-    return firstValueFrom(this.http.get<MemberPage>('/api/members/', { params }));
+    return params;
   }
 
   get(id: number): Promise<MemberRecord> {

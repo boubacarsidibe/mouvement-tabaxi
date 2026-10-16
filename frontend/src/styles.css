@@ -4454,3 +4454,43 @@ textarea[aria-invalid='true'] {
   margin: 4px 0 0;
   color: #616b65;
 }
+/* Bouton « Exporter en Excel » en pied de liste. */
+.export-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #b9cfc1;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--green-800);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.export-button:hover:not([disabled]) {
+  background: var(--green-100);
+}
+.export-button[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+.export-button ui-icon {
+  width: 16px;
+  height: 16px;
+}
+.export-done {
+  color: #0b6c3e;
+  font-weight: 650;
+}
+.export-error {
+  color: #8a2a24;
+  font-weight: 650;
+}

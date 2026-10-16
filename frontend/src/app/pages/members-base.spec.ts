@@ -79,7 +79,10 @@ describe('Base des membres', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
   /** Ouvre une base : le serveur reçoit la demande des territoires puis celle de la liste. */
   async function open(url: string, results: unknown[] = [LISTED], user = TEST_FOUNDER) {
@@ -264,6 +267,82 @@ describe('Base des membres', () => {
     button('Réinitialiser')!.click();
     nextList((p) => p.get('role') === 'coordonnateur,fondateur' && !p.has('territory')).flush(PAGE([]));
     await settle();
+  });
+
+  /** Remplace le téléchargement du navigateur : renvoie les noms de fichiers « enregistrés ». */
+  function stubDownload() {
+    const saved: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    return saved;
+  }
+  const file = (name: string) => ({
+    headers: { 'Content-Disposition': `attachment; filename="${name}"` },
+  });
+
+  it('exporte la liste affichée avec les mêmes filtres et le dit', async () => {
+    const saved = stubDownload();
+    await open('/bureau/membres');
+    choose(select('Filtrer par localité')!, '2');
+    nextList().flush(PAGE([LISTED]));
+    type('Date de début', '2026-01-01');
+    nextList().flush(PAGE([LISTED]));
+    choose(select('Filtrer par statut')!, 'actif');
+    nextList().flush(PAGE([LISTED]));
+    await settle();
+
+    button('Exporter en Excel')!.click();
+    const request = http.expectOne((req) => req.url === '/api/members/export/');
+    expect(request.request.params.get('territory')).toBe('2');
+    expect(request.request.params.get('joined_from')).toBe('2026-01-01');
+    expect(request.request.params.get('status')).toBe('actif');
+    expect(request.request.params.has('page')).toBe(false); // tout le fichier, pas une page
+    request.flush(new Blob(['x']), file('membres-2026-10-16.xlsx'));
+    await settle();
+    expect(saved).toEqual(['membres-2026-10-16.xlsx']);
+    expect(root.textContent).toContain('« membres-2026-10-16.xlsx » téléchargé');
+    expect(root.textContent).toContain('noté dans le journal des actions');
+  });
+
+  it('exporte la liste telle qu’elle est affichée, pas une saisie pas encore validée', async () => {
+    stubDownload();
+    await open('/bureau/membres');
+    type('Rechercher un membre', 'Ndiaye'); // saisi, mais ni Entrée ni « Rechercher »
+    button('Exporter en Excel')!.click();
+    const request = http.expectOne((req) => req.url === '/api/members/export/');
+    expect(request.request.params.has('search')).toBe(false);
+    request.flush(new Blob(['x']), file('membres-2026-10-16.xlsx'));
+    await settle();
+  });
+
+  it('exporte la base des coordonnateurs avec ses filtres', async () => {
+    const saved = stubDownload();
+    await open('/bureau/coordonnateurs', [COORDINATOR]);
+    button('Exporter en Excel')!.click();
+    const request = http.expectOne((req) => req.url === '/api/members/export/');
+    expect(request.request.params.get('role')).toBe('coordonnateur,fondateur');
+    request.flush(new Blob(['x']), file('coordonnateurs-2026-10-16.xlsx'));
+    await settle();
+    expect(saved).toEqual(['coordonnateurs-2026-10-16.xlsx']);
+  });
+
+  it('affiche l’erreur du serveur quand l’export échoue', async () => {
+    const saved = stubDownload();
+    await open('/bureau/membres');
+    button('Exporter en Excel')!.click();
+    http
+      .expectOne((req) => req.url === '/api/members/export/')
+      .flush(new Blob([JSON.stringify({ detail: 'Cette fonction est réservée au bureau exécutif.' })]), {
+        status: 403,
+        statusText: 'Forbidden',
+      });
+    await settle();
+    expect(root.textContent).toContain('réservée au bureau exécutif');
+    expect(saved).toEqual([]);
+    expect(button('Exporter en Excel')!.disabled).toBe(false); // on peut réessayer
   });
 
   it('comptes d’accès : le bureau avec les courriels', async () => {

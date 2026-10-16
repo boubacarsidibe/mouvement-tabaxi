@@ -6,6 +6,7 @@ import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
 import {
   ListedMember,
+  MemberFilters,
   MemberOrdering,
   MemberPage,
   MemberRecord,
@@ -13,6 +14,7 @@ import {
   MembersService,
 } from '../core/members.service';
 import { TerritoryService } from '../core/territories.service';
+import { ExportButton } from '../shared/export-button';
 
 const STATUSES: { value: MemberStatus | ''; label: string }[] = [
   { value: '', label: 'Statut · Tous' },
@@ -54,7 +56,7 @@ function messageOf(error: unknown): string {
  */
 @Component({
   selector: 'app-members-list',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, ExportButton],
   template: `
     <div class="filter-bar filter-bar-wide">
       <label
@@ -196,6 +198,7 @@ function messageOf(error: unknown): string {
         } @else {
           <span>{{ page()?.count ?? 0 }} résultat(s)</span>
         }
+        <app-export-button [run]="exportRun" />
         @if (page()?.previous || page()?.next) {
           <span>
             <button type="button" [disabled]="!page()?.previous" (click)="go(-1)">Précédent</button>
@@ -224,6 +227,9 @@ export class MembersList implements OnInit {
   protected readonly error = signal('');
   protected readonly territoryOptions = signal<{ id: number; label: string }[]>([]);
   private current = 1;
+  /** Filtres de la liste affichée : l'export les reprend tels quels, pas ceux d'une saisie pas encore validée. */
+  private applied: MemberFilters = {};
+  protected readonly exportRun = () => this.members.exportList(this.applied);
 
   ngOnInit() {
     void this.loadTerritories();
@@ -302,19 +308,18 @@ export class MembersList implements OnInit {
     }
     this.loading.set(true);
     this.error.set('');
+    const filters: MemberFilters = {
+      role: this.kind() === 'members' ? undefined : this.role() || BUREAU_ROLES,
+      status: this.status(),
+      territory: this.territory() ? Number(this.territory()) : '',
+      joined_from: this.from(),
+      joined_to: this.to(),
+      search: this.search(),
+      ordering: this.ordering(),
+    };
     try {
-      this.page.set(
-        await this.members.list({
-          role: this.kind() === 'members' ? undefined : this.role() || BUREAU_ROLES,
-          status: this.status(),
-          territory: this.territory() ? Number(this.territory()) : '',
-          joined_from: this.from(),
-          joined_to: this.to(),
-          search: this.search(),
-          ordering: this.ordering(),
-          page: this.current,
-        }),
-      );
+      this.page.set(await this.members.list({ ...filters, page: this.current }));
+      this.applied = filters;
     } catch (error) {
       this.error.set(messageOf(error));
     } finally {

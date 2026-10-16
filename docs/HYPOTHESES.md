@@ -43,6 +43,11 @@ Le cahier des charges (D5) demande un bouton de changement de statut, sans en pr
 - Aucun courriel n'est envoyé au membre lors d'un changement de statut.
 - Un membre radié peut être réactivé par un fondateur ; son numéro de membre ne change jamais.
 
+## Exports
+
+- Un export reprend les colonnes affichées par la liste plus le courriel ; l'adresse et le téléphone des membres, la motivation et les notes des demandes restent hors des fichiers (données sensibles, chiffrées en base).
+- Un coordonnateur peut exporter les listes de son territoire ; les demandes et le journal restent réservés aux fondateurs.
+
 ## Technique
 
 - Backend Django avec Django REST Framework, frontend Angular, base SQLite en développement.
