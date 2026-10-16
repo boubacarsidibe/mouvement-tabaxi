@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 from accounts.models import User
 from core.filters import read_period
 from territories.models import Territory
-from territories.scope import subtree_ids
+from territories.scope import scope_queryset, subtree_ids
 
 from .models import Member
 
@@ -25,6 +25,12 @@ ORDERINGS = {
     'date': ('joined_on', 'id'),
 }
 DEFAULT_ORDERING = '-date'
+
+
+def scoped_members(user):
+    """Membres que le bureau peut voir : tout pour un fondateur, son territoire et ceux qui en dépendent sinon."""
+    queryset = Member.objects.select_related('user__territory__parent__parent')
+    return scope_queryset(queryset, user, 'user__territory')
 
 
 def read_roles(params):

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
 import { AuditJournal } from './audit-journal';
+import { Dashboard } from './dashboard';
 import { InviteForm } from './invite-form';
 import { MemberDetail, MembersList } from './members-base';
 import { RequestDetail, RequestsList } from './requests-review';
@@ -18,6 +19,7 @@ import { RequestDetail, RequestsList } from './requests-review';
     MembersList,
     MemberDetail,
     AuditJournal,
+    Dashboard,
   ],
   template: `
     <main class="workspace-shell admin-shell">
@@ -75,117 +77,11 @@ import { RequestDetail, RequestsList } from './requests-review';
               <a class="btn btn-green" [routerLink]="actionLink"
                 ><ui-icon name="plus" />{{ actionLabel }}</a
               >
-            } @else if (view === 'dashboard') {
-              <button class="date-button">
-                <ui-icon name="calendar" />1 jan. 2026 – 31 déc. 2026
-              </button>
             }
           </header>
 
           @if (view === 'dashboard') {
-            <section class="stat-grid admin-stats">
-              @for (stat of stats; track stat.label) {
-                <article>
-                  <span class="stat-icon"><ui-icon [name]="stat.icon" /></span>
-                  <div>
-                    <p>{{ stat.label }}</p>
-                    <strong>{{ stat.value }}</strong
-                    ><small>{{ stat.note }}</small>
-                  </div>
-                  <b>{{ stat.delta }}</b>
-                </article>
-              }
-            </section>
-            <section class="dashboard-grid">
-              <article class="panel chart-panel">
-                <div class="panel-title">
-                  <h2>Évolution des adhésions</h2>
-                  <span class="chart-period">12 derniers mois</span>
-                </div>
-                <figure class="chart-figure">
-                  <figcaption>Nouveaux membres par mois</figcaption>
-                  <div class="chart-body">
-                    <div class="chart-y" aria-hidden="true">
-                      @for (tick of chartTicks; track tick) {
-                        <span>{{ tick }}</span>
-                      }
-                    </div>
-                    <svg
-                      class="line-chart"
-                      viewBox="0 0 500 200"
-                      preserveAspectRatio="none"
-                      role="img"
-                      [attr.aria-label]="chartSummary"
-                    >
-                      <defs>
-                        <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0" stop-color="#168558" stop-opacity=".28" />
-                          <stop offset="1" stop-color="#168558" stop-opacity="0" />
-                        </linearGradient>
-                      </defs>
-                      @for (tick of chartTicks; track tick) {
-                        <line
-                          class="grid-line"
-                          x1="0"
-                          x2="500"
-                          [attr.y1]="200 - tick"
-                          [attr.y2]="200 - tick"
-                        />
-                      }
-                      <path class="area" [attr.d]="chartArea" />
-                      <path [attr.d]="chartLine" />
-                      @for (dot of chartDots; track $index) {
-                        <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="4" />
-                      }
-                    </svg>
-                  </div>
-                  <div class="chart-months" aria-hidden="true">
-                    @for (month of chartMonths; track month) {
-                      <span>{{ month }}</span>
-                    }
-                  </div>
-                </figure>
-              </article>
-              <article class="panel recent-panel">
-                <div class="panel-title">
-                  <h2>Demandes récentes</h2>
-                  <a routerLink="/bureau/demandes">Voir tout →</a>
-                </div>
-                @for (person of requests.slice(0, 4); track person.name) {
-                  <div>
-                    <span class="list-avatar"><ui-icon name="users" /></span>
-                    <p>
-                      <strong>{{ person.name }}</strong
-                      ><small>{{ person.city }}</small>
-                    </p>
-                    <time>Il y a {{ $index + 2 }} h</time
-                    ><span class="badge warning">À examiner</span>
-                  </div>
-                }
-              </article>
-              <article class="panel small-panel">
-                <div class="panel-title">
-                  <h2>Programmes à venir</h2>
-                  <a routerLink="/bureau/programmes">Voir tout →</a>
-                </div>
-                <p>
-                  <ui-icon name="calendar" /><span
-                    ><strong>Éducation civique</strong><small>Thiès</small></span
-                  ><time>22 nov. 2026</time><b class="badge success">À venir</b>
-                </p>
-              </article>
-              <article class="panel small-panel">
-                <div class="panel-title">
-                  <h2>Dernières activités</h2>
-                  <a routerLink="/bureau/journal">Voir tout →</a>
-                </div>
-                <p>
-                  <ui-icon name="users" /><span
-                    ><strong>Nouvelle demande d’adhésion</strong><small>Par Awa Ndiaye</small></span
-                  ><time>Il y a 2 h</time>
-                </p>
-              </article>
-            </section>
+            <app-dashboard />
           }
 
           @if (view === 'requests') {
@@ -615,110 +511,6 @@ export class AdminPage {
     await this.router.navigateByUrl('/connexion');
   }
   protected readonly formSaved = signal(false);
-  protected readonly stats = [
-    {
-      icon: 'users',
-      value: '1 248',
-      label: 'Membres enregistrés',
-      note: 'Membres répartis dans 12 localités',
-      delta: '+12%',
-    },
-    {
-      icon: 'location',
-      value: '86',
-      label: 'Coordonnateurs',
-      note: 'Dans 12 localités',
-      delta: '+3%',
-    },
-    {
-      icon: 'clipboard',
-      value: '24',
-      label: 'Demandes à examiner',
-      note: 'À examiner par les membres fondateurs',
-      delta: '+8%',
-    },
-    {
-      icon: 'users',
-      value: '18',
-      label: 'Programmes',
-      note: 'Initiatives enregistrées',
-      delta: '+5%',
-    },
-  ];
-  protected readonly requests = [
-    {
-      name: 'Awa Ndiaye',
-      city: 'Saint-Louis',
-      email: 'awa.ndiaye@gmail.com',
-      job: 'Enseignante',
-      role: 'Membre',
-      date: '12 oct. 2026',
-      status: 'À examiner',
-    },
-    {
-      name: 'Mamadou Diop',
-      city: 'Dakar',
-      email: 'm.diop@gmail.com',
-      job: 'Commerçant',
-      role: 'Coordonnateur',
-      date: '12 oct. 2026',
-      status: 'À examiner',
-    },
-    {
-      name: 'Khady Fall',
-      city: 'Thiès',
-      email: 'khady.fall@gmail.com',
-      job: 'Étudiante',
-      role: 'Membre',
-      date: '11 oct. 2026',
-      status: 'À examiner',
-    },
-    {
-      name: 'El Hadj Ba',
-      city: 'Kaolack',
-      email: 'elh.ba@gmail.com',
-      job: 'Agriculteur',
-      role: 'Membre',
-      date: '11 oct. 2026',
-      status: 'À examiner',
-    },
-    {
-      name: 'Fatou Sarr',
-      city: 'Ziguinchor',
-      email: 'fatou.sarr@gmail.com',
-      job: 'Infirmière',
-      role: 'Membre',
-      date: '10 oct. 2026',
-      status: 'Acceptée',
-    },
-    {
-      name: 'Ibrahima Cissé',
-      city: 'Tambacounda',
-      email: 'i.cisse@gmail.com',
-      job: 'Enseignant',
-      role: 'Coordonnateur',
-      date: '10 oct. 2026',
-      status: 'Rejetée',
-    },
-    {
-      name: 'Marième Diallo',
-      city: 'Kolda',
-      email: 'm.diallo@gmail.com',
-      job: 'Commerçante',
-      role: 'Membre',
-      date: '9 oct. 2026',
-      status: 'Inscrite',
-    },
-    {
-      name: 'Cheikh Fall',
-      city: 'Louga',
-      email: 'c.fall@gmail.com',
-      job: 'Technicien',
-      role: 'Membre',
-      date: '8 oct. 2026',
-      status: 'Inscrite',
-    },
-  ];
   protected readonly programs = [
     {
       name: 'Brigades citoyennes',
@@ -793,32 +585,6 @@ export class AdminPage {
     { name: 'Cheikh Fall', id: 'TBX-2026-00161', time: '09 h 08', present: true },
   ];
   /** Nouveaux membres par mois, de novembre 2025 à octobre 2026 (données de démonstration). */
-  protected readonly chartValues = [32, 41, 48, 58, 54, 70, 78, 92, 108, 104, 126, 172];
-  protected readonly chartMonths = [
-    'Nov.',
-    'Déc.',
-    'Janv.',
-    'Févr.',
-    'Mars',
-    'Avr.',
-    'Mai',
-    'Juin',
-    'Juil.',
-    'Août',
-    'Sept.',
-    'Oct.',
-  ];
-  /** Échelle régulière : une unité du graphique vaut un membre (hauteur 200). */
-  protected readonly chartTicks = [200, 150, 100, 50, 0];
-  protected readonly chartDots = this.chartValues.map((value, index) => ({
-    x: ((index + 0.5) * 500) / this.chartValues.length,
-    y: 200 - value,
-  }));
-  protected readonly chartLine = 'M' + this.chartDots.map((dot) => `${dot.x} ${dot.y}`).join(' L');
-  protected readonly chartArea =
-    this.chartLine +
-    ` L${this.chartDots[this.chartDots.length - 1].x} 200 L${this.chartDots[0].x} 200Z`;
-  protected readonly chartSummary = `Nouveaux membres par mois sur 12 mois : de ${this.chartValues[0]} en novembre 2025 à ${this.chartValues[this.chartValues.length - 1]} en octobre 2026.`;
 
   protected get pageTitle(): string {
     return (

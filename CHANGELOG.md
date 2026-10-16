@@ -46,6 +46,8 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Export Excel des listes (`GET /api/members/export/`, `/api/applications/export/`, `/api/audit/export/`) : le fichier contient exactement la liste filtrée, dans le périmètre de la personne connectée, sans adresse, téléphone ni motivation ; les textes sont écrits comme du texte (aucune formule exécutée) ; chaque export est noté dans le journal des actions avec ses filtres et son nombre de lignes (#43).
 - Frontend : bouton « Exporter en Excel » sous chaque liste du bureau, qui exporte la liste telle qu'elle est affichée.
 - Commande `python manage.py comptes_demo` : crée un compte de démonstration par rôle (fondateur, coordonnateur, membre), réservée au développement ; aucun mot de passe n'est stocké dans le dépôt.
+- Tableau de bord du bureau (`GET /api/dashboard/`) : membres actifs, coordonnateurs, demandes à examiner, répartition par territoire et adhésions des douze derniers mois, calculés dans le territoire de la personne connectée (un coordonnateur ne voit que le sien) avec les mêmes listes que les écrans, pour que les chiffres correspondent ; demandes en attente et dernières actions réservées aux fondateurs (#37).
+- Frontend : l'écran « Tableau de bord » lit ces chiffres, sans valeur d'exemple ni bouton de date factice.
 
 ### Modifié
 

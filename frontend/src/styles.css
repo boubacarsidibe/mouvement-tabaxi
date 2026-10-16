@@ -1781,7 +1781,7 @@ small {
 }
 .recent-panel > div:not(.panel-title) {
   display: grid;
-  grid-template-columns: 28px 1fr 50px auto;
+  grid-template-columns: 28px 1fr auto auto;
   gap: 8px;
   align-items: center;
   padding: 9px 0;
@@ -4493,4 +4493,67 @@ textarea[aria-invalid='true'] {
 .export-error {
   color: #8a2a24;
   font-weight: 650;
+}
+/* Tableau de bord : périmètre et répartition par territoire. */
+.dashboard-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: #435149;
+  font-size: 14px;
+}
+.dashboard-scope ui-icon {
+  width: 18px;
+  height: 18px;
+  color: #0a9b51;
+}
+.territory-panel ul {
+  display: grid;
+  gap: 14px;
+  max-height: 330px;
+  margin: 12px 0 0;
+  padding: 0 6px 0 0;
+  overflow: auto;
+  list-style: none;
+}
+.territory-panel li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  align-items: baseline;
+  font-size: 13px;
+}
+.territory-name {
+  display: grid;
+}
+.territory-name small,
+.territory-count {
+  color: #616b65;
+}
+.territory-bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--green-100);
+  overflow: hidden;
+}
+.territory-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #168558;
+}
+/* Tableau de bord réel : courbe et répartition côte à côte, puis demandes et dernières actions. */
+.dashboard-balanced .chart-panel {
+  grid-row: auto;
+}
+.dashboard-balanced > .small-panel:last-child {
+  grid-column: auto;
+}
+.small-panel > p.audit-empty,
+.recent-panel > p.audit-empty {
+  display: block;
+  margin: 10px 0 0;
+  text-align: left;
 }

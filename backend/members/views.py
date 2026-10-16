@@ -11,10 +11,8 @@ from accounts.models import User
 from accounts.permissions import IsBureau, IsFounder
 from accounts.serializers import UserSerializer
 from audit.exports import export_list
-from territories.scope import scope_queryset
 
-from .filters import describe_filters, filter_members, order_members, read_roles
-from .models import Member
+from .filters import describe_filters, filter_members, order_members, read_roles, scoped_members
 from .registration import LinkProblem, check_link, complete_registration
 from .serializers import (
     MemberDetailSerializer,
@@ -116,12 +114,6 @@ class MemberPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 100
-
-
-def scoped_members(user):
-    """Membres que le bureau peut voir : tout pour un fondateur, son territoire et ceux qui en dépendent sinon."""
-    queryset = Member.objects.select_related('user__territory__parent__parent')
-    return scope_queryset(queryset, user, 'user__territory')
 
 
 class MemberListView(generics.ListAPIView):
