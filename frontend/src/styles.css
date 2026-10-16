@@ -5120,3 +5120,45 @@ textarea[aria-invalid='true'] {
     min-width: 250px;
   }
 }
+/* Téléphone : barre de filtres basse, trois lignes au plus (recherche et boutons,
+   listes, période sur une seule ligne). */
+@media (max-width: 600px) {
+  .filter-bar:not(.attendance-tools) {
+    gap: 5px;
+    padding: 6px;
+  }
+  .filter-bar:not(.attendance-tools) > label,
+  .filter-bar:not(.attendance-tools) > select,
+  .filter-bar:not(.attendance-tools) > .date-filter,
+  .filter-bar:not(.attendance-tools) > button {
+    height: 38px;
+    min-height: 38px;
+  }
+  .filter-bar:not(.attendance-tools) > label input {
+    min-height: 36px;
+    font-size: 14px;
+  }
+  .filter-bar:not(.attendance-tools) > button {
+    padding: 0 10px;
+  }
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    flex: 1 1 calc(50% - 3px);
+    gap: 4px;
+    padding: 0 4px 0 8px;
+  }
+  .filter-bar .date-filter .date-word {
+    display: none;
+  }
+  .filter-bar .date-filter input {
+    font-size: 13px;
+  }
+}
+@media (max-width: 600px) {
+  /* Deux listes côte à côte, puis les deux dates côte à côte. */
+  .filter-bar:not(.attendance-tools) > select {
+    flex: 1 1 calc(50% - 3px);
+  }
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    order: 3;
+  }
+}

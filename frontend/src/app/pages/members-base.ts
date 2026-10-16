@@ -101,7 +101,7 @@ function messageOf(error: unknown): string {
         }
       </select>
       <label class="date-filter"
-        ><span>{{ kind() === 'members' ? 'Adhésion du' : 'Entrée du' }}</span
+        ><span><span class="date-word">{{ kind() === 'members' ? 'Adhésion' : 'Entrée' }} </span>du</span
         ><input
           type="date"
           name="joined_from"
