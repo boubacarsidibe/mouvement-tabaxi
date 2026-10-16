@@ -197,9 +197,7 @@ export class ProgramsList implements OnInit {
   selector: 'app-program-form',
   imports: [FormsModule, RouterLink],
   template: `
-    <a class="back-link" [routerLink]="backLink()">← Retour</a>
     <form class="workspace-form panel admin-form" (submit)="save($event)" novalidate>
-      <p class="eyebrow">Programme</p>
       <h2>{{ editing() ? 'Modifier le programme' : 'Créer un nouveau programme' }}</h2>
       <p>Cadrez l’objectif, la localité et la période avant de planifier les activités.</p>
       @if (error()) {
@@ -399,7 +397,6 @@ export class ProgramForm implements OnInit {
   selector: 'app-program-detail',
   imports: [RouterLink, DatePipe],
   template: `
-    <a class="back-link" routerLink="/bureau/programmes">← Retour aux programmes</a>
     @if (error() && !program()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
@@ -454,7 +451,6 @@ export class ProgramForm implements OnInit {
           }
         </article>
         <aside class="panel decision-panel">
-          <p class="eyebrow">Programme</p>
           <h2>Gérer le programme</h2>
           <a class="btn btn-green btn-wide" [routerLink]="['/bureau/programmes', item.id, 'activites', 'nouvelle']"
             >Planifier une activité</a

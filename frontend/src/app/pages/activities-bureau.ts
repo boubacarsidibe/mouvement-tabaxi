@@ -28,9 +28,7 @@ function problemText(error: unknown): string {
   selector: 'app-activity-form',
   imports: [FormsModule, RouterLink, DatePipe],
   template: `
-    <a class="back-link" [routerLink]="backLink()">← Retour</a>
     <form class="workspace-form panel admin-form" (submit)="save($event)" novalidate>
-      <p class="eyebrow">Activité</p>
       <h2>{{ editing() ? 'Modifier l’activité' : 'Planifier une activité' }}</h2>
       @if (program(); as item) {
         <p>
@@ -169,7 +167,6 @@ export class ActivityForm implements OnInit {
   imports: [RouterLink, DatePipe, ExportButton],
   template: `
     @if (activity(); as item) {
-      <a class="back-link" [routerLink]="['/bureau/programmes', item.program.id]">← Retour au programme {{ item.program.name }}</a>
       <section class="review-grid">
         <article class="panel review-main">
           <div class="identity-row">
@@ -258,7 +255,6 @@ export class ActivityForm implements OnInit {
           }
         </article>
         <aside class="panel decision-panel">
-          <p class="eyebrow">Activité</p>
           <h2>Suivre l’activité</h2>
           @if (item.has_started) {
             <a class="btn btn-green btn-wide" [routerLink]="['/bureau/activites', item.id, 'compte-rendu']">{{
@@ -276,7 +272,6 @@ export class ActivityForm implements OnInit {
         </aside>
       </section>
     } @else if (error()) {
-      <a class="back-link" routerLink="/bureau/programmes">← Retour aux programmes</a>
       <p class="form-error" role="alert">{{ error() }}</p>
     }
   `,
@@ -316,9 +311,7 @@ export class ActivityDetail implements OnInit {
   imports: [FormsModule, RouterLink, DatePipe],
   template: `
     @if (activity(); as item) {
-      <a class="back-link" [routerLink]="['/bureau/activites', item.id]">← Retour à l’activité</a>
       <form class="workspace-form panel admin-form" (submit)="save($event)" novalidate>
-        <p class="eyebrow">Compte rendu</p>
         <h2>{{ item.title }}</h2>
         <p>
           {{ item.program.name }} · {{ item.starts_at | date: 'EEEE d MMMM y' }} · {{ item.place }}
@@ -414,12 +407,10 @@ export class ActivityReport implements OnInit {
 /** Liste à cocher des membres présents à une activité, avec le total des présents. */
 @Component({
   selector: 'app-activity-attendance',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
     @if (activity(); as item) {
-      <a class="back-link" [routerLink]="['/bureau/activites', item.id]">← Retour à l’activité</a>
       <section class="panel admin-form attendance-panel">
-        <p class="eyebrow">Présences</p>
         <h2>{{ item.title }}</h2>
         <p>{{ item.program.name }} · {{ item.starts_at | date: 'EEEE d MMMM y' }} · {{ item.place }}</p>
         @if (!item.has_started) {

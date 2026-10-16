@@ -334,18 +334,13 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
 /** Fiche d'un membre : coordonnées, statut du compte, et pour les fondateurs le changement de statut. */
 @Component({
   selector: 'app-member-detail',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
-    @if (isBureauFile()) {
-      <a class="back-link" routerLink="/bureau/coordonnateurs">← Retour à la base des coordonnateurs</a>
-    } @else {
-      <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
-    }
     @if (error() && !member()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
     @if (member(); as person) {
-      <section class="review-grid member-detail-grid">
+      <section class="review-grid member-detail-grid" [class.single]="!canManage()">
         <article class="panel member-record">
           <div class="identity-row">
             @if (person.photo_url) {
@@ -410,14 +405,9 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
             }
           }
         </article>
+        @if (canManage()) {
         <aside class="panel decision-panel">
-          <p class="eyebrow">Statut du compte</p>
           <h2>Gérer l’accès</h2>
-          @if (!auth.isFounder()) {
-            <p>Seuls les membres fondateurs peuvent changer le statut d’un membre.</p>
-          } @else if (isSelf()) {
-            <p>Vous ne pouvez pas changer votre propre statut.</p>
-          } @else {
             <p>
               Une suspension ou une radiation bloque immédiatement la connexion sans effacer
               l’historique.
@@ -469,11 +459,11 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
                 </button>
               }
             }
-          }
           @if (done()) {
             <p class="inline-success" role="status">✓ {{ done() }}</p>
           }
         </aside>
+        }
       </section>
     }
   `,
@@ -497,6 +487,8 @@ export class MemberDetail implements OnInit {
   protected readonly isSelf = computed(
     () => !!this.member() && this.member()?.email === this.auth.user()?.email,
   );
+  /** L'encadré « Gérer l'accès » n'est utile qu'à un fondateur, sur la fiche d'une autre personne. */
+  protected readonly canManage = computed(() => this.auth.isFounder() && !this.isSelf());
 
   async ngOnInit() {
     try {

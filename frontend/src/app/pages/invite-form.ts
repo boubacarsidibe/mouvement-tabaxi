@@ -10,9 +10,7 @@ import { UiIcon } from '../shared/ui-icon';
   selector: 'app-invite-form',
   imports: [RouterLink, UiIcon],
   template: `
-    <a class="back-link" routerLink="/bureau/comptes">← Retour</a>
     <form class="workspace-form panel admin-form" (submit)="submit($event)">
-      <p class="eyebrow">Compte d’accès</p>
       <h2>Inviter un coordonnateur</h2>
       <p>La personne recevra un lien personnel, valable 7 jours, pour créer son mot de passe.</p>
       @if (error()) {

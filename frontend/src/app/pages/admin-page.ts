@@ -65,7 +65,7 @@ import { RequestDetail, RequestsList } from './requests-review';
       <section class="workspace-area">
 
         <div class="workspace-content admin-content">
-          <header class="page-heading">
+          <header class="page-heading" [class.sr-only]="titleInCard">
             <h1>{{ pageTitle }}</h1>
             @if (hasPrimaryAction) {
               <a class="btn btn-green" [routerLink]="actionLink"
@@ -293,6 +293,10 @@ export class AdminPage {
         invite: 'Inviter un coordonnateur',
       } as Record<string, string>
     )[this.view];
+  }
+  /** Formulaires : leur carte affiche déjà le même titre (le titre de page reste pour les lecteurs d'écran). */
+  protected get titleInCard(): boolean {
+    return ['invite', 'program-new', 'program-edit', 'activity-new', 'activity-edit'].includes(this.view);
   }
   protected get actionLabel(): string {
     return (

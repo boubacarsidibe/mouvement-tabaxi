@@ -39,6 +39,32 @@
     --echelle: 1.5;
   }
 }
+/* Contenu principal agrandi : moins de marges, la carte utile prend la place disponible. */
+.workspace-content {
+  font-size: 15px;
+}
+.narrow-workspace {
+  max-width: 1200px;
+}
+.admin-form {
+  max-width: 1100px;
+}
+.review-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.detail-list dd {
+  font-size: 15px;
+}
+/* Texte réservé aux lecteurs d'écran (titre de page déjà affiché dans la carte). */
+.sr-only {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 @media print {
   :root {
     zoom: 1;

@@ -168,9 +168,8 @@ export class RequestsList implements OnInit {
 /** Fiche d'une demande : informations déposées, décision (acceptation ou refus motivé). */
 @Component({
   selector: 'app-request-detail',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
-    <a class="back-link" routerLink="/bureau/demandes">← Retour aux demandes</a>
     @if (error() && !application()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
@@ -210,7 +209,6 @@ export class RequestsList implements OnInit {
           </div>
         </article>
         <aside class="panel decision-panel">
-          <p class="eyebrow">Décision du fondateur</p>
           <h2>Examiner la demande</h2>
           @if (app.status === 'a_examiner') {
             <p>Chaque décision est datée et ajoutée au journal d’actions.</p>
