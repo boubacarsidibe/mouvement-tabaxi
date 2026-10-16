@@ -1,8 +1,12 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
+
+from core.tokens import new_token, token_digest
 
 
 class Application(models.Model):
@@ -72,3 +76,61 @@ class Application(models.Model):
                 year = timezone.localtime(self.created_at).year
                 self.reference = f'TAB-{year}-{self.pk:05d}'
                 type(self).objects.filter(pk=self.pk).update(reference=self.reference)
+
+
+class RegistrationLink(models.Model):
+    """Lien personnel envoyé à l'acceptation, pour finaliser l'inscription.
+
+    Valable 7 jours et utilisable une seule fois. Seule l'empreinte du jeton est
+    conservée : une copie de la base ne permet pas de reconstituer les liens.
+    """
+
+    VALIDITY = timedelta(days=7)
+
+    application = models.ForeignKey(
+        Application, verbose_name='demande', on_delete=models.CASCADE, related_name='registration_links'
+    )
+    token_digest = models.CharField('empreinte du jeton', max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField('créé le', auto_now_add=True)
+    expires_at = models.DateTimeField('expire le')
+    used_at = models.DateTimeField('utilisé le', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "lien personnel d'inscription"
+        verbose_name_plural = "liens personnels d'inscription"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Lien pour {self.application}'
+
+    @classmethod
+    def issue(cls, application):
+        """Crée un lien pour la demande ; renvoie (lien, jeton). Le jeton n'est pas conservé."""
+        token, digest = new_token()
+        link = cls.objects.create(application=application, token_digest=digest, expires_at=timezone.now() + cls.VALIDITY)
+        return link, token
+
+    @classmethod
+    def find(cls, token):
+        """Lien correspondant au jeton, qu'il soit encore valable ou non ; None si inconnu."""
+        return cls.objects.select_related('application').filter(token_digest=token_digest(token)).first()
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    @property
+    def is_valid(self):
+        return not self.is_used and not self.is_expired
+
+    def mark_used(self):
+        """Consomme le lien. Renvoie False s'il était déjà utilisé ou expiré (même en cas d'accès simultanés)."""
+        now = timezone.now()
+        updated = type(self).objects.filter(pk=self.pk, used_at__isnull=True, expires_at__gt=now).update(used_at=now)
+        if updated:
+            self.used_at = now
+        return bool(updated)

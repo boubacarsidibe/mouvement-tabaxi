@@ -15,6 +15,7 @@ from . import services
 from .models import Application
 from .serializers import (
     ALREADY_IN_PROGRESS,
+    AcceptSerializer,
     ApplicationSerializer,
     ApplicationSubmitSerializer,
     RejectSerializer,
@@ -114,6 +115,18 @@ class DecisionView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response(ApplicationSerializer(founders_queryset().get(pk=application.pk)).data)
+
+
+class AcceptView(DecisionView):
+    """Acceptation d'une demande : envoi du lien personnel d'inscription."""
+
+    def post(self, request, pk):
+        application = self.get_application(pk)
+        serializer = AcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return self.respond(
+            lambda: services.accept(application, by=request.user, note=serializer.validated_data['internal_note'])
+        )
 
 
 class RejectView(DecisionView):

@@ -109,6 +109,10 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class AcceptSerializer(serializers.Serializer):
+    internal_note = serializers.CharField(label='note interne', max_length=2000, required=False, allow_blank=True, default='')
+
+
 REJECTION_REASON_REQUIRED = 'Le motif du refus est obligatoire.'
 
 
