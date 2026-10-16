@@ -1,15 +1,30 @@
 from django.contrib.auth import login
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from accounts.models import User
+from accounts.permissions import IsBureau, IsFounder
 from accounts.serializers import UserSerializer
+from territories.scope import scope_queryset
 
+from .models import Member
 from .registration import LinkProblem, check_link, complete_registration
-from .serializers import MemberProfileSerializer, RegistrationLinkSerializer, RegistrationSerializer
+from .serializers import (
+    MemberDetailSerializer,
+    MemberListSerializer,
+    MemberProfileSerializer,
+    RegistrationLinkSerializer,
+    RegistrationSerializer,
+    StatusChangeSerializer,
+)
+from .status import StatusChangeRefused, change_status
 
 
 def link_problem_response(problem):
@@ -95,3 +110,112 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         if member is None:
             raise Http404
         return member
+
+
+class MemberPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+def scoped_members(user):
+    """Membres que le bureau peut voir : tout pour un fondateur, son territoire et ceux qui en dépendent sinon."""
+    queryset = Member.objects.select_related('user__territory__parent__parent')
+    return scope_queryset(queryset, user, 'user__territory')
+
+
+ORDERINGS = {
+    'name': ('user__last_name', 'user__first_name'),
+    'place': ('user__territory__name',),
+    'date': ('joined_on', 'id'),
+}
+
+
+class MemberListView(generics.ListAPIView):
+    """Base des membres pour le bureau exécutif, limitée au territoire de la personne connectée.
+
+    Filtres : ``role`` (``membre`` par défaut, ou ``coordonnateur``, ``fondateur``), ``status``
+    (``actif``, ``suspendu``, ``radie``), ``search`` (prénom, nom, courriel ou numéro ; plusieurs
+    mots doivent tous correspondre) et ``ordering`` (``name``, ``place`` ou ``date``, précédé de
+    ``-`` pour l'ordre inverse ; les plus récents d'abord par défaut).
+    """
+
+    permission_classes = [IsBureau]
+    serializer_class = MemberListSerializer
+    pagination_class = MemberPagination
+
+    def get_queryset(self):
+        params = self.request.query_params
+        queryset = scoped_members(self.request.user)
+
+        role = params.get('role') or User.Role.MEMBRE
+        if role not in User.Role.values:
+            raise ValidationError({'role': ['Rôle inconnu.']})
+        queryset = queryset.filter(user__role=role)
+
+        status_filter = params.get('status')
+        if status_filter:
+            if status_filter not in Member.Status.values:
+                raise ValidationError({'status': ['Statut inconnu.']})
+            queryset = queryset.filter(status=status_filter)
+
+        for term in params.get('search', '').split():
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=term)
+                | Q(user__last_name__icontains=term)
+                | Q(user__email__icontains=term)
+                | Q(number__icontains=term)
+            )
+
+        ordering = params.get('ordering') or '-date'
+        key = ordering.lstrip('-')
+        if key not in ORDERINGS:
+            raise ValidationError({'ordering': ['Tri inconnu.']})
+        fields = ORDERINGS[key]
+        return queryset.order_by(*(f'-{f}' if ordering.startswith('-') else f for f in fields))
+
+
+class MemberDetailView(generics.RetrieveAPIView):
+    """Fiche d'un membre. Hors du territoire de la personne connectée : 404."""
+
+    permission_classes = [IsBureau]
+    serializer_class = MemberDetailSerializer
+
+    def get_queryset(self):
+        return scoped_members(self.request.user)
+
+
+class MemberPhotoView(APIView):
+    """Photo d'un membre du périmètre, pour sa fiche."""
+
+    permission_classes = [IsBureau]
+
+    def get(self, request, pk):
+        member = generics.get_object_or_404(scoped_members(request.user), pk=pk)
+        if not member.photo:
+            raise Http404
+        response = FileResponse(member.photo.open('rb'), content_type='image/jpeg')
+        response['Cache-Control'] = 'private, max-age=300'
+        return response
+
+
+class MemberStatusView(APIView):
+    """Un fondateur rend actif, suspend ou radie un membre ; le compte suit, l'historique est conservé."""
+
+    permission_classes = [IsFounder]
+
+    def post(self, request, pk):
+        member = generics.get_object_or_404(scoped_members(request.user), pk=pk)
+        serializer = StatusChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            member = change_status(
+                member,
+                serializer.validated_data['status'],
+                by=request.user,
+                reason=serializer.validated_data['reason'],
+            )
+        except StatusChangeRefused as refusal:
+            return Response({'detail': refusal.detail, 'code': refusal.code}, status=status.HTTP_409_CONFLICT)
+        member = scoped_members(request.user).get(pk=member.pk)
+        return Response(MemberDetailSerializer(member, context={'request': request}).data)

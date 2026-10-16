@@ -18,6 +18,13 @@ class TabaxiUserAdmin(UserAdmin):
         ('Rôle et droits', {'fields': ('role', 'territory', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Dates', {'fields': ('last_login', 'date_joined')}),
     )
+    def get_readonly_fields(self, request, obj=None):
+        readonly = super().get_readonly_fields(request, obj)
+        # Pour un membre, l'accès suit son statut : on le change depuis la fiche du membre.
+        if obj is not None and hasattr(obj, 'member'):
+            readonly = (*readonly, 'is_active')
+        return readonly
+
     add_fieldsets = (
         (None, {'classes': ('wide',), 'fields': ('email', 'role', 'territory', 'password1', 'password2')}),
     )

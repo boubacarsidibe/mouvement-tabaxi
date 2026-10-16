@@ -9,6 +9,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from applications.tests.helpers import make_application
+from members.models import Member
 from territories.models import Territory
 
 from .models import PasswordResetLink, User
@@ -137,6 +138,13 @@ class AcceptInvitationTests(InvitationTestCase):
         )
         self.assertEqual(login.status_code, 200)
         self.assertEqual(login.json()['role'], 'coordonnateur')
+
+    def test_la_personne_invitee_recoit_son_dossier_de_membre(self):
+        token = self.invited_token()
+        self.accept(token)
+        member = Member.objects.get(user__email='mamadou.diop@example.org')
+        self.assertRegex(member.number, r'^TBX-\d{4}-\d{5}$')
+        self.assertEqual(member.status, Member.Status.ACTIF)
 
     def test_le_lien_ne_sert_qu_une_fois(self):
         token = self.invited_token()

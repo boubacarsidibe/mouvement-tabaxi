@@ -4319,7 +4319,8 @@ textarea {
   }
 }
 /* N° 13 : « Enregistrer en PDF » n'imprime que la carte. */
-.inline-error {
+.inline-error,
+.form-error {
   margin: 12px auto 0;
   width: min(900px, 100%);
   padding: 10px 14px;
@@ -4423,4 +4424,8 @@ textarea[aria-invalid='true'] {
 .confirmation-grid {
   grid-template-columns: minmax(0, 760px);
   justify-content: center;
+}
+.history-empty {
+  margin: 4px 0 0;
+  color: #616b65;
 }

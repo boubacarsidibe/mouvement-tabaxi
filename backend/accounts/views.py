@@ -27,6 +27,23 @@ INVALID_CREDENTIALS = 'Courriel ou mot de passe incorrect.'
 INACTIVE_ACCOUNT = (
     'Ce compte est suspendu ou radié : la connexion est impossible. Contactez le bureau du mouvement.'
 )
+SUSPENDED_ACCOUNT = (
+    'Votre compte est suspendu : la connexion est impossible pour le moment. Contactez le bureau du mouvement.'
+)
+STRUCK_OFF_ACCOUNT = (
+    "Vous avez été radié du mouvement : la connexion n'est plus possible. "
+    "Contactez le bureau du mouvement si vous pensez qu'il s'agit d'une erreur."
+)
+
+
+def inactive_message(user):
+    """Message adapté au statut du membre ; le message général si le compte n'a pas de dossier."""
+    member = getattr(user, 'member', None)
+    if member is not None and member.status == member.Status.SUSPENDU:
+        return SUSPENDED_ACCOUNT
+    if member is not None and member.status == member.Status.RADIE:
+        return STRUCK_OFF_ACCOUNT
+    return INACTIVE_ACCOUNT
 
 
 class LoginView(APIView):
@@ -57,7 +74,7 @@ class LoginView(APIView):
             inactive = User.objects.filter(email__iexact=email, is_active=False).first()
             if inactive is not None and inactive.check_password(password):
                 return Response(
-                    {'detail': INACTIVE_ACCOUNT, 'code': 'inactive_account'}, status=status.HTTP_403_FORBIDDEN
+                    {'detail': inactive_message(inactive), 'code': 'inactive_account'}, status=status.HTTP_403_FORBIDDEN
                 )
             lockout.record_failure(email, ip)
             return Response(

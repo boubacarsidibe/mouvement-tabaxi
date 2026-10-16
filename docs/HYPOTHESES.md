@@ -32,6 +32,17 @@
   8. Âge minimum à fixer par le bureau.
   9. Un fondateur est désigné pour les sauvegardes et la démarche auprès de la CDP.
 
+## Statut des membres
+
+Le cahier des charges (D5) demande un bouton de changement de statut, sans en préciser les règles. Choix retenus :
+
+- Le motif est obligatoire pour suspendre ou radier (comme pour un refus de demande) et facultatif pour rendre un membre actif.
+- Un fondateur ne change pas son propre statut : il reste toujours au moins un fondateur actif pour gérer les autres.
+- Le statut s'applique à tous les dossiers, coordonnateurs et fondateurs compris (le modèle de données prévoit un statut pour les coordonnateurs).
+- La suspension et la radiation ferment les sessions ouvertes ; rendre un membre actif ne rouvre pas ses anciennes sessions, il doit se reconnecter.
+- Aucun courriel n'est envoyé au membre lors d'un changement de statut.
+- Un membre radié peut être réactivé par un fondateur ; son numéro de membre ne change jamais.
+
 ## Technique
 
 - Backend Django avec Django REST Framework, frontend Angular, base SQLite en développement.

@@ -33,7 +33,7 @@ flowchart LR
 ```
 backend/
   config/        réglages, routes, lecture du fichier .env
-  core/          socle commun : point de contrôle /api/health/
+  core/          socle commun : point de contrôle /api/health/, courriels, chiffrement, historiques non modifiables
   accounts/      comptes et rôles
   territories/   territoires emboîtés pays, région, commune
   applications/  demandes d'adhésion et leur examen
@@ -78,6 +78,10 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - Numéro `TBX-AAAA-NNNNN` attribué automatiquement à la création : année d'adhésion et numéro d'ordre unique, jamais réutilisé (exemple : `TBX-2026-00125`). Unicité garantie en base.
 - Adresse et téléphone (facultatif) chiffrés en base ; photo, date d'acceptation des statuts et du règlement, demande d'origine.
 - Finalisation (`members/registration.py`) : le lien personnel reçu à l'acceptation permet de choisir son mot de passe (règles de sécurité de Django : 10 caractères au moins, pas seulement des chiffres, pas un mot de passe courant, pas semblable au nom ou au courriel), de donner son adresse et sa photo. Le compte membre (actif, rattaché au territoire de la demande) et son dossier sont créés, le lien est consommé et la demande passe « Inscrite », en une seule transaction ; la session s'ouvre. Lien inconnu : 404 `invalid_link` ; expiré : 410 `link_expired` ; déjà utilisé : 410 `link_used`, chacun avec un message qui dit quoi faire.
+- Statut : `actif` (Actif), `suspendu` (Suspendu) ou `radie` (Radié), `actif` par défaut. Un seul point d'entrée le change, `members/status.py` (`change_status`), en une transaction : suspendu ou radié désactive le compte (plus de connexion) et ferme ses sessions ouvertes (`accounts/sessions.py`), actif le réactive, et chaque changement ajoute une ligne à l'historique `members.MemberStatusChange` (ancien et nouveau statut, motif, auteur, date). Rien n'est supprimé : le dossier, le numéro et les données restent, un dossier ne se supprime pas (même dans l'administration, où le statut est en lecture seule et l'accès `is_active` d'un membre aussi).
+- Historique non modifiable : `MemberStatusChange` repose sur `core/append_only.py` (ni `save` sur une ligne existante, ni `delete`, ni `update`/`delete` en lot : `ImmutableRecordError`). Seuls les fondateurs voient l'historique.
+- Règles du changement de statut : réservé aux fondateurs ; un motif est obligatoire pour suspendre ou radier ; on ne change pas son propre statut ; changer vers le statut actuel est refusé (409). Les coordonnateurs et fondateurs invités ont aussi un dossier de membre, créé à l'acceptation de l'invitation.
+- Base des membres du bureau : `GET /api/members/` et la fiche `GET /api/members/<id>/` sont limitées au territoire de la personne connectée (`territories/scope.py`) ; hors périmètre, la fiche répond 404.
 - Photos : vérifiées (vraie image JPG ou PNG, 5 Mo au plus), réenregistrées en JPEG de 800 pixels au plus, sans aucune métadonnée (position GPS comprise), sous un nom aléatoire dans `MEDIA_ROOT/photos/`. Jamais servies directement : seulement par l'API, à la personne concernée.
 
 ### Courriels
@@ -98,13 +102,13 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 
 - Session Django par cookie, sur le même domaine que le frontend (le proxy Angular renvoie `/api` vers Django en développement).
 - Courriel reconnu sans tenir compte des majuscules ; un courriel ne sert qu'à un seul compte (contrainte en base).
-- Un compte désactivé (suspendu ou radié) ne peut plus se connecter, et sa session en cours cesse aussitôt d'être valable.
+- Un compte désactivé (suspendu ou radié) ne peut plus se connecter (`403 inactive_account`, avec un message propre à la suspension ou à la radiation, donné seulement à la personne qui connaît son mot de passe), et sa session en cours cesse aussitôt d'être valable.
 - Sans « rester connecté », la session se ferme avec le navigateur.
 - La session d'un coordonnateur ou d'un fondateur se ferme après 30 minutes sans requête (`accounts.middleware.BureauInactivityMiddleware`, réglable par `BUREAU_INACTIVITY_MINUTES`) ; la requête suivante reçoit `401 session_expired`. Les membres simples ne sont pas concernés.
 - Blocage temporaire (`accounts/lockout.py`) : après 5 échecs pour un même courriel, ou 20 depuis une même adresse IP, la connexion est refusée pendant 15 minutes (`429 too_many_attempts`, en-tête `Retry-After`), même avec le bon mot de passe. Une connexion réussie efface les échecs du compte ; les échecs sont effacés après un jour. Derrière un proxy en production, régler `LOGIN_TRUSTED_PROXIES` pour lire la vraie adresse du visiteur.
 - Mot de passe oublié (`accounts/password_reset.py`) : lien par courriel vers `FRONTEND_URL/nouveau-mot-de-passe?jeton=…`, valable **une heure**, utilisable une fois ; un nouveau lien annule le précédent ; trois demandes par heure au plus par compte. La réponse est la même qu'un compte existe ou non. Le nouveau mot de passe ferme les autres sessions et lève le blocage de connexion.
-- Invitation au bureau (`accounts/invitations.py`) : un fondateur saisit courriel, nom, fonction (coordonnateur ou fondateur) et territoire (obligatoire pour un coordonnateur). Le compte est créé sans mot de passe utilisable et un lien (7 jours, une fois) part vers `FRONTEND_URL/invitation?jeton=…` ; si le courriel ne part pas, rien n'est créé. En acceptant, la personne choisit son mot de passe, reçoit son dossier et son numéro, et sa session s'ouvre sur l'interface du bureau. Un fondateur invité a aussi accès à l'administration Django.
-- Liens personnels : base commune `core.models.OneTimeLink` (inscription, réinitialisation, invitation).
+- Invitation au bureau (`accounts/invitations.py`) : un fondateur saisit courriel, nom, fonction (coordonnateur ou fondateur) et territoire (obligatoire pour un coordonnateur). Le compte est créé sans mot de passe utilisable et un lien (7 jours, une fois) part vers `FRONTEND_URL/invitation?jeton=…` ; si le courriel ne part pas, rien n'est créé. En acceptant, la personne choisit son mot de passe, reçoit son dossier et son numéro, et sa session s'ouvre sur l'interface du bureau.
+- Liens personnels (inscription, réinitialisation, invitation) : le jeton n'est jamais conservé, seule son empreinte l'est (`core/tokens.py`) ; un lien est valable un temps limité et ne sert qu'une fois.
 - Protection CSRF aux noms attendus par Angular : Django dépose le cookie `XSRF-TOKEN` (à la connexion et sur `GET /api/auth/me/`), et chaque requête qui modifie renvoie sa valeur dans l'en-tête `X-XSRF-TOKEN`. Le client HTTP d'Angular le fait tout seul.
 
 ### Routes
@@ -114,21 +118,14 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 | `GET /api/health/` | public | Contrôle de santé : `{"status": "ready"}` (200), ou `{"status": "unavailable"}` (503) si la base est injoignable |
 | `POST /api/auth/login/` | public | Connexion. Corps : `email`, `password`, `remember` (facultatif). Renvoie l'utilisateur (200) ; 400 `invalid_credentials` ; 403 `inactive_account` ; 429 `too_many_attempts` |
 | `POST /api/auth/logout/` | public | Déconnexion (204) |
-| `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau` ; 401 sinon |
+| `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau`, `territory` ; 401 sinon |
 | `POST /api/auth/password/forgot/` | public | Mot de passe oublié. Corps : `email`. Répond toujours 202 avec le même message, que le compte existe ou non ; envoie un lien valable 1 h (3 demandes par heure et par compte au plus, un nouveau lien annule le précédent ; pas de lien pour un compte suspendu ou radié) ; 429 si trop d'envois |
 | `POST /api/auth/password/reset/check/` | public | Vérifie le lien. Corps : `token`. 200 `valid` ; 404 `invalid_link` ; 410 `link_used` ou `link_expired` |
 | `POST /api/auth/password/reset/` | public | Nouveau mot de passe. Corps : `token`, `password`, `password_confirm` (règles de sécurité de Django, messages en français) ; le lien est consommé ; mêmes erreurs de lien que `check/` ; 400 avec un message par champ |
 | `POST /api/auth/invitations/` | fondateur | Invite une personne au bureau. Corps : `email`, `first_name`, `last_name`, `role` (`coordonnateur` ou `fondateur`), `territory` (obligatoire pour un coordonnateur). Crée le compte sans mot de passe et envoie un lien valable 7 jours ; 201 ; 400 par champ (courriel déjà utilisé, demande d'adhésion en cours) ; 503 `email_not_sent` : aucun compte n'est créé ; 403 hors fondateur |
 | `POST /api/auth/invitation/check/` | public | Vérifie le lien d'invitation. Corps : `token`. 200 avec la personne invitée ; 404 `invalid_link` ; 410 `link_used` ou `link_expired` |
 | `POST /api/auth/invitation/accept/` | public | La personne invitée choisit son mot de passe (`token`, `password`, `password_confirm`) ; le lien est consommé, la session s'ouvre et l'utilisateur est renvoyé (201) |
-| `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau`, `territory` ; 401 sinon |
-| `POST /api/auth/password/forgot/` | public | Demande un lien de réinitialisation. Corps : `email`. Toujours 200 avec le même message |
-| `POST /api/auth/password/reset/check/` | public | Vérifie un lien de réinitialisation. Corps : `token`. Renvoie `email`, `expires_at` ; 404 `invalid_link`, 410 `link_expired` ou `link_used` |
-| `POST /api/auth/password/reset/` | public | Nouveau mot de passe. Corps : `token`, `password`, `password_confirm`. 200 ; 400 avec un message par champ ; 404 ou 410 si le lien ne sert plus |
 | `POST /api/auth/password/change/` | connecté | Changement du mot de passe. Corps : `current_password`, `new_password`, `new_password_confirm`. La session reste ouverte, les autres sont fermées |
-| `POST /api/auth/invitations/` | fondateur | Invite au bureau. Corps : `email`, `first_name`, `last_name`, `role` (`coordonnateur` ou `fondateur`), `territory`. 201 ; 400 avec un message par champ ; 503 `email_not_sent` (aucun compte créé) |
-| `POST /api/auth/invitation/check/` | public | Vérifie un lien d'invitation. Corps : `token`. Renvoie `email`, `first_name`, `last_name`, `role`, `role_label`, `territory`, `expires_at` |
-| `POST /api/auth/invitation/accept/` | public | Accepte l'invitation. Corps : `token`, `password`, `password_confirm`. Renvoie l'utilisateur (201) et ouvre la session |
 | `GET /api/territories/` | public | Territoires actifs en arbre pays > région > commune, par ordre alphabétique : `[{"id", "name", "kind", "kind_label", "children": [...]}]`. Un territoire dont un parent est inactif n'apparaît pas |
 | `GET /api/territories/managed/` | bureau | Territoires du périmètre de la personne connectée, actifs ou non, en ordre d'arbre : `id`, `name`, `kind`, `kind_label`, `path`, `parent`, `is_active` |
 | `GET /api/territories/managed/<id>/` | bureau | Un territoire du périmètre ; 404 s'il est hors périmètre |
@@ -141,6 +138,10 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 | `GET /api/members/me/` | connecté | Profil et données de carte : `number`, `joined_on`, `first_name`, `last_name`, `email`, `role`, `role_label`, `territory`, `address`, `phone`, `photo_url` ; 404 sans dossier de membre |
 | `PATCH /api/members/me/` | connecté | Modifie `address`, `phone`, `photo` (multipart pour la photo). Nom, courriel, territoire, numéro et date d'adhésion : 400 « Seul le bureau peut modifier cette information. » |
 | `GET /api/members/me/photo/` | connecté | Photo de profil de la personne connectée (JPEG) ; 404 sans photo |
+| `GET /api/members/` | bureau | Base des membres du périmètre (territoire du coordonnateur et ceux qui en dépendent ; tout pour un fondateur), par pages de 20. Filtres : `role` (`membre` par défaut, `coordonnateur` ou `fondateur`), `status` (`actif`, `suspendu`, `radie`), `search` (prénom, nom, courriel ou numéro ; plusieurs mots doivent tous correspondre), `ordering` (`name`, `place`, `date`, précédé de `-` pour inverser ; plus récents d'abord par défaut), `page`, `page_size`. Lignes : `id`, `number`, `first_name`, `last_name`, `email`, `role`, `role_label`, `territory`, `joined_on`, `status`, `status_label` ; 400 pour un filtre inconnu |
+| `GET /api/members/<id>/` | bureau | Fiche d'un membre : la ligne ci-dessus plus `phone`, `address`, `photo_url` et, pour les fondateurs seulement, `status_history` ; 404 hors périmètre |
+| `GET /api/members/<id>/photo/` | bureau | Photo d'un membre du périmètre (JPEG) ; 404 sans photo ou hors périmètre |
+| `POST /api/members/<id>/status/` | fondateur | Change le statut. Corps : `status` (`actif`, `suspendu`, `radie`), `reason` (obligatoire pour suspendre ou radier). Renvoie la fiche ; 400 par champ ; 409 `same_status` (déjà dans ce statut) ou `own_status` (son propre statut) ; 403 hors fondateur |
 | `POST /api/applications/<id>/reject/` | fondateur | Refus. Corps : `reason` (obligatoire), `internal_note`. Envoie le motif par courriel. 409 `already_decided` ; 503 `email_not_sent` |
 
 ## Frontend
@@ -149,6 +150,7 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - Interface mobile d'abord, en français.
 - Deux espaces : membre et bureau exécutif, ouverts selon le rôle renvoyé après la connexion.
 - Espace membre : le tableau de bord, le profil et la carte numérique lisent `GET /api/members/me/` (`core/profile.service.ts`) ; le profil enregistre l'adresse, le téléphone et la photo par `PATCH /api/members/me/` (formulaire multipart) et le mot de passe se change par `POST /api/auth/password/change/`. La carte (affichage, image téléchargée, impression) est dessinée à partir de ces mêmes données. Un compte sans dossier de membre (bureau seul) voit un message clair.
+- Bureau : « Bases de membres » (`pages/members-base.ts`, `core/members.service.ts`) liste les membres du serveur (recherche par nom, filtre par statut, tri, pages) et ouvre leur fiche ; les fondateurs y voient les boutons Rendre actif, Suspendre et Radier (motif obligatoire pour les deux derniers) et l'historique du statut, les coordonnateurs lisent le statut sans pouvoir le changer. Les filtres par territoire et par date et la base des coordonnateurs viennent avec l'écart suivant.
 
 ## Flux principal : demande d'adhésion
 

@@ -3,11 +3,20 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
 import { InviteForm } from './invite-form';
+import { MemberDetail, MembersList } from './members-base';
 import { RequestDetail, RequestsList } from './requests-review';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [RouterLink, UiIcon, RequestsList, RequestDetail, InviteForm],
+  imports: [
+    RouterLink,
+    UiIcon,
+    RequestsList,
+    RequestDetail,
+    InviteForm,
+    MembersList,
+    MemberDetail,
+  ],
   template: `
     <main class="workspace-shell admin-shell">
       <aside class="side-nav">
@@ -185,17 +194,15 @@ import { RequestDetail, RequestsList } from './requests-review';
             <app-request-detail />
           }
 
-          @if (
-            view === 'members' ||
-            view === 'accounts' ||
-            view === 'coordinators'
-          ) {
-            @if (view === 'members') {
-              <nav class="tabs">
-                <a class="active">Tous les membres (1 248)</a><a>Membres fondateurs (12)</a
-                ><a>Coordonnateurs (86)</a><a>Par localité</a>
-              </nav>
-            }
+          @if (view === 'members') {
+            <app-members-list />
+          }
+
+          @if (view === 'member-detail') {
+            <app-member-detail />
+          }
+
+          @if (view === 'accounts' || view === 'coordinators') {
             @if (view === 'accounts') {
               <div class="security-alert">
                 <ui-icon name="key" />
@@ -248,7 +255,6 @@ import { RequestDetail, RequestsList } from './requests-review';
                       </button>
                     </th>
                     <th>Statut</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -281,16 +287,6 @@ import { RequestDetail, RequestsList } from './requests-review';
                             person.status === 'Rejetée' || person.status === 'Inactif'
                           "
                           >{{ person.status }}</span
-                        >
-                      </td>
-                      <td>
-                        <a
-                          class="row-action"
-                          [routerLink]="
-                            '/bureau/membres/aminata-ndiaye'
-                          "
-                          [attr.aria-label]="'Voir la fiche de ' + person.name"
-                          >Voir</a
                         >
                       </td>
                     </tr>
@@ -414,89 +410,6 @@ import { RequestDetail, RequestsList } from './requests-review';
                   </tbody>
                 </table>
               </div>
-            </section>
-          }
-
-          @if (view === 'member-detail') {
-            <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
-            <section class="review-grid member-detail-grid">
-              <article class="panel member-record">
-                <div class="identity-row">
-                  <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
-                  <div>
-                    <p class="eyebrow">TBX-2026-00125</p>
-                    <h2>Aminata Ndiaye</h2>
-                    <p>Membre simple · Dakar</p>
-                  </div>
-                  <span
-                    class="badge"
-                    [class.success]="memberStatus() === 'Actif'"
-                    [class.warning]="memberStatus() === 'Suspendu'"
-                    [class.danger]="memberStatus() === 'Radié'"
-                    >{{ memberStatus() }}</span
-                  >
-                </div>
-                <dl class="detail-list">
-                  <div>
-                    <dt>Courriel</dt>
-                    <dd>aminata.ndiaye&#64;gmail.com</dd>
-                  </div>
-                  <div>
-                    <dt>Téléphone</dt>
-                    <dd>+221 77 456 78 90</dd>
-                  </div>
-                  <div>
-                    <dt>Adresse</dt>
-                    <dd>18, rue de la Corniche, Dakar</dd>
-                  </div>
-                  <div>
-                    <dt>Date d’adhésion</dt>
-                    <dd>12 mars 2026</dd>
-                  </div>
-                </dl>
-                <h3>Participation récente</h3>
-                <div class="history-row">
-                  <ui-icon name="leaf" /><span
-                    ><strong>Nettoyage citoyen de Yoff</strong
-                    ><small>Inscrite · 24 octobre 2026</small></span
-                  >
-                </div>
-                <div class="history-row">
-                  <ui-icon name="users" /><span
-                    ><strong>Atelier d’éducation civique</strong
-                    ><small>Présente · 8 octobre 2026</small></span
-                  >
-                </div>
-              </article>
-              <aside class="panel decision-panel">
-                <p class="eyebrow">Statut du compte</p>
-                <h2>Gérer l’accès</h2>
-                <p>
-                  Une suspension ou une radiation bloque immédiatement la connexion sans effacer
-                  l’historique.
-                </p>
-                <button
-                  class="btn btn-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Actif')"
-                >
-                  Rendre actif
-                </button>
-                <button
-                  class="btn btn-gold-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Suspendu')"
-                >
-                  Suspendre
-                </button>
-                <button
-                  class="btn btn-danger-outline btn-wide"
-                  type="button"
-                  (click)="memberStatus.set('Radié')"
-                >
-                  Radier
-                </button>
-              </aside>
             </section>
           }
 
@@ -805,7 +718,6 @@ export class AdminPage {
     await this.auth.logout();
     await this.router.navigateByUrl('/connexion');
   }
-  protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
   protected readonly formSaved = signal(false);
   protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
   protected readonly sortAsc = signal(false);
@@ -1090,7 +1002,7 @@ export class AdminPage {
         coordinators: 'Membres du bureau exécutif et territoires rattachés',
         audit: 'Historique des décisions et opérations sensibles',
         'request-detail': 'Décider avec les informations utiles et garder une trace',
-        'member-detail': 'Informations, participation et statut du compte',
+        'member-detail': 'Coordonnées, statut du compte et historique',
         'program-new': 'Définir un objectif, un territoire et une période',
         'program-detail': 'Suivre les activités, la participation et l’avancement',
         'activity-new': 'Préparer une activité visible par les membres du territoire',
@@ -1104,7 +1016,6 @@ export class AdminPage {
     return (
       (
         {
-          members: 'Ajouter un membre',
           programs: 'Nouveau programme',
           territories: 'Ajouter une localité',
           accounts: 'Créer un compte',
@@ -1117,7 +1028,6 @@ export class AdminPage {
     return (
       (
         {
-          members: '/bureau/membres/aminata-ndiaye',
           coordinators: '/bureau/comptes/inviter',
           programs: '/bureau/programmes/nouveau',
           territories: '/bureau/territoires',
@@ -1127,7 +1037,7 @@ export class AdminPage {
     );
   }
   protected get hasPrimaryAction(): boolean {
-    return ['members', 'coordinators', 'programs', 'territories', 'accounts'].includes(this.view);
+    return ['coordinators', 'programs', 'territories', 'accounts'].includes(this.view);
   }
   protected completeForm(event: SubmitEvent): void {
     event.preventDefault();
@@ -1164,15 +1074,10 @@ export class AdminPage {
       });
   }
   protected get visiblePeople() {
-    if (this.view === 'accounts' || this.view === 'coordinators')
-      return this.requests.slice(0, 6).map((person, index) => ({
-        ...person,
-        role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
-        status: index === 5 ? 'Inactif' : 'Actif',
-      }));
-    return this.requests.map((person, index) => ({
+    return this.requests.slice(0, 6).map((person, index) => ({
       ...person,
-      status: index === 6 ? 'Suspendu' : 'Actif',
+      role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
+      status: index === 5 ? 'Inactif' : 'Actif',
     }));
   }
 }

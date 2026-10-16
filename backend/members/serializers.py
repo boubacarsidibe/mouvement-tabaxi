@@ -6,7 +6,7 @@ from accounts.models import User
 from accounts.serializers import check_new_password
 from territories.serializers import TerritorySummarySerializer
 
-from .models import Member
+from .models import Member, MemberStatusChange
 from .photos import prepare_photo
 
 PHONE_FORMAT = RegexValidator(
@@ -110,3 +110,89 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         if old_photo and old_photo != member.photo.name:
             member.photo.storage.delete(old_photo)
         return member
+
+
+class MemberListSerializer(serializers.ModelSerializer):
+    """Une ligne de la base des membres, telle que le bureau la consulte."""
+
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    role = serializers.CharField(source='user.role', read_only=True)
+    role_label = serializers.CharField(source='user.get_role_display', read_only=True)
+    territory = TerritorySummarySerializer(source='user.territory', read_only=True)
+    status_label = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Member
+        fields = (
+            'id', 'number', 'first_name', 'last_name', 'email', 'role', 'role_label', 'territory',
+            'joined_on', 'status', 'status_label',
+        )
+        read_only_fields = fields
+
+
+class MemberStatusChangeSerializer(serializers.ModelSerializer):
+    from_status_label = serializers.CharField(source='get_from_status_display', read_only=True)
+    to_status_label = serializers.CharField(source='get_to_status_display', read_only=True)
+    changed_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MemberStatusChange
+        fields = (
+            'id', 'from_status', 'from_status_label', 'to_status', 'to_status_label', 'reason',
+            'changed_by', 'changed_at',
+        )
+        read_only_fields = fields
+
+    def get_changed_by(self, change):
+        user = change.changed_by
+        return {'id': user.pk, 'first_name': user.first_name, 'last_name': user.last_name} if user else None
+
+
+class MemberDetailSerializer(MemberListSerializer):
+    """Fiche d'un membre : coordonnées et, pour les fondateurs seulement, l'historique des statuts."""
+
+    phone = serializers.CharField(read_only=True)
+    address = serializers.CharField(read_only=True)
+    photo_url = serializers.SerializerMethodField()
+    status_history = serializers.SerializerMethodField()
+
+    class Meta(MemberListSerializer.Meta):
+        fields = MemberListSerializer.Meta.fields + ('phone', 'address', 'photo_url', 'status_history')
+        read_only_fields = fields
+
+    def get_photo_url(self, member):
+        return f'/api/members/{member.pk}/photo/' if member.photo else None
+
+    def get_status_history(self, member):
+        request = self.context.get('request')
+        if request is None or not request.user.is_founder:
+            return None
+        changes = member.status_changes.select_related('changed_by')
+        return MemberStatusChangeSerializer(changes, many=True).data
+
+
+class StatusChangeSerializer(serializers.Serializer):
+    """Nouveau statut d'un membre ; le motif est obligatoire pour suspendre ou radier."""
+
+    REASON_REQUIRED = {
+        Member.Status.SUSPENDU: 'Indiquez le motif de la suspension.',
+        Member.Status.RADIE: 'Indiquez le motif de la radiation.',
+    }
+
+    status = serializers.ChoiceField(
+        label='statut',
+        choices=Member.Status.choices,
+        error_messages={
+            'required': 'Choisissez le nouveau statut.',
+            'invalid_choice': 'Statut inconnu. Choisissez Actif, Suspendu ou Radié.',
+        },
+    )
+    reason = serializers.CharField(label='motif', required=False, allow_blank=True, default='', max_length=1000)
+
+    def validate(self, data):
+        required = self.REASON_REQUIRED.get(data['status'])
+        if required and not data['reason']:
+            raise serializers.ValidationError({'reason': [required]})
+        return data

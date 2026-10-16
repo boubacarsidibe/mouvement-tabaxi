@@ -12,6 +12,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 
 from core.mail import send_email
+from members.models import Member
 
 from .models import InvitationLink, User
 from .password_reset import LinkProblem
@@ -60,7 +61,7 @@ def check_invitation(token):
 
 
 def accept_invitation(token, password):
-    """Enregistre le mot de passe choisi et consomme le lien."""
+    """Enregistre le mot de passe choisi, consomme le lien et ouvre le dossier de membre (numéro, statut)."""
     with transaction.atomic():
         link = check_invitation(token)
         if not link.mark_used():
@@ -68,4 +69,5 @@ def accept_invitation(token, password):
         user = link.user
         user.set_password(password)
         user.save(update_fields=['password'])
+        Member.objects.get_or_create(user=user)
     return user

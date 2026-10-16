@@ -35,6 +35,9 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
 - Backend : profil du membre connecté (lecture des données de la carte, modification de l'adresse, du téléphone et de la photo ; nom et territoire réservés au bureau) (#33).
 - Frontend : « Mon profil » et « Ma carte numérique » relient `/api/members/me/` : nom, numéro, territoire, date d'adhésion et photo réels sur le tableau de bord et la carte (téléchargement en image compris), modification de l'adresse, du téléphone et de la photo, changement du mot de passe via `/api/auth/password/change/`, erreurs du serveur affichées en français ; plus aucune donnée de démonstration sur ces écrans (#33, #35).
+- Statut du membre (Actif, Suspendu, Radié) : un fondateur change le statut depuis la fiche du membre (`POST /api/members/<id>/status/`, motif obligatoire pour suspendre ou radier) ; un compte suspendu ou radié ne peut plus se connecter (message propre à chaque cas), ses sessions ouvertes sont fermées, et l'historique des changements (auteur, date, motif) est conservé sans pouvoir être modifié ni effacé ; les coordonnateurs et fondateurs invités ont aussi un dossier de membre (#40).
+- Backend : base des membres du bureau (`GET /api/members/`, fiche `GET /api/members/<id>/` et sa photo) limitée au territoire de la personne connectée, avec recherche par nom, filtre par statut, tri et pages.
+- Frontend : écran « Bases de membres » relié à l'API (liste, fiche, changement de statut, historique réservé aux fondateurs), sans données fictives ; la page « Demandes d'adhésion » affiche désormais ses erreurs en rouge.
 
 ### Modifié
 
