@@ -34,23 +34,15 @@ La plateforme est mise en ligne **à la main**, avec la ligne de commande Vercel
 
 ## Mettre en ligne
 
-Le déploiement part d'un dossier sans historique Git, pour que Vercel ne se relie pas au dépôt et ne déploie rien automatiquement.
+Une seule commande, depuis la racine du dépôt, sur la branche à mettre en ligne :
 
 ```powershell
-# 1. Préparer le dossier à envoyer (depuis la racine du dépôt, sur la branche à déployer)
-git archive --format=zip -o $env:TEMP\tabaxi.zip HEAD
-Expand-Archive $env:TEMP\tabaxi.zip -DestinationPath $env:TEMP\tabaxi-deploiement -Force
-cd $env:TEMP\tabaxi-deploiement
-
-# 2. La première fois seulement : relier le dossier au projet Vercel
-vercel link --project tabaxi
-
-# 3. Aperçu protégé (réservé aux membres du compte Vercel)
-vercel deploy
-
-# 4. Plus tard, mise en ligne publique, après la démarche auprès de la CDP
-vercel deploy --prod
+.\scripts\deployer-apercu.ps1
 ```
+
+Le script exporte le code commité sans historique Git (Vercel ne se relie pas au dépôt et ne déploie rien automatiquement), déploie sur le projet `tabaxi-apercu`, fait pointer le **lien fixe** `https://tabaxi-prive-boubacar.vercel.app` vers ce déploiement, puis vérifie qu'un visiteur anonyme est redirigé vers la connexion Vercel. Le lien ne change donc jamais d'une mise à jour à l'autre.
+
+Ne jamais utiliser `tabaxi-apercu.vercel.app` : c'est le nom de production du projet, qui n'est pas protégé. Mise en ligne publique, après la démarche auprès de la CDP : `vercel deploy --prod`.
 
 ## Base de données
 
