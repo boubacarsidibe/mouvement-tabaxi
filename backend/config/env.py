@@ -33,6 +33,34 @@ def env_flag(value):
     return str(value).strip().lower() in {'1', 'true', 'yes', 'oui', 'on'}
 
 
+def env_list(value):
+    """Liste séparée par des virgules ; espaces et éléments vides ignorés."""
+    return [item.strip() for item in str(value).split(',') if item.strip()]
+
+
+def origin_of(url):
+    """Origine d'une adresse (``https://site.example.org/a/b`` → ``https://site.example.org``).
+
+    Les origines CORS et CSRF n'ont ni chemin ni barre finale : une barre oubliée
+    à la fin de ``https://site.example.org/`` empêcherait le serveur de démarrer.
+    """
+    url = url.strip()
+    scheme, sep, rest = url.partition('://')
+    if not sep:
+        return url.rstrip('/')
+    return f'{scheme}://{rest.split("/", 1)[0]}'
+
+
+def origins_from_env(value):
+    """Origines séparées par des virgules, ramenées à leur forme ``schéma://hôte[:port]``."""
+    origins = []
+    for item in env_list(value):
+        origin = origin_of(item)
+        if origin not in origins:
+            origins.append(origin)
+    return origins
+
+
 def mailer_from_env(environ):
     """Service d'envoi des courriels, décrit par les variables d'environnement.
 

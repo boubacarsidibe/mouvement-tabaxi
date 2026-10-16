@@ -85,20 +85,21 @@ SHOW_SETTINGS = (
     '"hasher": s.PASSWORD_HASHERS[0]}))'
 )
 
+# Le point de contrôle /api/health/ échappe à la redirection (contrôle de santé de Railway).
 REDIRECT = (
     'from django.test import Client; '
-    'r = Client().get("/api/health/", HTTP_HOST="tabaxi.example.org"); '
+    'r = Client().get("/api/auth/me/", HTTP_HOST="tabaxi.example.org"); '
     'print(r.status_code, r["Location"])'
 )
 
 
 class ProductionConfigurationTests(SimpleTestCase):
     def test_controle_de_deploiement_sans_alerte(self):
-        result = run_production('check', '--deploy')
+        result = run_production('check', '--deploy', FRONTEND_URL='https://tabaxi.example.org')
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 0, output)
         # Seule reste la liste « preload » des navigateurs, décision volontairement laissée aux fondateurs.
-        warnings = [line for line in output.splitlines() if '(security.' in line or '(mail.' in line]
+        warnings = [line for line in output.splitlines() if any(f'({app}.' in line for app in ('security', 'mail', 'deploiement'))]
         self.assertEqual([w for w in warnings if 'security.W021' not in w], [], output)
 
     def test_https_obligatoire_et_cookies_securises(self):
@@ -114,7 +115,7 @@ class ProductionConfigurationTests(SimpleTestCase):
     def test_requete_http_redirigee_vers_https(self):
         result = run_production('shell', '-c', REDIRECT)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip().splitlines()[-1], '301 https://tabaxi.example.org/api/health/')
+        self.assertEqual(result.stdout.strip().splitlines()[-1], '301 https://tabaxi.example.org/api/auth/me/')
 
     def test_refus_de_demarrer_avec_la_cle_de_developpement(self):
         for key in ('cle-de-developpement-a-ne-jamais-utiliser-en-production', 'remplacer-par-une-longue-valeur-aleatoire', 'courte'):
