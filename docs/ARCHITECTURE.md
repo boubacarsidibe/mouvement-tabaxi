@@ -67,6 +67,7 @@ Modèle `applications.Application` : référence, prénom, nom, courriel, locali
 - Examen réservé aux fondateurs (`accounts.permissions.IsFounder`). Seule une demande « À examiner » peut être acceptée ou refusée ; chaque décision enregistre son auteur, sa date et une note interne facultative.
 - Un refus exige un motif écrit, envoyé par courriel à la personne. Toute décision n'est enregistrée que si son courriel est parti : sinon la demande reste « À examiner » et le fondateur voit l'erreur (`503 email_not_sent`). Logique dans `applications/services.py`.
 - L'acceptation crée un lien personnel (`RegistrationLink`) et l'envoie par courriel : `FRONTEND_URL/finaliser?jeton=…`. Le jeton (256 bits aléatoires) n'est jamais conservé, seule son empreinte SHA-256 l'est (`core/tokens.py`). Le lien est valable 7 jours et ne sert qu'une fois (consommation atomique). Si le courriel ne part pas, le lien n'existe pas et la demande reste « À examiner ».
+- Écran du bureau (`/bureau/demandes`, `/bureau/demandes/:id`, fondateurs seulement) : `core/review.service.ts` appelle `GET /api/applications/` (filtre `status`, recherche `search`, pagination), `GET /api/applications/:id/`, `POST …/accept/` et `POST …/reject/` (motif obligatoire, contrôlé aussi côté serveur). L'erreur `email_not_sent` est affichée telle quelle ; la demande reste « À examiner ». Aucune donnée fictive.
 
 ### Courriels
 

@@ -59,7 +59,7 @@ export const routes: Routes = [
 
   bureau('bureau', 'dashboard', 'Tableau de bord — TABAXI'),
   bureau('bureau/demandes', 'requests', 'Demandes d’adhésion — TABAXI', true),
-  bureau('bureau/demandes/awa-ndiaye', 'request-detail', 'Examiner la demande — TABAXI', true),
+  bureau('bureau/demandes/:id', 'request-detail', 'Examiner la demande — TABAXI', true),
   bureau('bureau/membres', 'members', 'Base des membres — TABAXI'),
   bureau('bureau/membres/aminata-ndiaye', 'member-detail', 'Fiche membre — TABAXI'),
   bureau('bureau/programmes', 'programs', 'Programmes — TABAXI'),

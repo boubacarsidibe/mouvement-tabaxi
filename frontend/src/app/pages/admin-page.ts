@@ -2,10 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
+import { RequestDetail, RequestsList } from './requests-review';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [RouterLink, UiIcon],
+  imports: [RouterLink, UiIcon, RequestsList, RequestDetail],
   template: `
     <main class="workspace-shell admin-shell">
       <aside class="side-nav">
@@ -175,8 +176,15 @@ import { UiIcon } from '../shared/ui-icon';
             </section>
           }
 
+          @if (view === 'requests') {
+            <app-requests-list />
+          }
+
+          @if (view === 'request-detail') {
+            <app-request-detail />
+          }
+
           @if (
-            view === 'requests' ||
             view === 'members' ||
             view === 'accounts' ||
             view === 'coordinators'
@@ -201,23 +209,19 @@ import { UiIcon } from '../shared/ui-icon';
               <label
                 ><ui-icon name="search" /><input
                   [attr.aria-label]="
-                    view === 'requests' ? 'Rechercher une demande' : 'Rechercher un membre'
+                    'Rechercher un membre'
                   "
                   [placeholder]="
-                    view === 'requests'
-                      ? 'Rechercher un nom, un email, une localité…'
-                      : 'Rechercher un membre…'
+                    'Rechercher un membre…'
                   " /></label
               ><select aria-label="Filtrer par localité">
                 <option>Localité · Toutes</option></select
               ><select aria-label="Filtrer par statut">
                 <option>Statut · Tous</option>
               </select>
-              @if (view !== 'requests') {
                 <select aria-label="Filtrer par rôle">
                   <option>Rôle · Tous</option>
                 </select>
-              }
               <button>Réinitialiser</button>
             </div>
             <div class="table-wrap responsive-table">
@@ -235,10 +239,10 @@ import { UiIcon } from '../shared/ui-icon';
                         <span aria-hidden="true">{{ sortIndicator('place') }}</span>
                       </button>
                     </th>
-                    <th>{{ view === 'requests' ? 'Profession' : 'Rôle' }}</th>
+                    <th>{{ 'Rôle' }}</th>
                     <th [attr.aria-sort]="ariaSort('date')">
                       <button class="th-sort" type="button" (click)="sortBy('date')">
-                        {{ view === 'requests' ? 'Date de demande' : 'Date d’adhésion' }}
+                        {{ 'Date d’adhésion' }}
                         <span aria-hidden="true">{{ sortIndicator('date') }}</span>
                       </button>
                     </th>
@@ -255,10 +259,10 @@ import { UiIcon } from '../shared/ui-icon';
                       <td [attr.data-label]="view === 'accounts' ? 'Email' : 'Localité'">
                         {{ view === 'accounts' ? person.email : person.city }}
                       </td>
-                      <td [attr.data-label]="view === 'requests' ? 'Profession' : 'Rôle'">
-                        {{ view === 'requests' ? person.job : person.role }}
+                      <td [attr.data-label]="'Rôle'">
+                        {{ person.role }}
                       </td>
-                      <td [attr.data-label]="view === 'requests' ? 'Demande' : 'Adhésion'">
+                      <td [attr.data-label]="'Adhésion'">
                         {{ person.date }}
                       </td>
                       <td data-label="Statut">
@@ -282,9 +286,7 @@ import { UiIcon } from '../shared/ui-icon';
                         <a
                           class="row-action"
                           [routerLink]="
-                            view === 'requests'
-                              ? '/bureau/demandes/awa-ndiaye'
-                              : '/bureau/membres/aminata-ndiaye'
+                            '/bureau/membres/aminata-ndiaye'
                           "
                           [attr.aria-label]="'Voir la fiche de ' + person.name"
                           >Voir</a
@@ -411,79 +413,6 @@ import { UiIcon } from '../shared/ui-icon';
                   </tbody>
                 </table>
               </div>
-            </section>
-          }
-
-          @if (view === 'request-detail') {
-            <a class="back-link" routerLink="/bureau/demandes">← Retour aux demandes</a>
-            <section class="review-grid">
-              <article class="panel review-main">
-                <div class="identity-row">
-                  <span class="identity-avatar">AN</span>
-                  <div>
-                    <p class="eyebrow">Demande TAB-2026-00418</p>
-                    <h2>Awa Ndiaye</h2>
-                    <p>Déposée le 12 octobre 2026 à 10 h 24</p>
-                  </div>
-                  <span class="badge warning">À examiner</span>
-                </div>
-                <dl class="detail-list">
-                  <div>
-                    <dt>Adresse courriel</dt>
-                    <dd>awa.ndiaye&#64;gmail.com</dd>
-                  </div>
-                  <div>
-                    <dt>Profession</dt>
-                    <dd>Enseignante</dd>
-                  </div>
-                  <div>
-                    <dt>Localité souhaitée</dt>
-                    <dd>Saint-Louis</dd>
-                  </div>
-                  <div>
-                    <dt>Disponibilité</dt>
-                    <dd>Soirs et week-ends</dd>
-                  </div>
-                </dl>
-                <div class="motivation-box">
-                  <h3>Motivation</h3>
-                  <p>
-                    Je souhaite contribuer aux activités d’éducation civique auprès des jeunes de
-                    Saint-Louis et mettre mon expérience d’enseignante au service du mouvement.
-                  </p>
-                </div>
-              </article>
-              <aside class="panel decision-panel">
-                <p class="eyebrow">Décision du fondateur</p>
-                <h2>Examiner la demande</h2>
-                <p>Chaque décision est datée et ajoutée au journal d’actions.</p>
-                <label
-                  >Note interne<textarea
-                    rows="4"
-                    placeholder="Ajouter une note utile au bureau…"
-                  ></textarea>
-                </label>
-                <button
-                  class="btn btn-green btn-wide"
-                  type="button"
-                  (click)="requestDecision.set('accepted')"
-                >
-                  Accepter la demande
-                </button>
-                <button
-                  class="btn btn-danger-outline btn-wide"
-                  type="button"
-                  (click)="requestDecision.set('rejected')"
-                >
-                  Refuser avec un motif
-                </button>
-                @if (requestDecision() !== 'pending') {
-                  <p class="inline-success" role="status">
-                    ✓ Décision enregistrée :
-                    {{ requestDecision() === 'accepted' ? 'demande acceptée' : 'refus préparé' }}.
-                  </p>
-                }
-              </aside>
             </section>
           }
 
@@ -917,7 +846,6 @@ export class AdminPage {
     await this.auth.logout();
     await this.router.navigateByUrl('/connexion');
   }
-  protected readonly requestDecision = signal<'pending' | 'accepted' | 'rejected'>('pending');
   protected readonly memberStatus = signal<'Actif' | 'Suspendu' | 'Radié'>('Actif');
   protected readonly formSaved = signal(false);
   protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
@@ -1277,7 +1205,6 @@ export class AdminPage {
       });
   }
   protected get visiblePeople() {
-    if (this.view === 'requests') return this.requests;
     if (this.view === 'accounts' || this.view === 'coordinators')
       return this.requests.slice(0, 6).map((person, index) => ({
         ...person,

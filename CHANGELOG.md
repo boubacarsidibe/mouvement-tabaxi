@@ -21,3 +21,4 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : service d'envoi de courriels (console en développement, SMTP par variables d'environnement) qui détecte et remonte les échecs (#20).
 - Backend : examen des demandes réservé aux fondateurs (liste filtrable, lecture, refus avec motif obligatoire envoyé par courriel, auteur et date de chaque décision) (#21).
 - Backend : acceptation d'une demande avec envoi d'un lien personnel d'inscription (jeton aléatoire dont seule l'empreinte est stockée, valable 7 jours, usage unique) ; la demande n'est « Acceptée » que si le courriel est parti (#22).
+- Frontend : écran d'examen des demandes du bureau relié à `/api/applications/` (liste filtrable par statut, fiche, acceptation, refus avec motif obligatoire, erreur d'envoi du courriel affichée), réservé aux fondateurs, sans données fictives (#21).
