@@ -2584,7 +2584,8 @@ h3 {
 }
 .public-story {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1.25fr) minmax(300px, 0.8fr);
+  /* Une seule colonne : la section ne contient plus que son texte. */
+  grid-template-columns: minmax(0, 760px);
   gap: 52px;
   align-items: start;
   border-top: 1px solid var(--line);
@@ -3468,7 +3469,6 @@ h3 {
 }
 
 @media (max-width: 1050px) {
-  .public-story,
   .public-news {
     grid-template-columns: 1fr 1fr;
   }
