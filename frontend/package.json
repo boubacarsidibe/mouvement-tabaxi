@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "verifier:index": "node scripts/verifier-index-production.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.1",
