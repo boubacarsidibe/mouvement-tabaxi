@@ -141,6 +141,11 @@ class PublicTerritoryListTests(TestCase):
         with self.assertNumQueries(1):
             self.client.get(self.url)
 
+    def test_liste_mise_en_cache_par_le_reseau(self):
+        header = self.client.get(self.url)['Cache-Control']
+        self.assertIn('public', header)
+        self.assertIn('s-maxage=3600', header)
+
     def test_lecture_seule(self):
         self.assertEqual(self.client.post(self.url, {}).status_code, 405)
 

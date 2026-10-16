@@ -51,7 +51,11 @@ def active_tree():
 @permission_classes([AllowAny])
 def territory_tree(request):
     """Liste publique des territoires, pour le formulaire d'adhésion."""
-    return Response(active_tree())
+    response = Response(active_tree())
+    # Liste publique qui change rarement : le réseau de diffusion la garde une heure, ce qui évite un
+    # aller-retour jusqu'au serveur et à la base à chaque ouverture du formulaire.
+    response['Cache-Control'] = 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
+    return response
 
 
 class ManagedTerritoryListView(generics.ListAPIView):
