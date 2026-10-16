@@ -1,10 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
-import { TerritoryService } from '../core/territories.service';
 import {
   ListedMember,
   MemberOrdering,
@@ -13,6 +12,7 @@ import {
   MemberStatus,
   MembersService,
 } from '../core/members.service';
+import { TerritoryService } from '../core/territories.service';
 
 const STATUSES: { value: MemberStatus | ''; label: string }[] = [
   { value: '', label: 'Statut · Tous' },
@@ -31,20 +31,63 @@ function badgeClass(status: MemberStatus) {
 
 type SortKey = 'name' | 'place' | 'date';
 
-/** Base des membres : recherche par nom, filtre par statut, tri, pages de 20. */
+/** Quelle base afficher : les membres simples, le bureau exécutif, ou les comptes d'accès (le bureau avec les courriels). */
+export type MembersListKind = 'members' | 'bureau' | 'accounts';
+
+const BUREAU_ROLES = 'coordonnateur,fondateur';
+const FUNCTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Fonction · Toutes' },
+  { value: 'coordonnateur', label: 'Coordonnateur' },
+  { value: 'fondateur', label: 'Membre fondateur' },
+];
+const BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date de début.';
+
+/** Message le plus utile d'une erreur de l'API : celui du premier champ en cause, sinon le message général. */
+function messageOf(error: unknown): string {
+  const problem = readProblem(error);
+  return Object.values(problem.fields)[0] ?? problem.message;
+}
+
+/**
+ * Base des membres ou du bureau : recherche par nom, filtres par territoire, statut et date
+ * d'adhésion, tri, pages de 20. Ce que voit la personne est limité à son territoire par le serveur.
+ */
 @Component({
   selector: 'app-members-list',
   imports: [FormsModule, RouterLink, DatePipe],
   template: `
-    <div class="filter-bar">
+    <div class="filter-bar filter-bar-wide">
       <label
         ><input
-          aria-label="Rechercher un membre"
+          [attr.aria-label]="kind() === 'members' ? 'Rechercher un membre' : 'Rechercher un coordonnateur'"
           placeholder="Rechercher un nom, un courriel, un numéro…"
           [ngModel]="search()"
           (ngModelChange)="search.set($event)"
           (keydown.enter)="reload()"
       /></label>
+      @if (territoryOptions().length) {
+        <select
+          aria-label="Filtrer par localité"
+          [ngModel]="territory()"
+          (ngModelChange)="territory.set($event); reload()"
+        >
+          <option value="">Localité · Toutes</option>
+          @for (option of territoryOptions(); track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
+          }
+        </select>
+      }
+      @if (kind() !== 'members') {
+        <select
+          aria-label="Filtrer par fonction"
+          [ngModel]="role()"
+          (ngModelChange)="role.set($event); reload()"
+        >
+          @for (item of functions; track item.value) {
+            <option [value]="item.value">{{ item.label }}</option>
+          }
+        </select>
+      }
       <select
         aria-label="Filtrer par statut"
         [ngModel]="status()"
@@ -54,29 +97,23 @@ type SortKey = 'name' | 'place' | 'date';
           <option [value]="item.value">{{ item.label }}</option>
         }
       </select>
-      <select
-        aria-label="Filtrer par localité"
-        [ngModel]="territory()"
-        (ngModelChange)="territory.set($event); reload()"
-      >
-        <option [ngValue]="null">Localité · Toutes</option>
-        @for (item of territories(); track item.id) {
-          <option [ngValue]="item.id">{{ item.path }}</option>
-        }
-      </select>
-      <label
-        >Adhésion du<input
+      <label class="date-filter"
+        ><span>{{ kind() === 'members' ? 'Adhésion du' : 'Entrée du' }}</span
+        ><input
           type="date"
-          aria-label="Adhésion à partir du"
-          [ngModel]="joinedFrom()"
-          (ngModelChange)="joinedFrom.set($event); reload()"
+          name="joined_from"
+          aria-label="Date de début"
+          [ngModel]="from()"
+          (ngModelChange)="from.set($event); reload()"
       /></label>
-      <label
-        >au<input
+      <label class="date-filter"
+        ><span>au</span
+        ><input
           type="date"
-          aria-label="Adhésion jusqu’au"
-          [ngModel]="joinedTo()"
-          (ngModelChange)="joinedTo.set($event); reload()"
+          name="joined_to"
+          aria-label="Date de fin"
+          [ngModel]="to()"
+          (ngModelChange)="to.set($event); reload()"
       /></label>
       <button type="button" (click)="reload()">Rechercher</button>
       <button type="button" (click)="reset()">Réinitialiser</button>
@@ -93,7 +130,14 @@ type SortKey = 'name' | 'place' | 'date';
                 Nom complet <span aria-hidden="true">{{ sortIndicator('name') }}</span>
               </button>
             </th>
-            <th>N° d’adhérent</th>
+            @if (kind() === 'members') {
+              <th>N° d’adhérent</th>
+            } @else {
+              @if (kind() === 'accounts') {
+                <th>Courriel</th>
+              }
+              <th>Fonction</th>
+            }
             <th [attr.aria-sort]="ariaSort('place')">
               <button class="th-sort" type="button" (click)="sortBy('place')">
                 Localité <span aria-hidden="true">{{ sortIndicator('place') }}</span>
@@ -101,7 +145,8 @@ type SortKey = 'name' | 'place' | 'date';
             </th>
             <th [attr.aria-sort]="ariaSort('date')">
               <button class="th-sort" type="button" (click)="sortBy('date')">
-                Date d’adhésion <span aria-hidden="true">{{ sortIndicator('date') }}</span>
+                {{ kind() === 'members' ? 'Date d’adhésion' : 'Date d’entrée' }}
+                <span aria-hidden="true">{{ sortIndicator('date') }}</span>
               </button>
             </th>
             <th>Statut</th>
@@ -114,9 +159,16 @@ type SortKey = 'name' | 'place' | 'date';
               <td>
                 <strong>{{ item.first_name }} {{ item.last_name }}</strong>
               </td>
-              <td data-label="N° d’adhérent">{{ item.number }}</td>
-              <td data-label="Localité">{{ item.territory?.name }}</td>
-              <td data-label="Adhésion">{{ item.joined_on | date: 'dd/MM/yyyy' }}</td>
+              @if (kind() === 'members') {
+                <td data-label="N° d’adhérent">{{ item.number }}</td>
+              } @else {
+                @if (kind() === 'accounts') {
+                  <td data-label="Courriel">{{ item.email }}</td>
+                }
+                <td data-label="Fonction">{{ item.role_label }}</td>
+              }
+              <td data-label="Localité">{{ item.territory?.name ?? 'Tous les territoires' }}</td>
+              <td data-label="Date">{{ item.joined_on | date: 'dd/MM/yyyy' }}</td>
               <td data-label="Statut">
                 <span
                   class="badge"
@@ -156,29 +208,26 @@ type SortKey = 'name' | 'place' | 'date';
 })
 export class MembersList implements OnInit {
   private readonly members = inject(MembersService);
-  private readonly territoryService = inject(TerritoryService);
-  /** `membre` pour la base des membres, `coordonnateur` pour celle des coordonnateurs. */
-  @Input() role: 'membre' | 'coordonnateur' = 'membre';
+  private readonly territories = inject(TerritoryService);
+  readonly kind = input<MembersListKind>('members');
   protected readonly statuses = STATUSES;
-  protected readonly territory = signal<number | null>(null);
-  protected readonly territories = signal<{ id: number; path: string }[]>([]);
-  protected readonly joinedFrom = signal('');
-  protected readonly joinedTo = signal('');
+  protected readonly functions = FUNCTIONS;
   protected readonly status = signal<MemberStatus | ''>('');
   protected readonly search = signal('');
+  protected readonly territory = signal('');
+  protected readonly role = signal('');
+  protected readonly from = signal('');
+  protected readonly to = signal('');
   protected readonly ordering = signal<MemberOrdering>('-date');
   protected readonly page = signal<MemberPage | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
+  protected readonly territoryOptions = signal<{ id: number; label: string }[]>([]);
   private current = 1;
 
   ngOnInit() {
+    void this.loadTerritories();
     void this.load();
-    // La liste des localités ne montre que le périmètre de la personne connectée.
-    this.territoryService.managed().then(
-      (list) => this.territories.set(list),
-      () => this.territories.set([]),
-    );
   }
 
   protected cls(item: ListedMember) {
@@ -193,9 +242,10 @@ export class MembersList implements OnInit {
   protected reset() {
     this.status.set('');
     this.search.set('');
-    this.territory.set(null);
-    this.joinedFrom.set('');
-    this.joinedTo.set('');
+    this.territory.set('');
+    this.role.set('');
+    this.from.set('');
+    this.to.set('');
     this.ordering.set('-date');
     this.reload();
   }
@@ -228,24 +278,45 @@ export class MembersList implements OnInit {
     return current.startsWith('-') ? 'descending' : 'ascending';
   }
 
+  /** Territoires du périmètre, présentés en arbre par un retrait : les communes sous leur région. */
+  private async loadTerritories() {
+    try {
+      const list = await this.territories.managed();
+      const depth = (path: string) => path.split(' › ').length;
+      const top = Math.min(...list.map((item) => depth(item.path)));
+      this.territoryOptions.set(
+        list.map((item) => ({
+          id: item.id,
+          label: `${'  '.repeat(depth(item.path) - top)}${item.name}${item.is_active ? '' : ' (inactif)'}`,
+        })),
+      );
+    } catch {
+      this.territoryOptions.set([]); // sans la liste, on filtre quand même par nom, statut et date
+    }
+  }
+
   private async load() {
+    if (this.from() && this.to() && this.to() < this.from()) {
+      this.error.set(BAD_PERIOD);
+      return;
+    }
     this.loading.set(true);
     this.error.set('');
     try {
       this.page.set(
         await this.members.list({
-          role: this.role,
-          territory: this.territory(),
-          joinedFrom: this.joinedFrom(),
-          joinedTo: this.joinedTo(),
+          role: this.kind() === 'members' ? undefined : this.role() || BUREAU_ROLES,
           status: this.status(),
+          territory: this.territory() ? Number(this.territory()) : '',
+          joined_from: this.from(),
+          joined_to: this.to(),
           search: this.search(),
           ordering: this.ordering(),
           page: this.current,
         }),
       );
     } catch (error) {
-      this.error.set(readProblem(error).message);
+      this.error.set(messageOf(error));
     } finally {
       this.loading.set(false);
     }
@@ -268,7 +339,11 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
   selector: 'app-member-detail',
   imports: [FormsModule, RouterLink, DatePipe],
   template: `
-    <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
+    @if (isBureauFile()) {
+      <a class="back-link" routerLink="/bureau/coordonnateurs">← Retour à la base des coordonnateurs</a>
+    } @else {
+      <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
+    }
     @if (error() && !member()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
@@ -312,7 +387,7 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
               <dd>{{ person.territory?.path }}</dd>
             </div>
             <div>
-              <dt>Date d’adhésion</dt>
+              <dt>{{ isBureauFile() ? 'Date d’entrée' : 'Date d’adhésion' }}</dt>
               <dd>{{ person.joined_on | date: 'dd/MM/yyyy' }}</dd>
             </div>
           </dl>
@@ -418,6 +493,10 @@ export class MemberDetail implements OnInit {
   protected readonly error = signal('');
   protected readonly done = signal('');
   protected readonly cls = computed(() => badgeClass(this.member()?.status ?? 'actif'));
+  protected readonly isBureauFile = computed(() => {
+    const role = this.member()?.role;
+    return role === 'coordonnateur' || role === 'fondateur';
+  });
   protected readonly isSelf = computed(
     () => !!this.member() && this.member()?.email === this.auth.user()?.email,
   );

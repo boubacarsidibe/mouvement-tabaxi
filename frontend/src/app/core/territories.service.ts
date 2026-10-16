@@ -11,22 +11,30 @@ export interface TerritoryNode {
   children: TerritoryNode[];
 }
 
+/** Territoire du périmètre d'un membre du bureau (route réservée au bureau). */
+export interface ManagedTerritory {
+  id: number;
+  name: string;
+  kind: 'pays' | 'region' | 'commune';
+  kind_label: string;
+  /** Exemple : « Sénégal › Saint-Louis › Podor ». */
+  path: string;
+  parent: number | null;
+  is_active: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TerritoryService {
   private readonly http = inject(HttpClient);
 
-  /** Territoires du périmètre de la personne connectée (bureau), du plus large au plus précis. */
-  managed(): Promise<{ id: number; name: string; kind_label: string; path: string }[]> {
-    return firstValueFrom(
-      this.http.get<{ id: number; name: string; kind_label: string; path: string }[]>(
-        '/api/territories/managed/',
-      ),
-    );
-  }
-
   /** Territoires actifs, en arbre pays > région > commune (route publique). */
   tree(): Promise<TerritoryNode[]> {
     return firstValueFrom(this.http.get<TerritoryNode[]>('/api/territories/'));
+  }
+
+  /** Territoires que la personne connectée peut gérer, en ordre d'arbre (un coordonnateur : le sien et ceux qui en dépendent). */
+  managed(): Promise<ManagedTerritory[]> {
+    return firstValueFrom(this.http.get<ManagedTerritory[]>('/api/territories/managed/'));
   }
 }
 

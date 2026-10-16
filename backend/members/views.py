@@ -1,22 +1,17 @@
-from datetime import date
-
 from django.contrib.auth import login
-from django.db.models import Q
 from django.http import FileResponse, Http404
 from rest_framework import generics, status
-from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from accounts.models import User
 from accounts.permissions import IsBureau, IsFounder
 from accounts.serializers import UserSerializer
-from territories.models import Territory
-from territories.scope import scope_queryset, subtree_ids
+from territories.scope import scope_queryset
 
+from .filters import filter_members, order_members
 from .models import Member
 from .registration import LinkProblem, check_link, complete_registration
 from .serializers import (
@@ -127,22 +122,12 @@ def scoped_members(user):
     return scope_queryset(queryset, user, 'user__territory')
 
 
-ORDERINGS = {
-    'name': ('user__last_name', 'user__first_name'),
-    'place': ('user__territory__name',),
-    'date': ('joined_on', 'id'),
-}
-
-
 class MemberListView(generics.ListAPIView):
-    """Base des membres pour le bureau exécutif, limitée au territoire de la personne connectée.
+    """Base des membres (ou des coordonnateurs) pour le bureau, limitée au territoire de la personne connectée.
 
-    Filtres : ``role`` (``membre`` par défaut, ou ``coordonnateur``, ``fondateur``), ``status``
-    (``actif``, ``suspendu``, ``radie``), ``territory`` (identifiant ; ce territoire et ceux qui en
-    dépendent, jamais au-delà du périmètre de la personne connectée), ``joined_from`` et
-    ``joined_to`` (dates d'adhésion AAAA-MM-JJ, bornes comprises), ``search`` (prénom, nom, courriel ou numéro ; plusieurs
-    mots doivent tous correspondre) et ``ordering`` (``name``, ``place`` ou ``date``, précédé de
-    ``-`` pour l'ordre inverse ; les plus récents d'abord par défaut).
+    Filtres, voir ``members.filters`` : ``role``, ``status``, ``territory``, ``joined_from``,
+    ``joined_to``, ``search`` et ``ordering`` (``name``, ``place`` ou ``date``, précédé de ``-``
+    pour l'ordre inverse ; les plus récents d'abord par défaut).
     """
 
     permission_classes = [IsBureau]
@@ -151,51 +136,8 @@ class MemberListView(generics.ListAPIView):
 
     def get_queryset(self):
         params = self.request.query_params
-        queryset = scoped_members(self.request.user)
-
-        role = params.get('role') or User.Role.MEMBRE
-        if role not in User.Role.values:
-            raise ValidationError({'role': ['Rôle inconnu.']})
-        queryset = queryset.filter(user__role=role)
-
-        status_filter = params.get('status')
-        if status_filter:
-            if status_filter not in Member.Status.values:
-                raise ValidationError({'status': ['Statut inconnu.']})
-            queryset = queryset.filter(status=status_filter)
-
-        territory = params.get('territory')
-        if territory:
-            if not territory.isdigit() or not Territory.objects.filter(pk=territory).exists():
-                raise ValidationError({'territory': ['Localité inconnue.']})
-            queryset = queryset.filter(user__territory__in=subtree_ids(Territory.objects.get(pk=territory)))
-
-        bounds = {}
-        for name, lookup in (('joined_from', 'joined_on__gte'), ('joined_to', 'joined_on__lte')):
-            value = params.get(name)
-            if value:
-                try:
-                    bounds[name] = date.fromisoformat(value)
-                except ValueError:
-                    raise ValidationError({name: ['Saisissez une date valide au format AAAA-MM-JJ.']})
-                queryset = queryset.filter(**{lookup: bounds[name]})
-        if len(bounds) == 2 and bounds['joined_from'] > bounds['joined_to']:
-            raise ValidationError({'joined_to': ['La date de fin doit suivre la date de début.']})
-
-        for term in params.get('search', '').split():
-            queryset = queryset.filter(
-                Q(user__first_name__icontains=term)
-                | Q(user__last_name__icontains=term)
-                | Q(user__email__icontains=term)
-                | Q(number__icontains=term)
-            )
-
-        ordering = params.get('ordering') or '-date'
-        key = ordering.lstrip('-')
-        if key not in ORDERINGS:
-            raise ValidationError({'ordering': ['Tri inconnu.']})
-        fields = ORDERINGS[key]
-        return queryset.order_by(*(f'-{f}' if ordering.startswith('-') else f for f in fields))
+        queryset = filter_members(scoped_members(self.request.user), params)
+        return order_members(queryset, params)
 
 
 class MemberDetailView(generics.RetrieveAPIView):

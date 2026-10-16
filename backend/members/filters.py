@@ -1,0 +1,98 @@
+"""Filtres de la base des membres, partagés par la liste et l'export Excel.
+
+L'export reprend exactement ces filtres : le fichier contient la liste affichée, ni plus ni moins.
+Paramètres reconnus : ``role`` (un ou plusieurs rôles séparés par des virgules, ``membre`` par
+défaut), ``status``, ``territory`` (le territoire et tous ceux qui en dépendent), ``joined_from`` et
+``joined_to`` (date d'adhésion, bornes comprises, au format AAAA-MM-JJ), ``search`` (prénom, nom,
+courriel ou numéro ; plusieurs mots doivent tous correspondre) et ``ordering``.
+"""
+
+from django.db.models import Q
+from django.utils.dateparse import parse_date
+from rest_framework.exceptions import ValidationError
+
+from accounts.models import User
+from territories.models import Territory
+from territories.scope import subtree_ids
+
+from .models import Member
+
+BAD_DATE = 'Saisissez une date valide au format AAAA-MM-JJ.'
+BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date de début.'
+UNKNOWN_TERRITORY = 'Localité inconnue.'
+
+ORDERINGS = {
+    'name': ('user__last_name', 'user__first_name'),
+    'place': ('user__territory__name',),
+    'date': ('joined_on', 'id'),
+}
+DEFAULT_ORDERING = '-date'
+
+
+def read_date(params, name):
+    value = params.get(name, '').strip()
+    if not value:
+        return None
+    try:
+        parsed = parse_date(value)
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise ValidationError({name: [BAD_DATE]})
+    return parsed
+
+
+def read_roles(params):
+    """Rôles demandés ; les membres simples si le paramètre est absent."""
+    raw = params.get('role', '').strip() or User.Role.MEMBRE
+    roles = [role.strip() for role in raw.split(',') if role.strip()]
+    unknown = [role for role in roles if role not in User.Role.values]
+    if unknown or not roles:
+        raise ValidationError({'role': ['Rôle inconnu.']})
+    return roles
+
+
+def filter_members(queryset, params):
+    """Applique les filtres de la requête à une liste de membres déjà limitée au périmètre."""
+    queryset = queryset.filter(user__role__in=read_roles(params))
+
+    status = params.get('status')
+    if status:
+        if status not in Member.Status.values:
+            raise ValidationError({'status': ['Statut inconnu.']})
+        queryset = queryset.filter(status=status)
+
+    territory = params.get('territory', '').strip()
+    if territory:
+        try:
+            root = Territory.objects.get(pk=int(territory))
+        except (ValueError, Territory.DoesNotExist):
+            raise ValidationError({'territory': [UNKNOWN_TERRITORY]})
+        queryset = queryset.filter(user__territory__in=subtree_ids(root))
+
+    joined_from = read_date(params, 'joined_from')
+    joined_to = read_date(params, 'joined_to')
+    if joined_from and joined_to and joined_to < joined_from:
+        raise ValidationError({'joined_to': [BAD_PERIOD]})
+    if joined_from:
+        queryset = queryset.filter(joined_on__gte=joined_from)
+    if joined_to:
+        queryset = queryset.filter(joined_on__lte=joined_to)
+
+    for term in params.get('search', '').split():
+        queryset = queryset.filter(
+            Q(user__first_name__icontains=term)
+            | Q(user__last_name__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(number__icontains=term)
+        )
+    return queryset
+
+
+def order_members(queryset, params):
+    ordering = params.get('ordering') or DEFAULT_ORDERING
+    key = ordering.lstrip('-')
+    if key not in ORDERINGS:
+        raise ValidationError({'ordering': ['Tri inconnu.']})
+    descending = ordering.startswith('-')
+    return queryset.order_by(*(f'-{field}' if descending else field for field in ORDERINGS[key]))

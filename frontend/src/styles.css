@@ -1576,6 +1576,26 @@ small {
 .filter-bar button {
   font-size: 14px;
 }
+/* Barre de filtres des bases du bureau : recherche, localité, fonction, statut, période. */
+.filter-bar.filter-bar-wide {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.filter-bar.filter-bar-wide > label:first-child {
+  grid-column: span 2;
+}
+.filter-bar.filter-bar-wide .date-filter {
+  grid-column: span 2;
+  padding: 0 6px 0 10px;
+}
+.filter-bar .date-filter span {
+  white-space: nowrap;
+  font-size: 13px;
+}
+.filter-bar .date-filter input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 4px;
+}
 .program-list {
   display: grid;
   gap: 10px;

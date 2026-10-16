@@ -1,8 +1,7 @@
-import { Component } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpParams, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService } from '../core/auth.service';
 import { TEST_COORDINATOR, TEST_FOUNDER } from '../core/testing';
@@ -29,14 +28,32 @@ const RECORD = {
   photo_url: null,
   status_history: [] as unknown[],
 };
-const MANAGED = [
-  { id: 2, name: 'Dakar', kind_label: 'Région', path: 'Sénégal › Dakar' },
-  { id: 4, name: 'Pikine', kind_label: 'Commune', path: 'Sénégal › Dakar › Pikine' },
-];
 const PAGE = (results: unknown[]) => ({ count: results.length, next: null, previous: null, results });
 
-@Component({ imports: [MembersList], template: '<app-members-list role="coordonnateur" />' })
-class CoordinatorsHost {}
+const TERRITORIES = [
+  { id: 1, name: 'Sénégal', kind: 'pays', kind_label: 'Pays', path: 'Sénégal', parent: null, is_active: true },
+  { id: 2, name: 'Dakar', kind: 'region', kind_label: 'Région', path: 'Sénégal › Dakar', parent: 1, is_active: true },
+  { id: 4, name: 'Pikine', kind: 'commune', kind_label: 'Commune', path: 'Sénégal › Dakar › Pikine', parent: 2, is_active: true },
+];
+const COORDINATOR = {
+  ...LISTED,
+  id: 20,
+  first_name: 'Mamadou',
+  last_name: 'Diop',
+  email: 'mamadou@example.org',
+  role: 'coordonnateur',
+  role_label: 'Coordonnateur',
+};
+const FOUNDER_ROW = {
+  ...LISTED,
+  id: 21,
+  first_name: 'Ibrahima',
+  last_name: 'Sow',
+  email: 'ibrahima@example.org',
+  role: 'fondateur',
+  role_label: 'Membre fondateur',
+  territory: null,
+};
 
 describe('Base des membres', () => {
   let http: HttpTestingController;
@@ -46,11 +63,15 @@ describe('Base des membres', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([
-          { path: 'bureau/membres', component: MembersList },
-          { path: 'bureau/coordonnateurs', component: CoordinatorsHost },
-          { path: 'bureau/membres/:id', component: MemberDetail },
-        ]),
+        provideRouter(
+          [
+            { path: 'bureau/membres', component: MembersList, data: { kind: 'members' } },
+            { path: 'bureau/coordonnateurs', component: MembersList, data: { kind: 'bureau' } },
+            { path: 'bureau/comptes', component: MembersList, data: { kind: 'accounts' } },
+            { path: 'bureau/membres/:id', component: MemberDetail },
+          ],
+          withComponentInputBinding(),
+        ),
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
@@ -60,12 +81,18 @@ describe('Base des membres', () => {
 
   afterEach(() => http.verify());
 
-  async function open(url: string, user = TEST_FOUNDER) {
+  /** Ouvre une base : le serveur reçoit la demande des territoires puis celle de la liste. */
+  async function open(url: string, results: unknown[] = [LISTED], user = TEST_FOUNDER) {
     TestBed.inject(AuthService).signedIn(user);
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url);
     root = harness.routeNativeElement as HTMLElement;
-    http.match('/api/territories/managed/').forEach((req) => req.flush(MANAGED));
+    http.expectOne('/api/territories/managed/').flush(TERRITORIES);
+    const first = http.expectOne((req) => req.url === '/api/members/');
+    const params = first.request.params;
+    first.flush(PAGE(results));
+    await settle();
+    return params;
   }
   async function settle() {
     await harness.fixture.whenStable();
@@ -73,11 +100,24 @@ describe('Base des membres', () => {
   }
   const button = (label: string) =>
     Array.from(root.querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+  const select = (label: string) =>
+    root.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement | null;
+  /** La prochaine demande de liste, avec ses paramètres. */
+  const nextList = (match: (params: HttpParams) => boolean = () => true) =>
+    http.expectOne((req) => req.url === '/api/members/' && match(req.params));
+  function choose(element: HTMLSelectElement, value: string) {
+    element.value = value;
+    element.dispatchEvent(new Event('change'));
+  }
+  function type(label: string, value: string) {
+    const input = root.querySelector(`input[aria-label="${label}"]`) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
 
   it('liste les membres du serveur, sans données fictives', async () => {
-    await open('/bureau/membres');
-    http.expectOne('/api/members/').flush(PAGE([LISTED]));
-    await settle();
+    const params = await open('/bureau/membres');
+    expect(params.has('role')).toBe(false); // les membres simples par défaut
     expect(root.textContent).toContain('Aminata Ndiaye');
     expect(root.textContent).toContain('TBX-2026-00012');
     expect(root.textContent).toContain('Pikine');
@@ -86,88 +126,151 @@ describe('Base des membres', () => {
     expect(root.querySelector('a.row-action')?.getAttribute('href')).toBe('/bureau/membres/12');
   });
 
-  it('filtre par statut et recherche par nom', async () => {
+  it('propose les territoires du périmètre, les communes sous leur région', async () => {
     await open('/bureau/membres');
-    http.expectOne('/api/members/').flush(PAGE([]));
+    const labels = Array.from(select('Filtrer par localité')!.options).map((o) => o.textContent);
+    expect(labels).toEqual(['Localité · Toutes', 'Sénégal', '  Dakar', '    Pikine']);
+  });
+
+  it('filtre par territoire', async () => {
+    await open('/bureau/membres');
+    choose(select('Filtrer par localité')!, '2');
+    nextList((params) => params.get('territory') === '2').flush(PAGE([LISTED]));
     await settle();
-    const select = root.querySelector('select') as HTMLSelectElement;
-    select.value = 'suspendu';
-    select.dispatchEvent(new Event('change'));
-    http
-      .expectOne((req) => req.url === '/api/members/' && req.params.get('status') === 'suspendu')
-      .flush(PAGE([{ ...LISTED, status: 'suspendu', status_label: 'Suspendu' }]));
+  });
+
+  it('filtre par période d’adhésion', async () => {
+    await open('/bureau/membres');
+    type('Date de début', '2026-01-01');
+    nextList((params) => params.get('joined_from') === '2026-01-01' && !params.has('joined_to')).flush(PAGE([LISTED]));
+    await settle();
+    type('Date de fin', '2026-03-31');
+    nextList(
+      (params) => params.get('joined_from') === '2026-01-01' && params.get('joined_to') === '2026-03-31',
+    ).flush(PAGE([LISTED]));
+    await settle();
+  });
+
+  it('combine territoire, période, statut et recherche', async () => {
+    await open('/bureau/membres');
+    choose(select('Filtrer par localité')!, '2');
+    nextList().flush(PAGE([]));
+    type('Date de début', '2026-01-01');
+    nextList().flush(PAGE([]));
+    type('Date de fin', '2026-03-31');
+    nextList().flush(PAGE([]));
+    choose(select('Filtrer par statut')!, 'actif');
+    nextList().flush(PAGE([]));
+    type('Rechercher un membre', 'Ndiaye');
+    button('Rechercher')!.click();
+    const params = nextList((p) => p.get('search') === 'Ndiaye');
+    expect(params.request.params.get('territory')).toBe('2');
+    expect(params.request.params.get('joined_from')).toBe('2026-01-01');
+    expect(params.request.params.get('joined_to')).toBe('2026-03-31');
+    expect(params.request.params.get('status')).toBe('actif');
+    params.flush(PAGE([LISTED]));
+    await settle();
+  });
+
+  it('refuse une période à l’envers sans interroger le serveur', async () => {
+    await open('/bureau/membres');
+    type('Date de début', '2026-03-01');
+    nextList().flush(PAGE([]));
+    type('Date de fin', '2026-01-01');
+    await settle();
+    expect(root.textContent).toContain('La date de fin doit être égale ou postérieure à la date de début.');
+  });
+
+  it('affiche le message du serveur pour une date invalide', async () => {
+    await open('/bureau/membres');
+    type('Date de début', '2026-01-01');
+    nextList().flush(
+      { joined_from: ['Saisissez une date valide au format AAAA-MM-JJ.'] },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    await settle();
+    expect(root.textContent).toContain('Saisissez une date valide au format AAAA-MM-JJ.');
+  });
+
+  it('réinitialise tous les filtres', async () => {
+    await open('/bureau/membres');
+    choose(select('Filtrer par localité')!, '4');
+    nextList().flush(PAGE([]));
+    type('Date de début', '2026-01-01');
+    nextList().flush(PAGE([]));
+    button('Réinitialiser')!.click();
+    const request = nextList();
+    expect(['territory', 'joined_from', 'joined_to', 'status', 'search'].some((k) => request.request.params.has(k))).toBe(false);
+    request.flush(PAGE([LISTED]));
+    await settle();
+  });
+
+  it('filtre par statut et recherche par nom', async () => {
+    await open('/bureau/membres', []);
+    choose(select('Filtrer par statut')!, 'suspendu');
+    nextList((params) => params.get('status') === 'suspendu').flush(
+      PAGE([{ ...LISTED, status: 'suspendu', status_label: 'Suspendu' }]),
+    );
     await settle();
     expect(root.textContent).toContain('Suspendu');
 
-    const input = root.querySelector('input') as HTMLInputElement;
-    input.value = 'Ndiaye';
-    input.dispatchEvent(new Event('input'));
+    type('Rechercher un membre', 'Ndiaye');
     button('Rechercher')!.click();
-    http
-      .expectOne((req) => req.params.get('search') === 'Ndiaye' && req.params.get('status') === 'suspendu')
-      .flush(PAGE([]));
+    nextList((params) => params.get('search') === 'Ndiaye' && params.get('status') === 'suspendu').flush(PAGE([]));
     await settle();
-  });
-
-  it('filtre par localité et par date d’adhésion', async () => {
-    await open('/bureau/membres');
-    http.expectOne('/api/members/').flush(PAGE([]));
-    await settle();
-    const selects = root.querySelectorAll('select');
-    expect(selects[1].textContent).toContain('Sénégal › Dakar › Pikine');
-    selects[1].value = selects[1].options[2].value;
-    selects[1].dispatchEvent(new Event('change'));
-    http.expectOne((req) => req.params.get('territory') === '4').flush(PAGE([LISTED]));
-    await settle();
-    const dates = root.querySelectorAll<HTMLInputElement>('input[type=date]');
-    dates[0].value = '2026-01-01';
-    dates[0].dispatchEvent(new Event('input'));
-    http
-      .expectOne(
-        (req) => req.params.get('territory') === '4' && req.params.get('joined_from') === '2026-01-01',
-      )
-      .flush(PAGE([LISTED]));
-    await settle();
-    expect(root.textContent).toContain('Aminata Ndiaye');
-    button('Réinitialiser')!.click();
-    http
-      .expectOne((req) => req.url === '/api/members/' && !req.params.has('territory') && !req.params.has('joined_from'))
-      .flush(PAGE([]));
-    await settle();
-  });
-
-  it('affiche la base des coordonnateurs', async () => {
-    TestBed.inject(AuthService).signedIn(TEST_FOUNDER);
-    harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/bureau/coordonnateurs');
-    root = harness.routeNativeElement as HTMLElement;
-    http.match('/api/territories/managed/').forEach((req) => req.flush(MANAGED));
-    http
-      .expectOne((req) => req.url === '/api/members/' && req.params.get('role') === 'coordonnateur')
-      .flush(PAGE([{ ...LISTED, role: 'coordonnateur', role_label: 'Coordonnateur' }]));
-    await settle();
-    expect(root.textContent).toContain('Aminata Ndiaye');
   });
 
   it('trie par nom', async () => {
-    await open('/bureau/membres');
-    http.expectOne('/api/members/').flush(PAGE([]));
+    await open('/bureau/membres', []);
+    button('Nom complet')!.click();
+    nextList((params) => params.get('ordering') === 'name').flush(PAGE([]));
     await settle();
     button('Nom complet')!.click();
-    http.expectOne((req) => req.params.get('ordering') === 'name').flush(PAGE([]));
-    await settle();
-    button('Nom complet')!.click();
-    http.expectOne((req) => req.params.get('ordering') === '-name').flush(PAGE([]));
+    nextList((params) => params.get('ordering') === '-name').flush(PAGE([]));
     await settle();
   });
 
   it('affiche l’erreur du serveur', async () => {
-    await open('/bureau/membres');
-    http
-      .expectOne('/api/members/')
-      .flush({ detail: 'Cette fonction est réservée au bureau exécutif.' }, { status: 403, statusText: 'Forbidden' });
+    TestBed.inject(AuthService).signedIn(TEST_FOUNDER);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/bureau/membres');
+    root = harness.routeNativeElement as HTMLElement;
+    http.expectOne('/api/territories/managed/').flush(TERRITORIES);
+    nextList().flush(
+      { detail: 'Cette fonction est réservée au bureau exécutif.' },
+      { status: 403, statusText: 'Forbidden' },
+    );
     await settle();
     expect(root.textContent).toContain('réservée au bureau exécutif');
+  });
+
+  it('base des coordonnateurs : le bureau exécutif, avec les mêmes filtres', async () => {
+    const params = await open('/bureau/coordonnateurs', [COORDINATOR, FOUNDER_ROW]);
+    expect(params.get('role')).toBe('coordonnateur,fondateur');
+    expect(root.textContent).toContain('Mamadou Diop');
+    expect(root.textContent).toContain('Coordonnateur');
+    expect(root.textContent).toContain('Ibrahima Sow');
+    expect(root.textContent).toContain('Membre fondateur');
+    expect(root.textContent).toContain('Tous les territoires'); // un fondateur n'est rattaché à aucun territoire
+    expect(root.textContent).toContain('Date d’entrée');
+    expect(root.textContent).not.toContain('N° d’adhérent');
+
+    choose(select('Filtrer par fonction')!, 'fondateur');
+    nextList((p) => p.get('role') === 'fondateur').flush(PAGE([FOUNDER_ROW]));
+    await settle();
+    choose(select('Filtrer par localité')!, '2');
+    nextList((p) => p.get('role') === 'fondateur' && p.get('territory') === '2').flush(PAGE([]));
+    await settle();
+    button('Réinitialiser')!.click();
+    nextList((p) => p.get('role') === 'coordonnateur,fondateur' && !p.has('territory')).flush(PAGE([]));
+    await settle();
+  });
+
+  it('comptes d’accès : le bureau avec les courriels', async () => {
+    const params = await open('/bureau/comptes', [COORDINATOR]);
+    expect(params.get('role')).toBe('coordonnateur,fondateur');
+    expect(root.textContent).toContain('Courriel');
+    expect(root.textContent).toContain('mamadou@example.org');
   });
 });
 

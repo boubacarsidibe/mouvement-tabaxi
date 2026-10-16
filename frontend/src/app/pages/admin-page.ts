@@ -195,7 +195,7 @@ import { RequestDetail, RequestsList } from './requests-review';
           }
 
           @if (view === 'members') {
-            <app-members-list />
+            <app-members-list kind="members" />
           }
 
           @if (view === 'member-detail') {
@@ -203,104 +203,19 @@ import { RequestDetail, RequestsList } from './requests-review';
           }
 
           @if (view === 'coordinators') {
-            <app-members-list role="coordonnateur" />
+            <app-members-list kind="bureau" />
           }
 
           @if (view === 'accounts') {
-            @if (view === 'accounts') {
-              <div class="security-alert">
-                <ui-icon name="key" />
-                <p>
-                  <strong>Sécurité</strong>Veillez à n’accorder des accès qu’aux personnes de
-                  confiance. Les comptes inactifs doivent être désactivés.
-                </p>
-                <button type="button" aria-label="Fermer l’avertissement">×</button>
-              </div>
-            }
-            <div class="filter-bar">
-              <label
-                ><ui-icon name="search" /><input
-                  [attr.aria-label]="
-                    'Rechercher un membre'
-                  "
-                  [placeholder]="
-                    'Rechercher un membre…'
-                  " /></label
-              ><select aria-label="Filtrer par localité">
-                <option>Localité · Toutes</option></select
-              ><select aria-label="Filtrer par statut">
-                <option>Statut · Tous</option>
-              </select>
-                <select aria-label="Filtrer par rôle">
-                  <option>Rôle · Tous</option>
-                </select>
-              <button>Réinitialiser</button>
+            <div class="security-alert">
+              <ui-icon name="key" />
+              <p>
+                <strong>Sécurité</strong>Veillez à n’accorder des accès qu’aux personnes de
+                confiance. Suspendez ou radiez les comptes qui ne servent plus : leur connexion est
+                aussitôt bloquée.
+              </p>
             </div>
-            <div class="table-wrap responsive-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th [attr.aria-sort]="ariaSort('name')">
-                      <button class="th-sort" type="button" (click)="sortBy('name')">
-                        Nom complet <span aria-hidden="true">{{ sortIndicator('name') }}</span>
-                      </button>
-                    </th>
-                    <th [attr.aria-sort]="ariaSort('place')">
-                      <button class="th-sort" type="button" (click)="sortBy('place')">
-                        {{ view === 'accounts' ? 'Email' : 'Localité' }}
-                        <span aria-hidden="true">{{ sortIndicator('place') }}</span>
-                      </button>
-                    </th>
-                    <th>{{ 'Rôle' }}</th>
-                    <th [attr.aria-sort]="ariaSort('date')">
-                      <button class="th-sort" type="button" (click)="sortBy('date')">
-                        {{ 'Date d’adhésion' }}
-                        <span aria-hidden="true">{{ sortIndicator('date') }}</span>
-                      </button>
-                    </th>
-                    <th>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (person of sortedPeople; track person.name) {
-                    <tr>
-                      <td>
-                        <strong>{{ person.name }}</strong>
-                      </td>
-                      <td [attr.data-label]="view === 'accounts' ? 'Email' : 'Localité'">
-                        {{ view === 'accounts' ? person.email : person.city }}
-                      </td>
-                      <td [attr.data-label]="'Rôle'">
-                        {{ person.role }}
-                      </td>
-                      <td [attr.data-label]="'Adhésion'">
-                        {{ person.date }}
-                      </td>
-                      <td data-label="Statut">
-                        <span
-                          class="badge"
-                          [class.success]="
-                            person.status === 'Actif' ||
-                            person.status === 'Acceptée' ||
-                            person.status === 'Inscrite'
-                          "
-                          [class.warning]="
-                            person.status === 'À examiner' || person.status === 'Suspendu'
-                          "
-                          [class.danger]="
-                            person.status === 'Rejetée' || person.status === 'Inactif'
-                          "
-                          >{{ person.status }}</span
-                        >
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-              <footer class="table-footer">
-                <span>{{ visiblePeople.length }} résultats</span>
-              </footer>
-            </div>
+            <app-members-list kind="accounts" />
           }
 
           @if (view === 'programs') {
@@ -723,8 +638,6 @@ export class AdminPage {
     await this.router.navigateByUrl('/connexion');
   }
   protected readonly formSaved = signal(false);
-  protected readonly sortKey = signal<'name' | 'place' | 'date'>('date');
-  protected readonly sortAsc = signal(false);
   protected readonly stats = [
     {
       icon: 'users',
@@ -1022,7 +935,7 @@ export class AdminPage {
         {
           programs: 'Nouveau programme',
           territories: 'Ajouter une localité',
-          accounts: 'Créer un compte',
+          accounts: 'Inviter au bureau',
           coordinators: 'Inviter un coordonnateur',
         } as Record<string, string>
       )[this.view] || 'Ajouter'
@@ -1041,47 +954,12 @@ export class AdminPage {
     );
   }
   protected get hasPrimaryAction(): boolean {
-    return ['coordinators', 'programs', 'territories', 'accounts'].includes(this.view);
+    // Inviter au bureau est réservé aux fondateurs ; le reste de la page reste lisible par les coordonnateurs.
+    if (this.view === 'coordinators' || this.view === 'accounts') return this.auth.isFounder();
+    return ['programs', 'territories'].includes(this.view);
   }
   protected completeForm(event: SubmitEvent): void {
     event.preventDefault();
     if ((event.currentTarget as HTMLFormElement).reportValidity()) this.formSaved.set(true);
-  }
-  protected sortBy(key: 'name' | 'place' | 'date'): void {
-    if (this.sortKey() === key) this.sortAsc.set(!this.sortAsc());
-    else {
-      this.sortKey.set(key);
-      this.sortAsc.set(key !== 'date');
-    }
-  }
-  protected sortIndicator(key: 'name' | 'place' | 'date'): string {
-    if (this.sortKey() !== key) return '↕';
-    return this.sortAsc() ? '↑' : '↓';
-  }
-  protected ariaSort(key: 'name' | 'place' | 'date'): string | null {
-    if (this.sortKey() !== key) return null;
-    return this.sortAsc() ? 'ascending' : 'descending';
-  }
-  /** Les données de démonstration sont rangées de la plus récente à la plus ancienne. */
-  protected get sortedPeople() {
-    const direction = this.sortAsc() ? 1 : -1;
-    const key = this.sortKey();
-    const place = (person: { city: string; email: string }) =>
-      this.view === 'accounts' ? person.email : person.city;
-    return this.visiblePeople
-      .map((person, order) => ({ ...person, order }))
-      .sort((a, b) => {
-        if (key === 'date') return (b.order - a.order) * direction;
-        const left = key === 'name' ? a.name : place(a);
-        const right = key === 'name' ? b.name : place(b);
-        return left.localeCompare(right, 'fr') * direction;
-      });
-  }
-  protected get visiblePeople() {
-    return this.requests.slice(0, 6).map((person, index) => ({
-      ...person,
-      role: this.view === 'coordinators' ? 'Coordonnateur' : person.role,
-      status: index === 5 ? 'Inactif' : 'Actif',
-    }));
   }
 }

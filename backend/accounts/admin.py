@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
+from members.models import Member
+
 from .models import LoginFailure, User
 
 
@@ -18,6 +20,11 @@ class TabaxiUserAdmin(UserAdmin):
         ('Rôle et droits', {'fields': ('role', 'territory', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Dates', {'fields': ('last_login', 'date_joined')}),
     )
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change and obj.is_bureau and obj.has_usable_password():
+            Member.objects.get_or_create(user=obj)  # un compte du bureau a son dossier et sa carte
+
     def get_readonly_fields(self, request, obj=None):
         readonly = super().get_readonly_fields(request, obj)
         # Pour un membre, l'accès suit son statut : on le change depuis la fiche du membre.

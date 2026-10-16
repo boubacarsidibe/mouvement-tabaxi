@@ -49,12 +49,14 @@ export interface MemberPage {
 }
 
 export interface MemberFilters {
-  role?: 'membre' | 'coordonnateur' | 'fondateur';
-  territory?: number | null;
-  /** Dates d'adhésion AAAA-MM-JJ, bornes comprises. */
-  joinedFrom?: string;
-  joinedTo?: string;
+  /** Rôles recherchés, séparés par des virgules ; les membres simples si absent. */
+  role?: string;
   status?: MemberStatus | '';
+  /** Territoire et tous ceux qui en dépendent. */
+  territory?: number | '';
+  /** Date d'adhésion de, au format AAAA-MM-JJ (bornes comprises). */
+  joined_from?: string;
+  joined_to?: string;
   search?: string;
   ordering?: MemberOrdering;
   page?: number;
@@ -67,11 +69,11 @@ export class MembersService {
 
   list(filters: MemberFilters = {}): Promise<MemberPage> {
     let params = new HttpParams();
-    if (filters.role && filters.role !== 'membre') params = params.set('role', filters.role);
-    if (filters.territory) params = params.set('territory', filters.territory);
-    if (filters.joinedFrom) params = params.set('joined_from', filters.joinedFrom);
-    if (filters.joinedTo) params = params.set('joined_to', filters.joinedTo);
+    if (filters.role) params = params.set('role', filters.role);
     if (filters.status) params = params.set('status', filters.status);
+    if (filters.territory) params = params.set('territory', filters.territory);
+    if (filters.joined_from) params = params.set('joined_from', filters.joined_from);
+    if (filters.joined_to) params = params.set('joined_to', filters.joined_to);
     if (filters.search?.trim()) params = params.set('search', filters.search.trim());
     if (filters.ordering && filters.ordering !== '-date')
       params = params.set('ordering', filters.ordering);

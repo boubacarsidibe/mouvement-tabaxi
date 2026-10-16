@@ -29,7 +29,12 @@ class UserManager(BaseUserManager):
         extra.setdefault('is_staff', True)
         extra.setdefault('is_superuser', True)
         extra.setdefault('role', User.Role.FONDATEUR)
-        return self._create_user(email, password, **extra)
+        user = self._create_user(email, password, **extra)
+        # Un fondateur figure dans la base des coordonnateurs et a sa carte : il lui faut un dossier de membre.
+        from members.models import Member
+
+        Member.objects.get_or_create(user=user)
+        return user
 
     def get_by_natural_key(self, email):
         # « Awa.Ndiaye@… » et « awa.ndiaye@… » désignent le même compte.
