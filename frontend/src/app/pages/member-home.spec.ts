@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService } from '../core/auth.service';
-import { FRENCH, TEST_MEMBER } from '../core/testing';
+import { FRENCH, TEST_COORDINATOR, TEST_MEMBER } from '../core/testing';
 import { MemberPage } from './member-page';
 
 const PROFILE = {
@@ -55,8 +55,8 @@ describe('Espace membre : accueil', () => {
 
   afterEach(() => http.verify());
 
-  async function open(programs: object[], profile: object = PROFILE) {
-    TestBed.inject(AuthService).signedIn(TEST_MEMBER);
+  async function open(programs: object[], profile: object = PROFILE, user = TEST_MEMBER) {
+    TestBed.inject(AuthService).signedIn(user);
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/membre');
     root = harness.routeNativeElement as HTMLElement;
@@ -89,6 +89,20 @@ describe('Espace membre : accueil', () => {
     expect(root.querySelector('a[href="mailto:rokhaya@example.org"]')).not.toBeNull();
     expect(text).not.toContain('Mamadou Diop'); // l'ancien exemple
     expect(text).not.toContain('+221 77 123 45 67');
+  });
+
+  it('ne montre pas « Mon coordonnateur » à un membre du bureau', async () => {
+    await open([], { ...PROFILE, role: 'coordonnateur', role_label: 'Coordonnateur', coordinator: null }, TEST_COORDINATOR);
+    expect(root.textContent).not.toContain('Mon coordonnateur');
+    expect(root.querySelector('.coordinator-panel')).toBeNull();
+    expect(root.querySelector('.member-grid')?.classList).toContain('no-coordinator');
+    // La carte affiche le rôle par-dessus « Membre adhérent ».
+    expect(root.querySelector('.card-role')?.textContent?.trim()).toBe('Coordonnateur');
+  });
+
+  it('n’écrit rien par-dessus « Membre adhérent » pour un membre simple', async () => {
+    await open([]);
+    expect(root.querySelector('.card-role')).toBeNull();
   });
 
   it('dit quand aucun coordonnateur n’est rattaché', async () => {

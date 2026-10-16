@@ -45,6 +45,8 @@ export function cardData(profile: MemberProfile): MemberCardData {
     locality: profile.locality || profile.territory?.name || '',
     date: formatDate(profile.joined_on),
     photo: profile.photo_url,
+    // Le modèle porte « Membre adhérent » : seuls les autres rôles sont écrits par-dessus.
+    role: profile.role === 'membre' ? '' : profile.role_label,
   };
 }
 

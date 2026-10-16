@@ -282,6 +282,17 @@ WHITENOISE_USE_FINDERS = True
 # renvoie après contrôle d'accès. Le dossier est ignoré par Git.
 MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
+# Sans disque durable (Vercel), les photos sont gardées en base, chiffrées (core/storage.py) :
+# DJANGO_FILE_STORAGE=database. Sinon, sur le disque (MEDIA_ROOT).
+STORAGES = {
+    'default': {
+        'BACKEND': 'core.storage.DatabaseStorage'
+        if os.environ.get('DJANGO_FILE_STORAGE') == 'database'
+        else 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

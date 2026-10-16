@@ -12,6 +12,9 @@ import { Component, Input } from '@angular/core';
       @if (photo) {
         <img class="card-portrait" [src]="photo" [alt]="'Portrait de ' + name" />
       }
+      @if (role) {
+        <div class="card-role">{{ role }}</div>
+      }
       <div class="card-value card-name">{{ name }}</div>
       <div class="card-value card-number">{{ number }}</div>
       <div class="card-value card-locality">{{ locality }}</div>
@@ -25,5 +28,7 @@ export class MemberCard {
   @Input() number = '';
   @Input() locality = '';
   @Input() date = '';
+  /** Rôle affiché à la place de « Membre adhérent » (fondateur, coordonnateur) ; vide pour un membre. */
+  @Input() role = '';
   @Input() photo: string | null = null;
 }

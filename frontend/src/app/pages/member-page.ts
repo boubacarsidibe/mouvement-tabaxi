@@ -95,7 +95,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                 </div>
               </article>
             </section>
-            <section class="member-grid">
+            <section class="member-grid" [class.no-coordinator]="auth.user()?.is_bureau">
               <article class="panel member-card-panel">
                 <h2>Votre carte de membre</h2>
                 @if (card(); as data) {
@@ -105,6 +105,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     [locality]="data.locality"
                     [date]="data.date"
                     [photo]="data.photo"
+                    [role]="data.role ?? ''"
                   /><a routerLink="/membre/carte">Voir ma carte numérique <span>→</span></a>
                 } @else {
                   <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
@@ -144,6 +145,8 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   </p>
                 }
               </article>
+              <!-- Coordonnateurs et fondateurs n'ont pas de coordonnateur au-dessus d'eux. -->
+              @if (!auth.user()?.is_bureau) {
               <article class="panel coordinator-panel">
                 <h2>Mon coordonnateur</h2>
                 @if (profile(); as me) {
@@ -164,6 +167,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   <p class="info-note">Chargement…</p>
                 }
               </article>
+              }
             </section>
             <section class="activity-grid member-upcoming">
               <article class="panel upcoming-panel">
@@ -220,6 +224,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                 [locality]="data.locality"
                 [date]="data.date"
                 [photo]="data.photo"
+                [role]="data.role ?? ''"
               />
             } @else {
               <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
