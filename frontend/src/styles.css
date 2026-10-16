@@ -201,7 +201,7 @@ small {
 }
 .public-frame {
   max-width: 1420px;
-  min-height: calc(calc(100vh / var(--echelle)) - 32px);
+  min-height: 0;
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.75);
@@ -370,7 +370,7 @@ small {
   z-index: 4;
   display: grid;
   grid-area: roles;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   align-self: end;
 }
@@ -417,13 +417,13 @@ small {
   border-radius: 50%;
   font-size: 17px;
 }
-.role-founder {
+.role-login {
   border-color: var(--green-700);
   background: linear-gradient(145deg, #087b51, #005538);
   color: #fff;
 }
-.role-founder ui-icon,
-.role-founder span {
+.role-login ui-icon,
+.role-login span {
   color: #fff;
 }
 .role-join {
@@ -2232,6 +2232,10 @@ table input {
   .role-card strong {
     font-size: 16px;
   }
+  .role-card span {
+    /* Laisse la place de la flèche en bas à droite de la carte. */
+    padding-right: 36px;
+  }
   .member-strip {
     width: 100%;
   }
@@ -2491,7 +2495,7 @@ h3 {
   font-weight: 600;
   transform: none;
 }
-.role-founder {
+.role-login {
   background: var(--green-800);
 }
 .role-join {
@@ -2751,10 +2755,10 @@ h3 {
 .auth-frame,
 .status-frame,
 .policy-frame {
-  min-height: calc(calc(100vh / var(--echelle)) - 32px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 32px), 900px);
 }
 .auth-layout {
-  min-height: calc(calc(100vh / var(--echelle)) - 110px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 110px), 900px);
   display: grid;
   grid-template-columns: minmax(360px, 0.88fr) minmax(440px, 1.12fr);
 }
@@ -2886,7 +2890,7 @@ h3 {
 .status-layout,
 .policy-layout {
   max-width: 1160px;
-  min-height: calc(calc(100vh / var(--echelle)) - 140px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 140px), 900px);
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 72px;
@@ -3588,11 +3592,11 @@ h3 {
   overflow: hidden;
 }
 .status-v2 .status-frame {
-  min-height: calc(calc(100vh / var(--echelle)) - 32px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 32px), 900px);
   overflow: hidden;
 }
 .enrollment-shell {
-  min-height: calc(calc(100vh / var(--echelle)) - 32px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 32px), 900px);
   display: grid;
   place-items: center;
   padding: clamp(28px, calc(5vw / var(--echelle)), 52px);
@@ -3896,7 +3900,7 @@ h3 {
 
 /* Confirmation step */
 .confirmation-shell {
-  min-height: calc(calc(100vh / var(--echelle)) - 108px);
+  min-height: min(calc(calc(100vh / var(--echelle)) - 108px), 900px);
   padding: 30px clamp(24px, calc(5vw / var(--echelle)), 72px) 56px;
   background: #f4f7f3;
 }

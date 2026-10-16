@@ -30,27 +30,6 @@ import { UiIcon } from '../shared/ui-icon';
             Notre engagement<br />pour des communautés<br />plus fortes <i></i>
           </div>
 
-          <div class="role-row">
-            <a class="role-card role-founder" routerLink="/bureau">
-              <ui-icon name="users" />
-              <strong>Membre fondateur</strong>
-              <span>Contribuez dès aujourd’hui à bâtir le mouvement.</span>
-              <b aria-hidden="true">→</b>
-            </a>
-            <a class="role-card role-member" routerLink="/membre">
-              <ui-icon name="users" />
-              <strong>Membre simple</strong>
-              <span>Rejoignez une communauté citoyenne active.</span>
-              <b aria-hidden="true">→</b>
-            </a>
-            <a class="role-card role-join" routerLink="/adherer">
-              <ui-icon name="plus" />
-              <strong>Je souhaite<br />devenir membre</strong>
-              <span>Commencez votre demande d’adhésion en quelques minutes.</span>
-              <b aria-hidden="true">→</b>
-            </a>
-          </div>
-
           <aside class="member-strip" aria-label="Exemples de membres du mouvement">
             <h2>Découvrez des membres du mouvement</h2>
             <div class="member-faces">
@@ -74,7 +53,7 @@ import { UiIcon } from '../shared/ui-icon';
             Les membres découvrent les activités proches de chez eux. Les coordonnateurs organisent
             les programmes et gardent une trace claire de ce qui a été accompli.
           </p>
-          <a class="btn btn-green" routerLink="/membre/programmes"
+          <a class="btn btn-green" routerLink="/" fragment="programmes"
             >Découvrir les programmes <span>→</span></a
           >
         </div>
