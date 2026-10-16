@@ -188,6 +188,14 @@ if os.environ.get('DATABASE_URL'):
     import dj_database_url
 
     DATABASES = {'default': dj_database_url.parse(os.environ['DATABASE_URL'], conn_max_age=60)}
+    # Une connexion gardée peut avoir été coupée pendant la mise en veille de la base (Neon) :
+    # elle est vérifiée avant d'être réutilisée.
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    if DATABASES['default']['ENGINE'].endswith('postgresql'):
+        # Le répartiteur de connexions de Neon ne garde pas les requêtes préparées côté serveur
+        # d'une transaction à l'autre, ni les curseurs côté serveur.
+        DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
 else:
     DATABASES = {
         'default': {
@@ -280,3 +288,13 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-
 
 # Adresse publique du frontend, pour les liens personnels envoyés par courriel.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+
+# Journaux : en production, les erreurs du serveur (500) sont écrites sur la sortie d'erreur,
+# lue par l'hébergeur. Sans ce réglage, Django ne les envoie qu'aux ADMINS par courriel.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'django': {'handlers': ['console'], 'level': 'ERROR' if not DEBUG else 'INFO'}},
+}

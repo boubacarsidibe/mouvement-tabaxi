@@ -294,3 +294,32 @@ class BureauInactivityTests(TestCase):
     def test_code_d_erreur_ordinaire_sans_session(self):
         response = self.client.get('/api/auth/me/')
         self.assertEqual(response.json()['code'], 'not_authenticated')
+
+
+class ClientIpTests(TestCase):
+    """L'adresse enregistrée lors d'un échec est toujours une vraie adresse IP (colonne inet de Postgres)."""
+
+    def _ip(self, forwarded=None, remote='10.0.0.1', proxies=1):
+        from django.test import RequestFactory
+
+        from accounts import lockout
+
+        meta = {'REMOTE_ADDR': remote}
+        if forwarded is not None:
+            meta['HTTP_X_FORWARDED_FOR'] = forwarded
+        with self.settings(LOGIN_TRUSTED_PROXIES=proxies):
+            return lockout.client_ip(RequestFactory().post('/api/auth/login/', **meta))
+
+    def test_adresse_simple(self):
+        self.assertEqual(self._ip('203.0.113.7'), '203.0.113.7')
+
+    def test_port_retire(self):
+        self.assertEqual(self._ip('203.0.113.7:51234'), '203.0.113.7')
+        self.assertEqual(self._ip('[2001:db8::1]:443'), '2001:db8::1')
+
+    def test_ipv6(self):
+        self.assertEqual(self._ip('2001:db8::1'), '2001:db8::1')
+
+    def test_valeur_invalide_ignoree(self):
+        self.assertIsNone(self._ip('pas-une-adresse'))
+        self.assertIsNone(self._ip(None, remote='inconnue', proxies=0))
