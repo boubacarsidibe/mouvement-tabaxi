@@ -1,4 +1,4 @@
-/** Informations affichées sur la carte de membre (données de démonstration). */
+/** Informations affichées sur la carte de membre. */
 export interface MemberCardData {
   name: string;
   number: string;
@@ -6,14 +6,6 @@ export interface MemberCardData {
   date: string;
   photo: string | null;
 }
-
-export const DEMO_MEMBER: MemberCardData = {
-  name: 'Aminata Ndiaye',
-  number: 'TBX-2026-00125',
-  locality: 'Dakar, Sénégal',
-  date: '12/03/2026',
-  photo: 'member-aminata.jpg',
-};
 
 /**
  * Zones du modèle de carte (1080 x 720 pixels).

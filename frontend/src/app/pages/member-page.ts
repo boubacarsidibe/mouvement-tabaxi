@@ -1,8 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { MemberCard } from '../shared/member-card';
-import { DEMO_MEMBER, drawMemberCard } from '../shared/member-card-image';
+import { readProblem } from '../core/api-problem';
+import { MemberProfile, ProfileService, cardData, formatDate } from '../core/profile.service';
+import { drawMemberCard } from '../shared/member-card-image';
 import { UiIcon } from '../shared/ui-icon';
 
 @Component({
@@ -74,11 +76,11 @@ import { UiIcon } from '../shared/ui-icon';
             <section class="welcome-banner">
               <img src="hero-tabaxi.jpg" alt="" />
               <div>
-                <h2>Bienvenue, Aminata</h2>
+                <h2>Bienvenue, {{ auth.user()?.first_name }}</h2>
                 <p>Ensemble pour une citoyenneté active<br />et un avenir meilleur.</p>
-                <strong
-                  ><ui-icon name="location" /> Dakar <span>12 activités ce mois-ci</span></strong
-                >
+                @if (auth.user()?.territory; as territory) {
+                  <strong><ui-icon name="location" /> {{ territory.name }}</strong>
+                }
               </div>
               <em>Notre engagement<br />pour des communautés<br />plus fortes</em>
             </section>
@@ -99,28 +101,45 @@ import { UiIcon } from '../shared/ui-icon';
             <section class="member-grid">
               <article class="panel member-card-panel">
                 <h2>Votre carte de membre</h2>
-                <app-member-card /><a routerLink="/membre/carte"
-                  >Voir ma carte numérique <span>→</span></a
-                >
+                @if (card(); as data) {
+                  <app-member-card
+                    [name]="data.name"
+                    [number]="data.number"
+                    [locality]="data.locality"
+                    [date]="data.date"
+                    [photo]="data.photo"
+                  /><a routerLink="/membre/carte">Voir ma carte numérique <span>→</span></a>
+                } @else {
+                  <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
+                    {{ profileError() || 'Chargement de votre dossier…' }}
+                  </p>
+                }
               </article>
               <article class="panel profile-panel">
                 <div class="panel-title">
                   <h2>Mon profil</h2>
                   <a routerLink="/membre/profil"><ui-icon name="plus" />Modifier</a>
                 </div>
-                <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
-                <h3>Aminata Ndiaye</h3>
-                <span class="badge success">Membre actif</span>
-                <dl>
-                  <dt>N° d’adhérent</dt>
-                  <dd>TBX-2026-00125</dd>
-                  <dt>Localité</dt>
-                  <dd>Dakar</dd>
-                  <dt>Rôle</dt>
-                  <dd>Membre</dd>
-                  <dt>Date d’adhésion</dt>
-                  <dd>12 mars 2026</dd>
-                </dl>
+                @if (profile(); as me) {
+                  @if (me.photo_url) {
+                    <img [src]="photoSrc()" [alt]="'Photo de ' + auth.displayName()" />
+                  }
+                  <h3>{{ auth.displayName() }}</h3>
+                  <dl>
+                    <dt>N° d’adhérent</dt>
+                    <dd>{{ me.number }}</dd>
+                    <dt>Localité</dt>
+                    <dd>{{ me.territory?.name }}</dd>
+                    <dt>Rôle</dt>
+                    <dd>{{ me.role_label }}</dd>
+                    <dt>Date d’adhésion</dt>
+                    <dd>{{ joinedOn() }}</dd>
+                  </dl>
+                } @else {
+                  <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
+                    {{ profileError() || 'Chargement de votre dossier…' }}
+                  </p>
+                }
               </article>
               <article class="panel coordinator-panel">
                 <h2>Mon coordonnateur</h2>
@@ -238,11 +257,24 @@ import { UiIcon } from '../shared/ui-icon';
                 <p>Votre carte de membre officielle du Mouvement TABAXI</p>
               </div>
             </header>
-            <app-member-card [large]="true" />
+            @if (card(); as data) {
+              <app-member-card
+                [large]="true"
+                [name]="data.name"
+                [number]="data.number"
+                [locality]="data.locality"
+                [date]="data.date"
+                [photo]="data.photo"
+              />
+            } @else {
+              <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
+                    {{ profileError() || 'Chargement de votre dossier…' }}
+                  </p>
+            }
             <div class="card-actions">
-              <button class="btn btn-green" type="button" (click)="downloadCard()">
+              <button class="btn btn-green" type="button" [disabled]="!card()" (click)="downloadCard()">
                 <ui-icon name="download" />Télécharger en image</button
-              ><button class="btn btn-outline" type="button" (click)="printCard()">
+              ><button class="btn btn-outline" type="button" [disabled]="!card()" (click)="printCard()">
                 <ui-icon name="card" />Enregistrer en PDF
               </button>
             </div>
@@ -264,51 +296,83 @@ import { UiIcon } from '../shared/ui-icon';
                 <h1>Mon profil</h1>
                 <p>Mettez à jour vos coordonnées et votre photo.</p>
               </div>
-              <span class="badge success">Membre actif</span>
             </header>
-            <form class="workspace-form panel" (submit)="saveProfile($event)">
-              <section class="profile-identity">
-                <img src="member-aminata.jpg" alt="Aminata Ndiaye" />
-                <div>
-                  <h2>Photo de profil</h2>
-                  <p>JPG ou PNG, 5 Mo maximum.</p>
-                  <button class="btn btn-outline" type="button">Choisir une photo</button>
+            @if (profile(); as me) {
+              <form class="workspace-form panel" (submit)="saveProfile($event)">
+                <section class="profile-identity">
+                  @if (me.photo_url) {
+                    <img [src]="photoSrc()" [alt]="'Photo de ' + auth.displayName()" />
+                  }
+                  <div>
+                    <h2>Photo de profil</h2>
+                    <p>JPG ou PNG, 5 Mo maximum.</p>
+                    <input
+                      type="file"
+                      name="photo"
+                      accept="image/jpeg,image/png"
+                      aria-label="Choisir une photo"
+                      (change)="photoChosen($event)"
+                    />
+                    @if (fieldErrors()['photo']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </div>
+                </section>
+                <div class="field-grid">
+                  <label
+                    >Prénom <input [value]="me.first_name" disabled /><small
+                      >Modifiable uniquement par le bureau.</small
+                    ></label
+                  >
+                  <label
+                    >Nom <input [value]="me.last_name" disabled /><small
+                      >Modifiable uniquement par le bureau.</small
+                    ></label
+                  >
                 </div>
-              </section>
-              <div class="field-grid">
                 <label
-                  >Prénom <input value="Aminata" disabled /><small
+                  >Adresse courriel <input type="email" [value]="me.email" disabled /><small
                     >Modifiable uniquement par le bureau.</small
                   ></label
                 >
                 <label
-                  >Nom <input value="Ndiaye" disabled /><small
-                    >Modifiable uniquement par le bureau.</small
-                  ></label
-                >
-              </div>
-              <label
-                >Adresse courriel <input type="email" value="aminata.ndiaye@gmail.com" required
-              /></label>
-              <label
-                >Adresse complète <input value="18, rue de la Corniche, Dakar" required
-              /></label>
-              <div class="field-grid">
-                <label>Téléphone <input type="tel" value="+221 77 456 78 90" /></label>
-                <label
-                  >Territoire <input value="Dakar" disabled /><small
-                    >Rattaché par le bureau.</small
-                  ></label
-                >
-              </div>
-              <div class="form-actions">
-                <a class="btn btn-outline" routerLink="/membre">Annuler</a>
-                <button class="btn btn-green" type="submit">Enregistrer les modifications</button>
-              </div>
-              @if (profileSaved()) {
-                <p class="inline-success" role="status">✓ Vos informations ont été enregistrées.</p>
-              }
-            </form>
+                  >Adresse complète
+                  <input name="address" [value]="me.address" required maxlength="255" />
+                  @if (fieldErrors()['address']; as message) {
+                    <small class="field-error" role="alert">{{ message }}</small>
+                  }
+                </label>
+                <div class="field-grid">
+                  <label
+                    >Téléphone <input type="tel" name="phone" [value]="me.phone" maxlength="30" />
+                    @if (fieldErrors()['phone']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </label>
+                  <label
+                    >Territoire <input [value]="me.territory?.name ?? ''" disabled /><small
+                      >Rattaché par le bureau.</small
+                    ></label
+                  >
+                </div>
+                <div class="form-actions">
+                  <a class="btn btn-outline" routerLink="/membre">Annuler</a>
+                  <button class="btn btn-green" type="submit" [disabled]="saving()">
+                    Enregistrer les modifications
+                  </button>
+                </div>
+                @if (profileSaved()) {
+                  <p class="inline-success" role="status">✓ Vos informations ont été enregistrées.</p>
+                }
+                @if (formError()) {
+                  <p class="inline-error" role="alert">{{ formError() }}</p>
+                }
+              </form>
+            } @else {
+              <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
+                {{ profileError() || 'Chargement de votre dossier…' }}
+              </p>
+            }
           </div>
         }
 
@@ -392,19 +456,56 @@ import { UiIcon } from '../shared/ui-icon';
               <form class="workspace-form panel" (submit)="savePassword($event)">
                 <h2>Changer mon mot de passe</h2>
                 <p>Utilisez au moins 10 caractères, avec une lettre et un chiffre.</p>
-                <label>Mot de passe actuel <input type="password" required minlength="10" /></label>
+                <label
+                  >Mot de passe actuel
+                  <input
+                    type="password"
+                    name="current_password"
+                    autocomplete="current-password"
+                    required
+                  />
+                  @if (fieldErrors()['current_password']; as message) {
+                    <small class="field-error" role="alert">{{ message }}</small>
+                  }
+                </label>
                 <div class="field-grid">
                   <label
-                    >Nouveau mot de passe <input type="password" required minlength="10" /></label
-                  ><label
-                    >Confirmer le mot de passe <input type="password" required minlength="10"
-                  /></label>
+                    >Nouveau mot de passe
+                    <input
+                      type="password"
+                      name="new_password"
+                      autocomplete="new-password"
+                      required
+                      minlength="10"
+                    />
+                    @if (fieldErrors()['new_password']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </label>
+                  <label
+                    >Confirmer le mot de passe
+                    <input
+                      type="password"
+                      name="new_password_confirm"
+                      autocomplete="new-password"
+                      required
+                      minlength="10"
+                    />
+                    @if (fieldErrors()['new_password_confirm']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </label>
                 </div>
                 <div class="form-actions">
-                  <button class="btn btn-green" type="submit">Mettre à jour</button>
+                  <button class="btn btn-green" type="submit" [disabled]="saving()">
+                    Mettre à jour
+                  </button>
                 </div>
                 @if (passwordSaved()) {
                   <p class="inline-success" role="status">✓ Mot de passe mis à jour.</p>
+                }
+                @if (formError()) {
+                  <p class="inline-error" role="alert">{{ formError() }}</p>
                 }
               </form>
               <article class="panel session-panel">
@@ -427,23 +528,83 @@ export class MemberPage {
   protected readonly auth = inject(AuthService);
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
+  private readonly profiles = inject(ProfileService);
   protected readonly joined = signal(false);
   protected readonly profileSaved = signal(false);
   protected readonly passwordSaved = signal(false);
   protected readonly cardError = signal('');
+  protected readonly profile = signal<MemberProfile | null>(null);
+  protected readonly profileError = signal('');
+  protected readonly fieldErrors = signal<Record<string, string>>({});
+  protected readonly formError = signal('');
+  protected readonly saving = signal(false);
+  /** Change à chaque nouvelle photo, pour que le navigateur recharge l'image. */
+  private readonly photoVersion = signal(0);
+  private newPhoto: File | null = null;
+
+  protected readonly card = computed(() => {
+    const me = this.profile();
+    return me ? cardData({ ...me, photo_url: me.photo_url && this.photoUrl(me) }) : null;
+  });
+  protected readonly joinedOn = computed(() => {
+    const me = this.profile();
+    return me ? formatDate(me.joined_on) : '';
+  });
+
+  constructor() {
+    if (this.view === 'home' || this.view === 'card' || this.view === 'profile') void this.loadProfile();
+  }
+
+  private photoUrl(me: MemberProfile): string {
+    return `${me.photo_url}?v=${this.photoVersion()}`;
+  }
+
+  protected photoSrc(): string {
+    const me = this.profile();
+    return me?.photo_url ? this.photoUrl(me) : '';
+  }
+
+  private async loadProfile(): Promise<void> {
+    try {
+      this.profile.set(await this.profiles.load());
+    } catch (error) {
+      const problem = readProblem(error);
+      this.profileError.set(
+        problem.status === 404
+          ? 'Aucun dossier de membre n’est rattaché à ce compte.'
+          : problem.message,
+      );
+    }
+  }
 
   protected async downloadCard(): Promise<void> {
     this.cardError.set('');
+    const data = this.card();
+    if (!data) return;
     try {
-      const blob = await drawMemberCard(DEMO_MEMBER);
+      const blob = await drawMemberCard(data);
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `carte-TABAXI-${DEMO_MEMBER.number}.png`;
+      link.download = `carte-TABAXI-${data.number}.png`;
       link.click();
       URL.revokeObjectURL(link.href);
     } catch {
       this.cardError.set('La carte n’a pas pu être téléchargée. Réessayez dans un instant.');
     }
+  }
+
+  protected photoChosen(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    this.fieldErrors.update(({ photo: _removed, ...rest }) => rest);
+    if (file && file.size > 5 * 1024 * 1024) {
+      this.newPhoto = null;
+      this.fieldErrors.update((errors) => ({
+        ...errors,
+        photo: 'La photo dépasse 5 Mo. Choisissez une image plus légère.',
+      }));
+      return;
+    }
+    this.newPhoto = file;
   }
 
   protected async logout(): Promise<void> {
@@ -456,14 +617,63 @@ export class MemberPage {
     window.print();
   }
 
-  protected saveProfile(event: SubmitEvent): void {
+  protected async saveProfile(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.profileSaved.set(true);
+    const form = event.currentTarget as HTMLFormElement;
+    if (!form.reportValidity() || this.fieldErrors()['photo']) return;
+    const data = new FormData();
+    data.set('address', (form.elements.namedItem('address') as HTMLInputElement).value.trim());
+    data.set('phone', (form.elements.namedItem('phone') as HTMLInputElement).value.trim());
+    if (this.newPhoto) data.set('photo', this.newPhoto);
+    this.begin();
+    try {
+      this.profile.set(await this.profiles.save(data));
+      this.newPhoto = null;
+      this.photoVersion.update((v) => v + 1);
+      this.profileSaved.set(true);
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  protected savePassword(event: SubmitEvent): void {
+  protected async savePassword(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    if ((event.currentTarget as HTMLFormElement).reportValidity()) this.passwordSaved.set(true);
+    const form = event.currentTarget as HTMLFormElement;
+    if (!form.reportValidity()) return;
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value;
+    this.begin();
+    try {
+      await this.profiles.changePassword({
+        current_password: value('current_password'),
+        new_password: value('new_password'),
+        new_password_confirm: value('new_password_confirm'),
+      });
+      form.reset();
+      this.passwordSaved.set(true);
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  private begin(): void {
+    this.saving.set(true);
+    this.profileSaved.set(false);
+    this.passwordSaved.set(false);
+    this.formError.set('');
+    this.fieldErrors.update((errors): Record<string, string> => {
+      const photo = errors['photo'];
+      return photo ? { photo } : {};
+    });
+  }
+
+  private fail(error: unknown): void {
+    const problem = readProblem(error);
+    this.fieldErrors.update((errors) => ({ ...errors, ...problem.fields }));
+    this.formError.set(problem.message);
   }
 
   protected readonly stats = [

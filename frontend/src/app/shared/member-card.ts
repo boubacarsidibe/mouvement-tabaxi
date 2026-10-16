@@ -1,5 +1,4 @@
 import { Component, Input } from '@angular/core';
-import { DEMO_MEMBER } from './member-card-image';
 
 /**
  * Carte de membre : le modèle officiel du mouvement sert de fond,
@@ -22,9 +21,9 @@ import { DEMO_MEMBER } from './member-card-image';
 })
 export class MemberCard {
   @Input() large = false;
-  @Input() name = DEMO_MEMBER.name;
-  @Input() number = DEMO_MEMBER.number;
-  @Input() locality = DEMO_MEMBER.locality;
-  @Input() date = DEMO_MEMBER.date;
-  @Input() photo: string | null = DEMO_MEMBER.photo;
+  @Input() name = '';
+  @Input() number = '';
+  @Input() locality = '';
+  @Input() date = '';
+  @Input() photo: string | null = null;
 }

@@ -148,6 +148,7 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - **Angular** (composants autonomes), appels à l'API sous `/api` (redirigés vers le backend en développement par `proxy.conf.json`).
 - Interface mobile d'abord, en français.
 - Deux espaces : membre et bureau exécutif, ouverts selon le rôle renvoyé après la connexion.
+- Espace membre : le tableau de bord, le profil et la carte numérique lisent `GET /api/members/me/` (`core/profile.service.ts`) ; le profil enregistre l'adresse, le téléphone et la photo par `PATCH /api/members/me/` (formulaire multipart) et le mot de passe se change par `POST /api/auth/password/change/`. La carte (affichage, image téléchargée, impression) est dessinée à partir de ces mêmes données. Un compte sans dossier de membre (bureau seul) voit un message clair.
 
 ## Flux principal : demande d'adhésion
 

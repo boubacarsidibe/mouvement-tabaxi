@@ -34,6 +34,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : mot de passe oublié (lien valable une heure, utilisable une fois) et changement du mot de passe une fois connecté (#29).
 - Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
 - Backend : profil du membre connecté (lecture des données de la carte, modification de l'adresse, du téléphone et de la photo ; nom et territoire réservés au bureau) (#33).
+- Frontend : « Mon profil » et « Ma carte numérique » relient `/api/members/me/` : nom, numéro, territoire, date d'adhésion et photo réels sur le tableau de bord et la carte (téléchargement en image compris), modification de l'adresse, du téléphone et de la photo, changement du mot de passe via `/api/auth/password/change/`, erreurs du serveur affichées en français ; plus aucune donnée de démonstration sur ces écrans (#33, #35).
 
 ### Modifié
 
