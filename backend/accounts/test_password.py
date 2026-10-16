@@ -126,3 +126,39 @@ class PasswordResetTests(TestCase):
         )
         self.assertEqual(login(PASSWORD).status_code, 400)
         self.assertEqual(login(NEW_PASSWORD).status_code, 200)
+
+
+class PasswordChangeTests(TestCase):
+    url = '/api/auth/password/change/'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('awa@example.org', PASSWORD, first_name='Awa')
+
+    def change(self, current=PASSWORD, new=NEW_PASSWORD, confirm=None):
+        return self.client.post(
+            self.url,
+            {'current_password': current, 'new_password': new, 'new_password_confirm': confirm or new},
+            content_type='application/json',
+        )
+
+    def test_changement_et_session_gardee(self):
+        self.client.force_login(self.user)
+        self.assertEqual(self.change().status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(NEW_PASSWORD))
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
+
+    def test_mot_de_passe_actuel_incorrect(self):
+        self.client.force_login(self.user)
+        response = self.change(current='mauvais-mot-de-passe')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Le mot de passe actuel est incorrect.', response.json()['current_password'])
+
+    def test_nouveau_mot_de_passe_trop_faible_ou_different(self):
+        self.client.force_login(self.user)
+        self.assertEqual(self.change(new='1234567890').status_code, 400)
+        self.assertEqual(self.change(confirm='autre-chose-123456').status_code, 400)
+
+    def test_connexion_obligatoire(self):
+        self.assertIn(self.change().status_code, (401, 403))

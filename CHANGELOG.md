@@ -31,6 +31,9 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Backend : rattachement des comptes à un territoire et règle d'accès par territoire (un coordonnateur voit son territoire et ceux qui en dépendent, un fondateur voit tout) (#36).
 - Backend : dossier de membre avec numéro TBX-AAAA-NNNNN attribué automatiquement, unique et jamais réutilisé (#34).
 - Backend : finalisation de l'inscription avec le lien personnel (mot de passe, adresse et téléphone chiffrés, photo nettoyée), création du compte membre et passage de la demande à « Inscrite » (#25).
+- Backend : mot de passe oublié (lien valable une heure, utilisable une fois) et changement du mot de passe une fois connecté (#29).
+- Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
+- Backend : profil du membre connecté (lecture des données de la carte, modification de l'adresse, du téléphone et de la photo ; nom et territoire réservés au bureau) (#33).
 
 ### Modifié
 

@@ -102,6 +102,9 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 - Sans « rester connecté », la session se ferme avec le navigateur.
 - La session d'un coordonnateur ou d'un fondateur se ferme après 30 minutes sans requête (`accounts.middleware.BureauInactivityMiddleware`, réglable par `BUREAU_INACTIVITY_MINUTES`) ; la requête suivante reçoit `401 session_expired`. Les membres simples ne sont pas concernés.
 - Blocage temporaire (`accounts/lockout.py`) : après 5 échecs pour un même courriel, ou 20 depuis une même adresse IP, la connexion est refusée pendant 15 minutes (`429 too_many_attempts`, en-tête `Retry-After`), même avec le bon mot de passe. Une connexion réussie efface les échecs du compte ; les échecs sont effacés après un jour. Derrière un proxy en production, régler `LOGIN_TRUSTED_PROXIES` pour lire la vraie adresse du visiteur.
+- Mot de passe oublié (`accounts/password_reset.py`) : lien par courriel vers `FRONTEND_URL/nouveau-mot-de-passe?jeton=…`, valable **une heure**, utilisable une fois ; un nouveau lien annule le précédent ; trois demandes par heure au plus par compte. La réponse est la même qu'un compte existe ou non. Le nouveau mot de passe ferme les autres sessions et lève le blocage de connexion.
+- Invitation au bureau (`accounts/invitations.py`) : un fondateur saisit courriel, nom, fonction (coordonnateur ou fondateur) et territoire (obligatoire pour un coordonnateur). Le compte est créé sans mot de passe utilisable et un lien (7 jours, une fois) part vers `FRONTEND_URL/invitation?jeton=…` ; si le courriel ne part pas, rien n'est créé. En acceptant, la personne choisit son mot de passe, reçoit son dossier et son numéro, et sa session s'ouvre sur l'interface du bureau. Un fondateur invité a aussi accès à l'administration Django.
+- Liens personnels : base commune `core.models.OneTimeLink` (inscription, réinitialisation, invitation).
 - Protection CSRF aux noms attendus par Angular : Django dépose le cookie `XSRF-TOKEN` (à la connexion et sur `GET /api/auth/me/`), et chaque requête qui modifie renvoie sa valeur dans l'en-tête `X-XSRF-TOKEN`. Le client HTTP d'Angular le fait tout seul.
 
 ### Routes
@@ -119,6 +122,13 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 | `POST /api/auth/invitation/check/` | public | Vérifie le lien d'invitation. Corps : `token`. 200 avec la personne invitée ; 404 `invalid_link` ; 410 `link_used` ou `link_expired` |
 | `POST /api/auth/invitation/accept/` | public | La personne invitée choisit son mot de passe (`token`, `password`, `password_confirm`) ; le lien est consommé, la session s'ouvre et l'utilisateur est renvoyé (201) |
 | `GET /api/auth/me/` | connecté | Utilisateur connecté : `id`, `email`, `first_name`, `last_name`, `role`, `role_label`, `is_bureau`, `territory` ; 401 sinon |
+| `POST /api/auth/password/forgot/` | public | Demande un lien de réinitialisation. Corps : `email`. Toujours 200 avec le même message |
+| `POST /api/auth/password/reset/check/` | public | Vérifie un lien de réinitialisation. Corps : `token`. Renvoie `email`, `expires_at` ; 404 `invalid_link`, 410 `link_expired` ou `link_used` |
+| `POST /api/auth/password/reset/` | public | Nouveau mot de passe. Corps : `token`, `password`, `password_confirm`. 200 ; 400 avec un message par champ ; 404 ou 410 si le lien ne sert plus |
+| `POST /api/auth/password/change/` | connecté | Changement du mot de passe. Corps : `current_password`, `new_password`, `new_password_confirm`. La session reste ouverte, les autres sont fermées |
+| `POST /api/auth/invitations/` | fondateur | Invite au bureau. Corps : `email`, `first_name`, `last_name`, `role` (`coordonnateur` ou `fondateur`), `territory`. 201 ; 400 avec un message par champ ; 503 `email_not_sent` (aucun compte créé) |
+| `POST /api/auth/invitation/check/` | public | Vérifie un lien d'invitation. Corps : `token`. Renvoie `email`, `first_name`, `last_name`, `role`, `role_label`, `territory`, `expires_at` |
+| `POST /api/auth/invitation/accept/` | public | Accepte l'invitation. Corps : `token`, `password`, `password_confirm`. Renvoie l'utilisateur (201) et ouvre la session |
 | `GET /api/territories/` | public | Territoires actifs en arbre pays > région > commune, par ordre alphabétique : `[{"id", "name", "kind", "kind_label", "children": [...]}]`. Un territoire dont un parent est inactif n'apparaît pas |
 | `GET /api/territories/managed/` | bureau | Territoires du périmètre de la personne connectée, actifs ou non, en ordre d'arbre : `id`, `name`, `kind`, `kind_label`, `path`, `parent`, `is_active` |
 | `GET /api/territories/managed/<id>/` | bureau | Un territoire du périmètre ; 404 s'il est hors périmètre |
@@ -128,6 +138,8 @@ Modèle `members.Member`, relié à un compte (un dossier par compte) : numéro 
 | `POST /api/applications/<id>/accept/` | fondateur | Acceptation. Corps : `internal_note` (facultatif). Envoie le lien personnel d'inscription. 409 `already_decided` ; 503 `email_not_sent` (la demande reste « À examiner ») |
 | `POST /api/registration/check/` | public | Vérifie un lien personnel. Corps : `token`. Renvoie `first_name`, `last_name`, `email`, `territory`, `expires_at` ; 404 `invalid_link`, 410 `link_expired` ou `link_used` |
 | `POST /api/registration/` | public | Finalise l'inscription (formulaire multipart). Champs : `token`, `address`, `phone` (facultatif), `photo`, `password`, `password_confirm`, `accept_rules`. Renvoie `user` et `member_number` (201) et ouvre la session ; 400 avec un message par champ ; 409 `account_exists` |
+| `GET /api/members/me/` | connecté | Profil et données de carte : `number`, `joined_on`, `first_name`, `last_name`, `email`, `role`, `role_label`, `territory`, `address`, `phone`, `photo_url` ; 404 sans dossier de membre |
+| `PATCH /api/members/me/` | connecté | Modifie `address`, `phone`, `photo` (multipart pour la photo). Nom, courriel, territoire, numéro et date d'adhésion : 400 « Seul le bureau peut modifier cette information. » |
 | `GET /api/members/me/photo/` | connecté | Photo de profil de la personne connectée (JPEG) ; 404 sans photo |
 | `POST /api/applications/<id>/reject/` | fondateur | Refus. Corps : `reason` (obligatoire), `internal_note`. Envoie le motif par courriel. 409 `already_decided` ; 503 `email_not_sent` |
 

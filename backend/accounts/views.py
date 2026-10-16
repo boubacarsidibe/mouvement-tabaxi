@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -17,6 +17,7 @@ from .serializers import (
     InvitationDetailSerializer,
     InvitationSerializer,
     LoginSerializer,
+    PasswordChangeSerializer,
     PasswordResetSerializer,
     TokenSerializer,
     UserSerializer,
@@ -140,6 +141,20 @@ class PasswordResetView(APIView):
         except password_reset.LinkProblem as problem:
             return problem.response()
         return Response({'detail': 'Votre mot de passe a été modifié. Vous pouvez vous connecter.'})
+
+
+class PasswordChangeView(APIView):
+    """Changement du mot de passe par la personne connectée ; sa session reste ouverte."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data, context={'user': request.user})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)
+        return Response({'detail': 'Votre mot de passe a été mis à jour.'})
 
 
 class InvitationCreateView(APIView):

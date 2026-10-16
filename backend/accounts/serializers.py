@@ -35,6 +35,16 @@ class LoginSerializer(serializers.Serializer):
 PASSWORDS_DIFFER = 'Les deux mots de passe ne correspondent pas.'
 
 
+def check_new_password(password, confirmation, user, field='password', confirm_field='password_confirm'):
+    """Règles d'un nouveau mot de passe : confirmation identique et règles de sécurité de Django."""
+    if password != confirmation:
+        raise serializers.ValidationError({confirm_field: [PASSWORDS_DIFFER]})
+    try:
+        validate_password(password, user=user)
+    except DjangoValidationError as error:
+        raise serializers.ValidationError({field: error.messages})
+
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(label='courriel')
 
@@ -48,12 +58,25 @@ class PasswordResetSerializer(TokenSerializer):
     password_confirm = serializers.CharField(label='confirmation', trim_whitespace=False)
 
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError({'password_confirm': [PASSWORDS_DIFFER]})
-        try:
-            validate_password(data['password'], user=self.context['user'])
-        except DjangoValidationError as error:
-            raise serializers.ValidationError({'password': error.messages})
+        check_new_password(data['password'], data['password_confirm'], self.context['user'])
+        return data
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(label='mot de passe actuel', trim_whitespace=False)
+    new_password = serializers.CharField(label='nouveau mot de passe', trim_whitespace=False)
+    new_password_confirm = serializers.CharField(label='confirmation', trim_whitespace=False)
+
+    def validate_current_password(self, value):
+        if not self.context['user'].check_password(value):
+            raise serializers.ValidationError('Le mot de passe actuel est incorrect.')
+        return value
+
+    def validate(self, data):
+        check_new_password(
+            data['new_password'], data['new_password_confirm'], self.context['user'],
+            field='new_password', confirm_field='new_password_confirm',
+        )
         return data
 
 
