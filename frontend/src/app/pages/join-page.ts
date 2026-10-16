@@ -153,12 +153,6 @@ import { UiIcon } from '../shared/ui-icon';
               </label>
 
               <footer class="enrollment-form-footer">
-                <p>
-                  <ui-icon name="key" /><span
-                    ><strong>Données protégées</strong>Accès limité aux responsables
-                    habilités.</span
-                  >
-                </p>
                 <button class="btn btn-green" type="submit" [disabled]="busy()">
                   {{ busy() ? 'Envoi en cours…' : 'Envoyer ma demande' }}
                   <span>→</span>

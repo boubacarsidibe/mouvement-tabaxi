@@ -58,33 +58,6 @@ import { UiIcon } from '../shared/ui-icon';
               </div>
               <a class="btn btn-green" routerLink="/">Retour à l’accueil</a>
             </section>
-
-            <aside class="confirmation-aside">
-              <img src="hero-tabaxi.jpg" alt="Communauté du Mouvement TABAXI" />
-              <div>
-                <p class="eyebrow">Pendant ce temps</p>
-                <h2>Découvrez ce qui se passe près de chez vous.</h2>
-                <ul>
-                  <li>
-                    <ui-icon name="mail" /><span
-                      ><strong>Surveillez votre courriel</strong>Vérifiez aussi les messages
-                      indésirables.</span
-                    >
-                  </li>
-                  <li>
-                    <ui-icon name="key" /><span
-                      ><strong>Gardez votre lien personnel</strong>En cas d’acceptation, il restera
-                      valable 7 jours.</span
-                    >
-                  </li>
-                  <li>
-                    <ui-icon name="users" /><span
-                      ><strong>Une question ?</strong>adhesion&#64;tabaxi.org</span
-                    >
-                  </li>
-                </ul>
-              </div>
-            </aside>
           </div>
         </div>
       </section>

@@ -4418,3 +4418,9 @@ textarea[aria-invalid='true'] {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Page de confirmation : une seule carte, centrée. */
+.confirmation-grid {
+  grid-template-columns: minmax(0, 760px);
+  justify-content: center;
+}
