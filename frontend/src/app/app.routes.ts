@@ -4,6 +4,7 @@ import { AdminPage } from './pages/admin-page';
 import { ResetPasswordPage } from './pages/reset-password-page';
 import { AuthPage } from './pages/auth-page';
 import { FinalizePage } from './pages/finalize-page';
+import { InvitationPage } from './pages/invitation-page';
 import { JoinPage } from './pages/join-page';
 import { MemberPage } from './pages/member-page';
 import { PrivacyPage } from './pages/privacy-page';
@@ -50,6 +51,7 @@ export const routes: Routes = [
     title: 'Mot de passe oublié — TABAXI',
   },
   { path: 'nouveau-mot-de-passe', component: ResetPasswordPage, title: 'Nouveau mot de passe — TABAXI' },
+  { path: 'invitation', component: InvitationPage, title: 'Invitation au bureau — TABAXI' },
   { path: 'confidentialite', component: PrivacyPage, title: 'Confidentialité — TABAXI' },
 
   member('membre', 'home', 'Mon espace — TABAXI'),

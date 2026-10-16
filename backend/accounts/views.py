@@ -7,11 +7,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from . import password_reset
+from core.mail import EmailNotSent
 
+from . import invitations, password_reset
 from .models import User
+from .permissions import IsFounder
 from .serializers import (
     ForgotPasswordSerializer,
+    InvitationDetailSerializer,
+    InvitationSerializer,
     LoginSerializer,
     PasswordResetSerializer,
     TokenSerializer,
@@ -123,3 +127,64 @@ class PasswordResetView(APIView):
         except password_reset.LinkProblem as problem:
             return problem.response()
         return Response({'detail': 'Votre mot de passe a été modifié. Vous pouvez vous connecter.'})
+
+
+class InvitationCreateView(APIView):
+    """Un fondateur invite une personne au bureau exécutif."""
+
+    permission_classes = [IsFounder]
+
+    def post(self, request):
+        serializer = InvitationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = invitations.invite(invited_by=request.user, **serializer.validated_data)
+        except EmailNotSent:
+            return Response(
+                {
+                    'detail': "Le courriel d'invitation n'a pas pu être envoyé : aucun compte n'a été créé. "
+                    'Réessayez dans quelques minutes.',
+                    'code': 'email_not_sent',
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(InvitationDetailSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class InvitationCheckView(APIView):
+    """Vérifie le lien d'invitation avant d'afficher le choix du mot de passe."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            link = invitations.check_invitation(serializer.validated_data['token'])
+        except password_reset.LinkProblem as problem:
+            return problem.response()
+        return Response({**InvitationDetailSerializer(link.user).data, 'expires_at': link.expires_at})
+
+
+class InvitationAcceptView(APIView):
+    """La personne invitée choisit son mot de passe ; sa session s'ouvre sur l'interface du bureau."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        token_serializer = TokenSerializer(data=request.data)
+        token_serializer.is_valid(raise_exception=True)
+        token = token_serializer.validated_data['token']
+        try:
+            link = invitations.check_invitation(token)
+            serializer = PasswordResetSerializer(data=request.data, context={'user': link.user})
+            serializer.is_valid(raise_exception=True)
+            user = invitations.accept_invitation(token, serializer.validated_data['password'])
+        except password_reset.LinkProblem as problem:
+            return problem.response()
+        login(request, user)
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)

@@ -2,11 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
+import { InviteForm } from './invite-form';
 import { RequestDetail, RequestsList } from './requests-review';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [RouterLink, UiIcon, RequestsList, RequestDetail],
+  imports: [RouterLink, UiIcon, RequestsList, RequestDetail, InviteForm],
   template: `
     <main class="workspace-shell admin-shell">
       <aside class="side-nav">
@@ -528,15 +529,14 @@ import { RequestDetail, RequestsList } from './requests-review';
             </section>
           }
 
-          @if (
-            view === 'program-new' ||
-            view === 'activity-new' ||
-            view === 'report' ||
-            view === 'invite'
-          ) {
+          @if (view === 'invite') {
+            <app-invite-form />
+          }
+
+          @if (view === 'program-new' || view === 'activity-new' || view === 'report') {
             <a
               class="back-link"
-              [routerLink]="view === 'invite' ? '/bureau/comptes' : '/bureau/programmes'"
+              routerLink="/bureau/programmes"
               >← Retour</a
             >
             <form class="workspace-form panel admin-form" (submit)="completeForm($event)">
@@ -640,55 +640,14 @@ import { RequestDetail, RequestsList } from './requests-review';
                     ></span
                   ></label
                 >
-              } @else {
-                <p class="eyebrow">Compte d’accès</p>
-                <h2>Inviter un coordonnateur</h2>
-                <p>La personne recevra un lien personnel pour créer son mot de passe.</p>
-                <div class="field-grid">
-                  <label>Prénom <input placeholder="Prénom" required /></label
-                  ><label>Nom <input placeholder="Nom" required /></label>
-                </div>
-                <label
-                  >Adresse courriel
-                  <input type="email" placeholder="prenom.nom@exemple.com" required
-                /></label>
-                <div class="field-grid">
-                  <label
-                    >Rôle
-                    <select required>
-                      <option>Coordonnateur</option>
-                      <option>Membre fondateur</option>
-                    </select></label
-                  ><label
-                    >Territoire
-                    <select required>
-                      <option value="">Sélectionner un territoire</option>
-                      <option>Dakar</option>
-                      <option>Thiès</option>
-                      <option>Saint-Louis</option>
-                    </select></label
-                  >
-                </div>
-                <div class="security-alert compact">
-                  <ui-icon name="key" />
-                  <p>
-                    <strong>Accès contrôlé</strong>Seul un fondateur peut envoyer cette invitation.
-                  </p>
-                </div>
               }
               <div class="form-actions">
                 <a
                   class="btn btn-outline"
-                  [routerLink]="view === 'invite' ? '/bureau/comptes' : '/bureau/programmes'"
+                  routerLink="/bureau/programmes"
                   >Annuler</a
                 ><button class="btn btn-green" type="submit">
-                  {{
-                    view === 'report'
-                      ? 'Publier le compte rendu'
-                      : view === 'invite'
-                        ? 'Envoyer l’invitation'
-                        : 'Enregistrer'
-                  }}
+                  {{ view === 'report' ? 'Publier le compte rendu' : 'Enregistrer' }}
                 </button>
               </div>
               @if (formSaved()) {

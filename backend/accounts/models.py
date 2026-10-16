@@ -46,6 +46,11 @@ class User(AbstractUser):
     username = None
     email = models.EmailField('courriel', unique=True)
     role = models.CharField('rôle', max_length=20, choices=Role.choices, default=Role.MEMBRE)
+    territory = models.ForeignKey(
+        'territories.Territory', verbose_name='territoire', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='users',
+        help_text='Territoire d’un coordonnateur : il ne voit que les données de ce territoire.',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -115,6 +120,56 @@ class PasswordResetLink(models.Model):
 
     def mark_used(self):
         """Consomme le lien ; False s'il était déjà utilisé ou expiré (même en accès simultanés)."""
+        now = timezone.now()
+        updated = type(self).objects.filter(pk=self.pk, used_at__isnull=True, expires_at__gt=now).update(used_at=now)
+        if updated:
+            self.used_at = now
+        return bool(updated)
+
+
+class InvitationLink(models.Model):
+    """Invitation au bureau exécutif : lien personnel valable 7 jours, utilisable une fois."""
+
+    VALIDITY = timedelta(days=7)
+
+    user = models.ForeignKey(User, verbose_name='compte invité', on_delete=models.CASCADE, related_name='invitations')
+    invited_by = models.ForeignKey(
+        User, verbose_name='invité par', on_delete=models.PROTECT, null=True, related_name='invitations_sent'
+    )
+    token_digest = models.CharField('empreinte du jeton', max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField('créée le', auto_now_add=True)
+    expires_at = models.DateTimeField('expire le')
+    used_at = models.DateTimeField('utilisée le', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'invitation au bureau'
+        verbose_name_plural = 'invitations au bureau'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Invitation de {self.user}'
+
+    @classmethod
+    def issue(cls, user, invited_by):
+        token, digest = new_token()
+        link = cls.objects.create(
+            user=user, invited_by=invited_by, token_digest=digest, expires_at=timezone.now() + cls.VALIDITY
+        )
+        return link, token
+
+    @classmethod
+    def find(cls, token):
+        return cls.objects.select_related('user', 'user__territory').filter(token_digest=token_digest(token)).first()
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    def mark_used(self):
         now = timezone.now()
         updated = type(self).objects.filter(pk=self.pk, used_at__isnull=True, expires_at__gt=now).update(used_at=now)
         if updated:
