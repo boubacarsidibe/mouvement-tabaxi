@@ -45,6 +45,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Les motifs de suspension et de radiation sont chiffrés en base, comme les motifs de refus.
 - Export Excel des listes (`GET /api/members/export/`, `/api/applications/export/`, `/api/audit/export/`) : le fichier contient exactement la liste filtrée, dans le périmètre de la personne connectée, sans adresse, téléphone ni motivation ; les textes sont écrits comme du texte (aucune formule exécutée) ; chaque export est noté dans le journal des actions avec ses filtres et son nombre de lignes (#43).
 - Frontend : bouton « Exporter en Excel » sous chaque liste du bureau, qui exporte la liste telle qu'elle est affichée.
+- Commande `python manage.py comptes_demo` : crée un compte de démonstration par rôle (fondateur, coordonnateur, membre), réservée au développement ; aucun mot de passe n'est stocké dans le dépôt.
 
 ### Modifié
 

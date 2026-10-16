@@ -78,6 +78,8 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+Comptes de démonstration, un par rôle (développement seulement, `DJANGO_DEBUG=1`) : `python manage.py comptes_demo` crée `fondateur.demo@example.org`, `coordonnateur.demo@example.org` (région de Dakar) et `membre.demo@example.org` (Pikine) et affiche leurs mots de passe aléatoires ; `--mot-de-passe MOT` en fixe un commun. La commande peut être relancée pour réinitialiser les mots de passe.
+
 Le premier compte créé avec `createsuperuser` reçoit le rôle de membre fondateur. L'administration est sur `http://localhost:8000/admin/`. Tests : `python manage.py test`.
 
 ### Frontend (port 4200)
