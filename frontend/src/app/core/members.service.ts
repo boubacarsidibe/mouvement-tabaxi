@@ -49,6 +49,11 @@ export interface MemberPage {
 }
 
 export interface MemberFilters {
+  role?: 'membre' | 'coordonnateur' | 'fondateur';
+  territory?: number | null;
+  /** Dates d'adhésion AAAA-MM-JJ, bornes comprises. */
+  joinedFrom?: string;
+  joinedTo?: string;
   status?: MemberStatus | '';
   search?: string;
   ordering?: MemberOrdering;
@@ -62,6 +67,10 @@ export class MembersService {
 
   list(filters: MemberFilters = {}): Promise<MemberPage> {
     let params = new HttpParams();
+    if (filters.role && filters.role !== 'membre') params = params.set('role', filters.role);
+    if (filters.territory) params = params.set('territory', filters.territory);
+    if (filters.joinedFrom) params = params.set('joined_from', filters.joinedFrom);
+    if (filters.joinedTo) params = params.set('joined_to', filters.joinedTo);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.search?.trim()) params = params.set('search', filters.search.trim());
     if (filters.ordering && filters.ordering !== '-date')

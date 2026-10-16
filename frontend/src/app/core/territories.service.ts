@@ -15,6 +15,15 @@ export interface TerritoryNode {
 export class TerritoryService {
   private readonly http = inject(HttpClient);
 
+  /** Territoires du périmètre de la personne connectée (bureau), du plus large au plus précis. */
+  managed(): Promise<{ id: number; name: string; kind_label: string; path: string }[]> {
+    return firstValueFrom(
+      this.http.get<{ id: number; name: string; kind_label: string; path: string }[]>(
+        '/api/territories/managed/',
+      ),
+    );
+  }
+
   /** Territoires actifs, en arbre pays > région > commune (route publique). */
   tree(): Promise<TerritoryNode[]> {
     return firstValueFrom(this.http.get<TerritoryNode[]>('/api/territories/'));

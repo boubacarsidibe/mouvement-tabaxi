@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -28,7 +29,14 @@ const RECORD = {
   photo_url: null,
   status_history: [] as unknown[],
 };
+const MANAGED = [
+  { id: 2, name: 'Dakar', kind_label: 'Région', path: 'Sénégal › Dakar' },
+  { id: 4, name: 'Pikine', kind_label: 'Commune', path: 'Sénégal › Dakar › Pikine' },
+];
 const PAGE = (results: unknown[]) => ({ count: results.length, next: null, previous: null, results });
+
+@Component({ imports: [MembersList], template: '<app-members-list role="coordonnateur" />' })
+class CoordinatorsHost {}
 
 describe('Base des membres', () => {
   let http: HttpTestingController;
@@ -40,6 +48,7 @@ describe('Base des membres', () => {
       providers: [
         provideRouter([
           { path: 'bureau/membres', component: MembersList },
+          { path: 'bureau/coordonnateurs', component: CoordinatorsHost },
           { path: 'bureau/membres/:id', component: MemberDetail },
         ]),
         provideHttpClient(),
@@ -56,6 +65,7 @@ describe('Base des membres', () => {
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url);
     root = harness.routeNativeElement as HTMLElement;
+    http.match('/api/territories/managed/').forEach((req) => req.flush(MANAGED));
   }
   async function settle() {
     await harness.fixture.whenStable();
@@ -97,6 +107,46 @@ describe('Base des membres', () => {
       .expectOne((req) => req.params.get('search') === 'Ndiaye' && req.params.get('status') === 'suspendu')
       .flush(PAGE([]));
     await settle();
+  });
+
+  it('filtre par localité et par date d’adhésion', async () => {
+    await open('/bureau/membres');
+    http.expectOne('/api/members/').flush(PAGE([]));
+    await settle();
+    const selects = root.querySelectorAll('select');
+    expect(selects[1].textContent).toContain('Sénégal › Dakar › Pikine');
+    selects[1].value = selects[1].options[2].value;
+    selects[1].dispatchEvent(new Event('change'));
+    http.expectOne((req) => req.params.get('territory') === '4').flush(PAGE([LISTED]));
+    await settle();
+    const dates = root.querySelectorAll<HTMLInputElement>('input[type=date]');
+    dates[0].value = '2026-01-01';
+    dates[0].dispatchEvent(new Event('input'));
+    http
+      .expectOne(
+        (req) => req.params.get('territory') === '4' && req.params.get('joined_from') === '2026-01-01',
+      )
+      .flush(PAGE([LISTED]));
+    await settle();
+    expect(root.textContent).toContain('Aminata Ndiaye');
+    button('Réinitialiser')!.click();
+    http
+      .expectOne((req) => req.url === '/api/members/' && !req.params.has('territory') && !req.params.has('joined_from'))
+      .flush(PAGE([]));
+    await settle();
+  });
+
+  it('affiche la base des coordonnateurs', async () => {
+    TestBed.inject(AuthService).signedIn(TEST_FOUNDER);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/bureau/coordonnateurs');
+    root = harness.routeNativeElement as HTMLElement;
+    http.match('/api/territories/managed/').forEach((req) => req.flush(MANAGED));
+    http
+      .expectOne((req) => req.url === '/api/members/' && req.params.get('role') === 'coordonnateur')
+      .flush(PAGE([{ ...LISTED, role: 'coordonnateur', role_label: 'Coordonnateur' }]));
+    await settle();
+    expect(root.textContent).toContain('Aminata Ndiaye');
   });
 
   it('trie par nom', async () => {

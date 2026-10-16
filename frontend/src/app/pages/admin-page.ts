@@ -202,7 +202,11 @@ import { RequestDetail, RequestsList } from './requests-review';
             <app-member-detail />
           }
 
-          @if (view === 'accounts' || view === 'coordinators') {
+          @if (view === 'coordinators') {
+            <app-members-list role="coordonnateur" />
+          }
+
+          @if (view === 'accounts') {
             @if (view === 'accounts') {
               <div class="security-alert">
                 <ui-icon name="key" />

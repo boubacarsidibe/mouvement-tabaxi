@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth import login
 from django.db.models import Q
 from django.http import FileResponse, Http404
@@ -12,7 +14,8 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.permissions import IsBureau, IsFounder
 from accounts.serializers import UserSerializer
-from territories.scope import scope_queryset
+from territories.models import Territory
+from territories.scope import scope_queryset, subtree_ids
 
 from .models import Member
 from .registration import LinkProblem, check_link, complete_registration
@@ -135,7 +138,9 @@ class MemberListView(generics.ListAPIView):
     """Base des membres pour le bureau exécutif, limitée au territoire de la personne connectée.
 
     Filtres : ``role`` (``membre`` par défaut, ou ``coordonnateur``, ``fondateur``), ``status``
-    (``actif``, ``suspendu``, ``radie``), ``search`` (prénom, nom, courriel ou numéro ; plusieurs
+    (``actif``, ``suspendu``, ``radie``), ``territory`` (identifiant ; ce territoire et ceux qui en
+    dépendent, jamais au-delà du périmètre de la personne connectée), ``joined_from`` et
+    ``joined_to`` (dates d'adhésion AAAA-MM-JJ, bornes comprises), ``search`` (prénom, nom, courriel ou numéro ; plusieurs
     mots doivent tous correspondre) et ``ordering`` (``name``, ``place`` ou ``date``, précédé de
     ``-`` pour l'ordre inverse ; les plus récents d'abord par défaut).
     """
@@ -158,6 +163,24 @@ class MemberListView(generics.ListAPIView):
             if status_filter not in Member.Status.values:
                 raise ValidationError({'status': ['Statut inconnu.']})
             queryset = queryset.filter(status=status_filter)
+
+        territory = params.get('territory')
+        if territory:
+            if not territory.isdigit() or not Territory.objects.filter(pk=territory).exists():
+                raise ValidationError({'territory': ['Localité inconnue.']})
+            queryset = queryset.filter(user__territory__in=subtree_ids(Territory.objects.get(pk=territory)))
+
+        bounds = {}
+        for name, lookup in (('joined_from', 'joined_on__gte'), ('joined_to', 'joined_on__lte')):
+            value = params.get(name)
+            if value:
+                try:
+                    bounds[name] = date.fromisoformat(value)
+                except ValueError:
+                    raise ValidationError({name: ['Saisissez une date valide au format AAAA-MM-JJ.']})
+                queryset = queryset.filter(**{lookup: bounds[name]})
+        if len(bounds) == 2 and bounds['joined_from'] > bounds['joined_to']:
+            raise ValidationError({'joined_to': ['La date de fin doit suivre la date de début.']})
 
         for term in params.get('search', '').split():
             queryset = queryset.filter(

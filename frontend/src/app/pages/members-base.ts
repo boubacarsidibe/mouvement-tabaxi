@@ -1,9 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
+import { TerritoryService } from '../core/territories.service';
 import {
   ListedMember,
   MemberOrdering,
@@ -53,6 +54,30 @@ type SortKey = 'name' | 'place' | 'date';
           <option [value]="item.value">{{ item.label }}</option>
         }
       </select>
+      <select
+        aria-label="Filtrer par localité"
+        [ngModel]="territory()"
+        (ngModelChange)="territory.set($event); reload()"
+      >
+        <option [ngValue]="null">Localité · Toutes</option>
+        @for (item of territories(); track item.id) {
+          <option [ngValue]="item.id">{{ item.path }}</option>
+        }
+      </select>
+      <label
+        >Adhésion du<input
+          type="date"
+          aria-label="Adhésion à partir du"
+          [ngModel]="joinedFrom()"
+          (ngModelChange)="joinedFrom.set($event); reload()"
+      /></label>
+      <label
+        >au<input
+          type="date"
+          aria-label="Adhésion jusqu’au"
+          [ngModel]="joinedTo()"
+          (ngModelChange)="joinedTo.set($event); reload()"
+      /></label>
       <button type="button" (click)="reload()">Rechercher</button>
       <button type="button" (click)="reset()">Réinitialiser</button>
     </div>
@@ -131,7 +156,14 @@ type SortKey = 'name' | 'place' | 'date';
 })
 export class MembersList implements OnInit {
   private readonly members = inject(MembersService);
+  private readonly territoryService = inject(TerritoryService);
+  /** `membre` pour la base des membres, `coordonnateur` pour celle des coordonnateurs. */
+  @Input() role: 'membre' | 'coordonnateur' = 'membre';
   protected readonly statuses = STATUSES;
+  protected readonly territory = signal<number | null>(null);
+  protected readonly territories = signal<{ id: number; path: string }[]>([]);
+  protected readonly joinedFrom = signal('');
+  protected readonly joinedTo = signal('');
   protected readonly status = signal<MemberStatus | ''>('');
   protected readonly search = signal('');
   protected readonly ordering = signal<MemberOrdering>('-date');
@@ -142,6 +174,11 @@ export class MembersList implements OnInit {
 
   ngOnInit() {
     void this.load();
+    // La liste des localités ne montre que le périmètre de la personne connectée.
+    this.territoryService.managed().then(
+      (list) => this.territories.set(list),
+      () => this.territories.set([]),
+    );
   }
 
   protected cls(item: ListedMember) {
@@ -156,6 +193,9 @@ export class MembersList implements OnInit {
   protected reset() {
     this.status.set('');
     this.search.set('');
+    this.territory.set(null);
+    this.joinedFrom.set('');
+    this.joinedTo.set('');
     this.ordering.set('-date');
     this.reload();
   }
@@ -194,6 +234,10 @@ export class MembersList implements OnInit {
     try {
       this.page.set(
         await this.members.list({
+          role: this.role,
+          territory: this.territory(),
+          joinedFrom: this.joinedFrom(),
+          joinedTo: this.joinedTo(),
           status: this.status(),
           search: this.search(),
           ordering: this.ordering(),
