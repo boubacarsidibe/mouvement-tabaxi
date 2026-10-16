@@ -11,10 +11,15 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
+
+from .env import load_env_file, mailer_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_env_file(BASE_DIR / '.env')
 
 
 # Les valeurs sensibles viennent de l'environnement (voir .env.example).
@@ -37,7 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'core',
     'accounts',
+    'territories',
+    'applications',
+    'members',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -46,9 +55,21 @@ CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http:
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+# Noms attendus par défaut par le client HTTP d'Angular : il lit le cookie XSRF-TOKEN
+# et renvoie sa valeur dans l'en-tête X-XSRF-TOKEN pour chaque requête qui modifie.
+CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.SessionAuthentication'],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
+    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
+    + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
+    # Limite les envois répétés depuis une même adresse sur les formulaires publics.
+    'DEFAULT_THROTTLE_RATES': {
+        'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
+    },
 }
 
 MIDDLEWARE = [
@@ -112,6 +133,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Les tests créent beaucoup de comptes : un hachage rapide les accélère.
+# Partout ailleurs, le hachage lent et sûr par défaut de Django reste utilisé.
+if sys.argv[1:2] == ['test']:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
@@ -134,8 +160,9 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# Console en développement, SMTP dès que EMAIL_HOST est défini (voir .env.example).
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
+    'default': mailer_from_env(os.environ),
 }
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
