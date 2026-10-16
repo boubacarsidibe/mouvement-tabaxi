@@ -184,6 +184,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 # En production, DATABASE_URL (PostgreSQL) ; sans elle, un fichier SQLite local.
+# En production, l'absence de DATABASE_URL est une erreur : le serveur tournerait sur un fichier
+# SQLite figé au déploiement (lecture seule sur l'hébergeur), et toute écriture échouerait.
+if not os.environ.get('DATABASE_URL') and not DEBUG and not TESTING:
+    raise ImproperlyConfigured(
+        'DATABASE_URL est obligatoire en production (base PostgreSQL). '
+        'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
+    )
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
 
