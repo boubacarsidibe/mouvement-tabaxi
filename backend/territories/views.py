@@ -1,15 +1,16 @@
 import unicodedata
 
-from rest_framework import generics
+from django.db.models import Count, ProtectedError
+from rest_framework import generics, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission
 from rest_framework.response import Response
 
 from accounts.permissions import IsBureau
 
 from .models import Territory
 from .scope import visible_territories
-from .serializers import ManagedTerritorySerializer, territory_path
+from .serializers import TerritoryUsageSerializer, TerritoryWriteSerializer, territory_path
 
 
 def french_sort_key(name):
@@ -54,30 +55,96 @@ def territory_tree(request):
     return Response(active_tree())
 
 
-class ManagedTerritoryListView(generics.ListAPIView):
+def with_usage(queryset):
+    """Territoires avec le nombre de comptes, de programmes et de territoires qui y sont rattachés."""
+    return queryset.annotate(
+        members_count=Count('users', distinct=True),
+        programs_count=Count('programs', distinct=True),
+        children_count=Count('children', distinct=True),
+    )
+
+
+class FounderWrites(BasePermission):
+    """Lecture pour tout le bureau (dans son périmètre) ; ajout, modification et suppression pour les fondateurs."""
+
+    message = 'Seuls les membres fondateurs peuvent modifier les territoires.'
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.is_founder
+
+
+def deletion_obstacle(territory):
+    """Raison pour laquelle un territoire ne peut pas être supprimé, ou None s'il est vide."""
+    reasons = []
+    if territory.children.exists():
+        reasons.append("il contient d'autres territoires")
+    if territory.users.exists():
+        reasons.append('des membres y sont rattachés')
+    if territory.programs.exists():
+        reasons.append('des programmes y sont rattachés')
+    if territory.applications.exists():
+        reasons.append("des demandes d'adhésion le concernent")
+    if not reasons:
+        return None
+    return f"{territory.name} ne peut pas être supprimé : {', '.join(reasons)}. Désactivez-le plutôt."
+
+
+class ManagedTerritoryListView(generics.ListCreateAPIView):
     """Territoires du périmètre de la personne connectée (bureau exécutif).
 
     Un coordonnateur reçoit son territoire et ceux qui en dépendent ; un fondateur, tous
-    les territoires, actifs ou non.
+    les territoires, actifs ou non. Seul un fondateur en ajoute.
     """
 
-    permission_classes = [IsBureau]
-    serializer_class = ManagedTerritorySerializer
+    permission_classes = [IsBureau, FounderWrites]
     pagination_class = None
 
+    def get_serializer_class(self):
+        return TerritoryWriteSerializer if self.request.method == 'POST' else TerritoryUsageSerializer
+
     def get_queryset(self):
-        return visible_territories(self.request.user).select_related('parent__parent').order_by('kind', 'name')
+        return with_usage(visible_territories(self.request.user)).select_related('parent__parent')
 
     def list(self, request, *args, **kwargs):
         territories = sorted(self.get_queryset(), key=lambda t: french_sort_key(territory_path(t)))
         return Response(self.get_serializer(territories, many=True).data)
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        territory = serializer.save()
+        data = TerritoryUsageSerializer(with_usage(Territory.objects.filter(pk=territory.pk)).get()).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
-class ManagedTerritoryDetailView(generics.RetrieveAPIView):
-    """Un territoire du périmètre. Hors périmètre : 404, même en changeant l'adresse à la main."""
 
-    permission_classes = [IsBureau]
-    serializer_class = ManagedTerritorySerializer
+class ManagedTerritoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Un territoire du périmètre. Hors périmètre : 404, même en changeant l'adresse à la main.
+
+    Un fondateur le renomme, le rattache ailleurs, le désactive, ou le supprime s'il est vide.
+    """
+
+    permission_classes = [IsBureau, FounderWrites]
+
+    def get_serializer_class(self):
+        return TerritoryUsageSerializer if self.request.method in SAFE_METHODS else TerritoryWriteSerializer
 
     def get_queryset(self):
-        return visible_territories(self.request.user).select_related('parent__parent')
+        return with_usage(visible_territories(self.request.user)).select_related('parent__parent')
+
+    def update(self, request, *args, **kwargs):
+        super().update(request, *args, **kwargs)
+        return Response(TerritoryUsageSerializer(self.get_queryset().get(pk=self.kwargs['pk'])).data)
+
+    def destroy(self, request, *args, **kwargs):
+        territory = self.get_object()
+        obstacle = deletion_obstacle(territory)
+        if obstacle is None:
+            try:
+                territory.delete()
+            except ProtectedError:
+                obstacle = f'{territory.name} est encore utilisé : désactivez-le plutôt.'
+        if obstacle:
+            return Response({'detail': obstacle}, status=status.HTTP_409_CONFLICT)
+        return Response(status=status.HTTP_204_NO_CONTENT)

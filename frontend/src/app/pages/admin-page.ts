@@ -9,6 +9,7 @@ import { InviteForm } from './invite-form';
 import { MemberDetail, MembersList } from './members-base';
 import { ProgramDetail, ProgramForm, ProgramsList } from './programs-bureau';
 import { RequestDetail, RequestsList } from './requests-review';
+import { TerritoriesManager } from './territories-bureau';
 
 @Component({
   selector: 'app-admin-page',
@@ -29,6 +30,7 @@ import { RequestDetail, RequestsList } from './requests-review';
     ActivityDetail,
     ActivityReport,
     ActivityAttendance,
+    TerritoriesManager,
   ],
   template: `
     <main class="workspace-shell admin-shell">
@@ -148,71 +150,7 @@ import { RequestDetail, RequestsList } from './requests-review';
           }
 
           @if (view === 'territories') {
-            <section class="territory-summary stat-grid">
-              <article>
-                <ui-icon name="location" /><strong>12</strong>
-                <p>Localités couvertes</p>
-              </article>
-              <article>
-                <ui-icon name="users" /><strong>86</strong>
-                <p>Coordonnateurs</p>
-              </article>
-              <article>
-                <ui-icon name="users" /><strong>1 248</strong>
-                <p>Membres</p>
-              </article>
-            </section>
-            <section class="territory-layout">
-              <div class="territory-map-card">
-                <img src="hero-tabaxi.jpg" alt="Carte illustrée du Sénégal" /><span
-                  class="map-city city-one"
-                ></span
-                ><span class="map-city city-two"></span><span class="map-city city-three"></span>
-                <div>
-                  <strong>Dakar</strong><small>24 membres<br />3 coordonnateurs</small>
-                </div>
-              </div>
-              <div class="table-wrap responsive-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Localité</th>
-                      <th>Région</th>
-                      <th>Coordonnateurs</th>
-                      <th>Membres</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (territory of territories; track territory.city) {
-                      <tr>
-                        <td>
-                          <strong>{{ territory.city }}</strong>
-                        </td>
-                        <td data-label="Région">{{ territory.region }}</td>
-                        <td data-label="Coordonnateurs">{{ territory.coordinators }}</td>
-                        <td data-label="Membres">{{ territory.members }}</td>
-                        <td>
-                          <button
-                            class="row-action"
-                            type="button"
-                            [attr.aria-label]="'Voir ' + territory.city + ' sur la carte'"
-                          >
-                            ◉</button
-                          ><button
-                            class="row-action"
-                            type="button"
-                            [attr.aria-label]="'Plus d’actions pour ' + territory.city"
-                          >
-                            •••
-                          </button>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <app-territories-manager />
           }
 
           @if (view === 'audit') {
@@ -266,16 +204,6 @@ export class AdminPage {
     await this.auth.logout();
     await this.router.navigateByUrl('/connexion');
   }
-  protected readonly territories = [
-    { city: 'Dakar', region: 'Dakar', coordinators: 3, members: 320 },
-    { city: 'Thiès', region: 'Thiès', coordinators: 8, members: 210 },
-    { city: 'Saint-Louis', region: 'Saint-Louis', coordinators: 6, members: 180 },
-    { city: 'Kaolack', region: 'Kaolack', coordinators: 7, members: 160 },
-    { city: 'Ziguinchor', region: 'Ziguinchor', coordinators: 5, members: 98 },
-    { city: 'Tambacounda', region: 'Tambacounda', coordinators: 4, members: 96 },
-    { city: 'Kolda', region: 'Kolda', coordinators: 3, members: 84 },
-    { city: 'Louga', region: 'Louga', coordinators: 5, members: 100 },
-  ];
 
   protected get pageTitle(): string {
     return (
@@ -309,7 +237,7 @@ export class AdminPage {
         requests: 'Liste des personnes qui souhaitent rejoindre le Mouvement TABAXI',
         members: 'Gestion des membres du Mouvement TABAXI',
         programs: 'Suivi des initiatives du Mouvement TABAXI',
-        territories: 'Gestion des localités et de leurs coordonnateurs',
+        territories: 'Pays, régions et communes du Mouvement TABAXI',
         accounts: 'Gestion des utilisateurs et des accès à la plateforme',
         coordinators: 'Membres du bureau exécutif et territoires rattachés',
         audit: 'Historique des décisions et opérations sensibles',
@@ -332,7 +260,6 @@ export class AdminPage {
       (
         {
           programs: 'Nouveau programme',
-          territories: 'Ajouter une localité',
           accounts: 'Inviter au bureau',
           coordinators: 'Inviter un coordonnateur',
         } as Record<string, string>
@@ -345,7 +272,6 @@ export class AdminPage {
         {
           coordinators: '/bureau/comptes/inviter',
           programs: '/bureau/programmes/nouveau',
-          territories: '/bureau/territoires',
           accounts: '/bureau/comptes/inviter',
         } as Record<string, string>
       )[this.view] || '/bureau'
@@ -353,7 +279,8 @@ export class AdminPage {
   }
   protected get hasPrimaryAction(): boolean {
     // Inviter au bureau est réservé aux fondateurs ; le reste de la page reste lisible par les coordonnateurs.
+    // Les territoires s'ajoutent depuis l'écran lui-même, réservé aux fondateurs.
     if (this.view === 'coordinators' || this.view === 'accounts') return this.auth.isFounder();
-    return ['programs', 'territories'].includes(this.view);
+    return this.view === 'programs';
   }
 }
