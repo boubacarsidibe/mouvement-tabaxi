@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
+import { PasswordService } from '../core/password.service';
 import { PublicHeader } from '../shared/public-header';
 import { UiIcon } from '../shared/ui-icon';
 
@@ -80,7 +81,7 @@ import { UiIcon } from '../shared/ui-icon';
                   </div>
                 }
                 <button class="btn btn-green btn-wide" type="submit" [disabled]="busy()">
-                  {{ isForgot ? 'Envoyer le lien' : busy() ? 'Connexion…' : 'Se connecter' }}
+                  {{ isForgot ? (busy() ? 'Envoi…' : 'Envoyer le lien') : busy() ? 'Connexion…' : 'Se connecter' }}
                 </button>
                 @if (!isForgot) {
                   <p class="auth-help">
@@ -99,6 +100,7 @@ export class AuthPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly passwords = inject(PasswordService);
   protected readonly isForgot = this.route.snapshot.data['mode'] === 'forgot';
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
@@ -112,14 +114,15 @@ export class AuthPage {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     if (!form.reportValidity()) return;
-    if (this.isForgot) {
-      this.submitted.set(true);
-      return;
-    }
     const data = new FormData(form);
     this.error.set('');
     this.busy.set(true);
     try {
+      if (this.isForgot) {
+        await this.passwords.forgot(String(data.get('email') ?? '').trim());
+        this.submitted.set(true);
+        return;
+      }
       const user = await this.auth.login(
         String(data.get('email') ?? '').trim(),
         String(data.get('password') ?? ''),

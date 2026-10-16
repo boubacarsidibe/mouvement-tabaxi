@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, bureauGuard, founderGuard, guestGuard } from './core/auth.guards';
 import { AdminPage } from './pages/admin-page';
+import { ResetPasswordPage } from './pages/reset-password-page';
 import { AuthPage } from './pages/auth-page';
 import { FinalizePage } from './pages/finalize-page';
 import { JoinPage } from './pages/join-page';
@@ -48,6 +49,7 @@ export const routes: Routes = [
     data: { mode: 'forgot' },
     title: 'Mot de passe oublié — TABAXI',
   },
+  { path: 'nouveau-mot-de-passe', component: ResetPasswordPage, title: 'Nouveau mot de passe — TABAXI' },
   { path: 'confidentialite', component: PrivacyPage, title: 'Confidentialité — TABAXI' },
 
   member('membre', 'home', 'Mon espace — TABAXI'),

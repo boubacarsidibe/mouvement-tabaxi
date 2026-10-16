@@ -69,6 +69,7 @@ REST_FRAMEWORK = {
     # Limite les envois répétés depuis une même adresse sur les formulaires publics.
     'DEFAULT_THROTTLE_RATES': {
         'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
+        'password_reset': os.environ.get('PASSWORD_RESET_RATE', '10/hour'),
     },
 }
 
