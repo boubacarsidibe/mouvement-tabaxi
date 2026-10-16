@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService } from '../core/auth.service';
+import { PhotoService } from '../core/photo.service';
 import { TEST_MEMBER } from '../core/testing';
 import { MemberPage } from './member-page';
 
@@ -24,13 +25,16 @@ const PROFILE = {
 describe('Profil et carte du membre', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
+  let photos: { prepare: ReturnType<typeof vi.fn> };
 
   async function open(view: string) {
+    photos = { prepare: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: 'membre', component: MemberPage, data: { view } }]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: PhotoService, useValue: photos },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -92,5 +96,26 @@ describe('Profil et carte du membre', () => {
       .flush({ phone: ['Numéro de téléphone invalide.'] }, { status: 400, statusText: 'Bad Request' });
     await settle();
     expect(root().textContent).toContain('Numéro de téléphone invalide.');
+  });
+
+  it('envoie la nouvelle photo réduite', async () => {
+    await open('profile');
+    http.expectOne('/api/members/me/').flush(PROFILE);
+    await settle();
+    const original = new File([new Uint8Array(3_800_000)], 'photo.jpeg', { type: 'image/jpeg' });
+    const reduced = new File([new Uint8Array(150_000)], 'photo.jpg', { type: 'image/jpeg' });
+    photos.prepare.mockResolvedValue(reduced);
+    const input = root().querySelector('[name=photo]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [original], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    expect(photos.prepare).toHaveBeenCalledWith(original);
+    root().querySelector('form')!.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve));
+    const request = http.expectOne('/api/members/me/');
+    expect(request.request.method).toBe('PATCH');
+    expect(((request.request.body as FormData).get('photo') as File).size).toBe(150_000);
+    request.flush(PROFILE);
+    await settle();
+    expect(root().textContent).toContain('Vos informations ont été enregistrées');
   });
 });

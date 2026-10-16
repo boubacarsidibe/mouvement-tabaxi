@@ -2,10 +2,9 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiProblem, readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
+import { PHOTO_TOO_LARGE, PhotoService } from '../core/photo.service';
 import { RegistrationLinkInfo, RegistrationService } from '../core/registration.service';
 import { UiIcon } from '../shared/ui-icon';
-
-const MAX_PHOTO = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-finalize-page',
@@ -79,7 +78,10 @@ const MAX_PHOTO = 5 * 1024 * 1024;
                     (change)="photoChosen($event)"
                     [attr.aria-invalid]="fieldErrors()['photo'] ? 'true' : null"
                   />
-                  <small>JPG ou PNG · 5 Mo maximum</small>
+                  <small>JPG ou PNG · les photos lourdes sont réduites avant l’envoi</small>
+                  @if (preparingPhoto()) {
+                    <small role="status">Préparation de la photo…</small>
+                  }
                   @if (fieldErrors()['photo']; as message) {
                     <span class="field-error" role="alert">{{ message }}</span>
                   }
@@ -158,6 +160,7 @@ const MAX_PHOTO = 5 * 1024 * 1024;
 })
 export class FinalizePage {
   private readonly registration = inject(RegistrationService);
+  private readonly photos = inject(PhotoService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly token = inject(ActivatedRoute).snapshot.queryParamMap.get('jeton') ?? '';
@@ -168,6 +171,9 @@ export class FinalizePage {
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly fieldErrors = signal<Record<string, string>>({});
+  protected readonly preparingPhoto = signal(false);
+  /** Photo choisie, réduite pendant que la personne remplit le reste du formulaire. */
+  private photo: Promise<File | null> | null = null;
 
   constructor() {
     void this.check();
@@ -200,15 +206,24 @@ export class FinalizePage {
   protected photoChosen(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (file && file.size > MAX_PHOTO) {
-      input.value = '';
-      this.fieldErrors.update((errors) => ({
-        ...errors,
-        photo: 'La photo dépasse 5 Mo. Choisissez une image plus légère.',
-      }));
-    } else {
-      this.fieldErrors.update(({ photo: _removed, ...rest }) => rest);
+    this.fieldErrors.update(({ photo: _removed, ...rest }) => rest);
+    if (!file) {
+      this.photo = null;
+      return;
     }
+    this.preparingPhoto.set(true);
+    const photo = this.photos.prepare(file).then(
+      (reduced) => reduced,
+      () => {
+        input.value = '';
+        this.fieldErrors.update((errors) => ({ ...errors, photo: PHOTO_TOO_LARGE }));
+        return null;
+      },
+    );
+    this.photo = photo;
+    void photo.then(() => {
+      if (this.photo === photo) this.preparingPhoto.set(false);
+    });
   }
 
   protected async submit(event: SubmitEvent): Promise<void> {
@@ -216,11 +231,22 @@ export class FinalizePage {
     const form = event.currentTarget as HTMLFormElement;
     if (!form.reportValidity()) return;
     const data = new FormData(form);
+    let photo = data.get('photo') as File;
+    if (this.photo) {
+      this.busy.set(true);
+      const reduced = await this.photo;
+      if (!reduced) {
+        // Une photo trop lourde a déjà son message sous le champ.
+        this.busy.set(false);
+        return;
+      }
+      photo = reduced;
+    }
     const body = new FormData();
     body.set('token', this.token);
     body.set('address', String(data.get('address') ?? '').trim());
     body.set('phone', String(data.get('phone') ?? '').trim());
-    body.set('photo', data.get('photo') as File);
+    body.set('photo', photo);
     body.set('password', String(data.get('password') ?? ''));
     body.set('password_confirm', String(data.get('passwordConfirm') ?? ''));
     body.set('accept_rules', data.get('rules') === 'on' ? 'true' : 'false');

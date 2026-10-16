@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { MemberCard } from '../shared/member-card';
 import { readProblem } from '../core/api-problem';
+import { PHOTO_TOO_LARGE, PhotoService } from '../core/photo.service';
 import { MemberProfile, ProfileService, cardData, formatDate } from '../core/profile.service';
 import { MemberActivity, ProgramsService } from '../core/programs.service';
 import { drawMemberCard } from '../shared/member-card-image';
@@ -274,7 +275,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   }
                   <div>
                     <h2>Photo de profil</h2>
-                    <p>JPG ou PNG, 5 Mo maximum.</p>
+                    <p>JPG ou PNG. Les photos lourdes sont réduites avant l’envoi.</p>
                     <input
                       type="file"
                       name="photo"
@@ -282,6 +283,9 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                       aria-label="Choisir une photo"
                       (change)="photoChosen($event)"
                     />
+                    @if (preparingPhoto()) {
+                      <small role="status">Préparation de la photo…</small>
+                    }
                     @if (fieldErrors()['photo']; as message) {
                       <small class="field-error" role="alert">{{ message }}</small>
                     }
@@ -430,6 +434,7 @@ export class MemberPage {
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   private readonly profiles = inject(ProfileService);
+  private readonly photos = inject(PhotoService);
   private readonly programs = inject(ProgramsService);
   protected readonly homeActivities = signal<MemberActivity[]>([]);
   protected readonly homeProgramCount = signal(0);
@@ -444,7 +449,9 @@ export class MemberPage {
   protected readonly saving = signal(false);
   /** Change à chaque nouvelle photo, pour que le navigateur recharge l'image. */
   private readonly photoVersion = signal(0);
-  private newPhoto: File | null = null;
+  /** Nouvelle photo choisie, réduite avant l'envoi ; null si elle est trop lourde. */
+  private newPhoto: Promise<File | null> | null = null;
+  protected readonly preparingPhoto = signal(false);
 
   protected readonly card = computed(() => {
     const me = this.profile();
@@ -538,15 +545,22 @@ export class MemberPage {
   protected photoChosen(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
     this.fieldErrors.update(({ photo: _removed, ...rest }) => rest);
-    if (file && file.size > 5 * 1024 * 1024) {
+    if (!file) {
       this.newPhoto = null;
-      this.fieldErrors.update((errors) => ({
-        ...errors,
-        photo: 'La photo dépasse 5 Mo. Choisissez une image plus légère.',
-      }));
       return;
     }
-    this.newPhoto = file;
+    this.preparingPhoto.set(true);
+    const photo = this.photos.prepare(file).then(
+      (reduced) => reduced,
+      () => {
+        this.fieldErrors.update((errors) => ({ ...errors, photo: PHOTO_TOO_LARGE }));
+        return null;
+      },
+    );
+    this.newPhoto = photo;
+    void photo.then(() => {
+      if (this.newPhoto === photo) this.preparingPhoto.set(false);
+    });
   }
 
   protected async logout(): Promise<void> {
@@ -566,8 +580,16 @@ export class MemberPage {
     const data = new FormData();
     data.set('address', (form.elements.namedItem('address') as HTMLInputElement).value.trim());
     data.set('phone', (form.elements.namedItem('phone') as HTMLInputElement).value.trim());
-    if (this.newPhoto) data.set('photo', this.newPhoto);
     this.begin();
+    if (this.newPhoto) {
+      const photo = await this.newPhoto;
+      if (!photo) {
+        // Une photo trop lourde a déjà son message sous le champ.
+        this.saving.set(false);
+        return;
+      }
+      data.set('photo', photo);
+    }
     try {
       this.profile.set(await this.profiles.save(data));
       this.newPhoto = null;

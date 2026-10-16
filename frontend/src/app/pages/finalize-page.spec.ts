@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService } from '../core/auth.service';
+import { PHOTO_TOO_LARGE, PhotoService } from '../core/photo.service';
 import { TEST_MEMBER } from '../core/testing';
 import { FinalizePage } from './finalize-page';
 
@@ -25,10 +26,19 @@ const INFO = {
   expires_at: '2026-10-22T10:00:00Z',
 };
 
+/** Choisit un fichier dans le champ, comme la personne depuis son téléphone. */
+function choose(input: HTMLInputElement, file: File) {
+  Object.defineProperty(input, 'files', { value: [file], configurable: true });
+  input.dispatchEvent(new Event('change'));
+}
+
+const tick = () => new Promise((resolve) => setTimeout(resolve));
+
 describe('Finalisation de l’inscription', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
   let root: HTMLElement;
+  let photos: { prepare: ReturnType<typeof vi.fn> };
 
   async function open(url: string) {
     harness = await RouterTestingHarness.create();
@@ -42,6 +52,7 @@ describe('Finalisation de l’inscription', () => {
   }
 
   beforeEach(() => {
+    photos = { prepare: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -50,6 +61,7 @@ describe('Finalisation de l’inscription', () => {
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: PhotoService, useValue: photos },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -131,5 +143,60 @@ describe('Finalisation de l’inscription', () => {
     await settle();
     expect(TestBed.inject(Router).url).toBe('/membre');
     expect(TestBed.inject(AuthService).user()?.email).toBe(TEST_MEMBER.email);
+  });
+
+  async function fillForm() {
+    await open('/finaliser?jeton=abc');
+    http.expectOne('/api/registration/check/').flush(INFO);
+    await settle();
+    const form = root.querySelector('form')!;
+    const set = (name: string, value: string) =>
+      ((form.querySelector(`[name=${name}]`) as HTMLInputElement).value = value);
+    set('address', '12, rue Blaise-Diagne, Thiès');
+    set('password', 'Baobab-solide-2026');
+    set('passwordConfirm', 'Baobab-solide-2026');
+    (form.querySelector('[name=rules]') as HTMLInputElement).checked = true;
+    form.reportValidity = () => true;
+    return form;
+  }
+
+  it('envoie la photo réduite, et non la photo d’origine', async () => {
+    const original = new File([new Uint8Array(4_600_000)], 'IMG_2041.JPG', { type: 'image/jpeg' });
+    const reduced = new File([new Uint8Array(180_000)], 'IMG_2041.jpg', { type: 'image/jpeg' });
+    photos.prepare.mockResolvedValue(reduced);
+    const form = await fillForm();
+    choose(form.querySelector('[name=photo]') as HTMLInputElement, original);
+    expect(photos.prepare).toHaveBeenCalledWith(original);
+    form.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+    await tick();
+    const request = http.expectOne('/api/registration/');
+    const sent = (request.request.body as FormData).get('photo') as File;
+    expect(sent.name).toBe('IMG_2041.jpg');
+    expect(sent.size).toBe(180_000);
+    request.flush(
+      { user: TEST_MEMBER, member_number: 'TBX-2026-00001' },
+      { status: 201, statusText: 'Created' },
+    );
+    await tick();
+    await settle();
+    expect(TestBed.inject(Router).url).toBe('/membre');
+  });
+
+  it('n’envoie rien si la photo reste trop lourde', async () => {
+    photos.prepare.mockRejectedValue(new Error(PHOTO_TOO_LARGE));
+    const form = await fillForm();
+    const big = new File([new Uint8Array(10)], 'scan.png', { type: 'image/png' });
+    choose(form.querySelector('[name=photo]') as HTMLInputElement, big);
+    form.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+    await tick();
+    await settle();
+    http.expectNone('/api/registration/');
+    expect(root.textContent).toContain('La photo dépasse 5 Mo');
+  });
+
+  it('annonce que les photos lourdes sont réduites', async () => {
+    await fillForm();
+    expect(root.textContent).toContain('les photos lourdes sont réduites avant l’envoi');
+    expect(root.textContent).not.toContain('5 Mo maximum');
   });
 });
