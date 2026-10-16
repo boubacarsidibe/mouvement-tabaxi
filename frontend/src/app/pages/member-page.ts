@@ -126,7 +126,13 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     <dt>N° d’adhérent</dt>
                     <dd>{{ me.number }}</dd>
                     <dt>Localité</dt>
-                    <dd>{{ me.territory?.name }}</dd>
+                    <dd>{{ me.locality || me.territory?.name }}</dd>
+                    <dt>Courriel</dt>
+                    <dd>{{ me.email }}</dd>
+                    @if (me.phone) {
+                      <dt>Téléphone</dt>
+                      <dd>{{ me.phone }}</dd>
+                    }
                     <dt>Rôle</dt>
                     <dd>{{ me.role_label }}</dd>
                     <dt>Date d’adhésion</dt>
@@ -264,16 +270,38 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   </div>
                 </section>
                 <div class="field-grid">
-                  <label
-                    >Prénom <input [value]="me.first_name" disabled /><small
-                      >Modifiable uniquement par le bureau.</small
-                    ></label
-                  >
-                  <label
-                    >Nom <input [value]="me.last_name" disabled /><small
-                      >Modifiable uniquement par le bureau.</small
-                    ></label
-                  >
+                  @if (me.first_name) {
+                    <label
+                      >Prénom <input [value]="me.first_name" disabled /><small
+                        >Modifiable uniquement par le bureau.</small
+                      ></label
+                    >
+                  } @else {
+                    <label
+                      >Prénom <input name="first_name" required maxlength="150" autocomplete="given-name" /><small
+                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
+                      >
+                      @if (fieldErrors()['first_name']; as message) {
+                        <small class="field-error" role="alert">{{ message }}</small>
+                      }
+                    </label>
+                  }
+                  @if (me.last_name) {
+                    <label
+                      >Nom <input [value]="me.last_name" disabled /><small
+                        >Modifiable uniquement par le bureau.</small
+                      ></label
+                    >
+                  } @else {
+                    <label
+                      >Nom <input name="last_name" required maxlength="150" autocomplete="family-name" /><small
+                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
+                      >
+                      @if (fieldErrors()['last_name']; as message) {
+                        <small class="field-error" role="alert">{{ message }}</small>
+                      }
+                    </label>
+                  }
                 </div>
                 <label
                   >Adresse courriel <input type="email" [value]="me.email" disabled /><small
@@ -295,7 +323,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     }
                   </label>
                   <label
-                    >Territoire <input [value]="me.territory?.name ?? ''" disabled /><small
+                    >Territoire <input [value]="me.locality || me.territory?.name || ''" disabled /><small
                       >Rattaché par le bureau.</small
                     ></label
                   >
@@ -533,10 +561,20 @@ export class MemberPage {
     const data = new FormData();
     data.set('address', (form.elements.namedItem('address') as HTMLInputElement).value.trim());
     data.set('phone', (form.elements.namedItem('phone') as HTMLInputElement).value.trim());
+    // Prénom et nom ne sont proposés que s'ils manquent encore.
+    for (const name of ['first_name', 'last_name']) {
+      const input = form.elements.namedItem(name) as HTMLInputElement | null;
+      if (input) data.set(name, input.value.trim());
+    }
     if (this.newPhoto) data.set('photo', this.newPhoto);
     this.begin();
     try {
-      this.profile.set(await this.profiles.save(data));
+      const saved = await this.profiles.save(data);
+      this.profile.set(saved);
+      const user = this.auth.user();
+      if (user && (user.first_name !== saved.first_name || user.last_name !== saved.last_name)) {
+        this.auth.signedIn({ ...user, first_name: saved.first_name, last_name: saved.last_name });
+      }
       this.newPhoto = null;
       this.photoVersion.update((v) => v + 1);
       this.profileSaved.set(true);

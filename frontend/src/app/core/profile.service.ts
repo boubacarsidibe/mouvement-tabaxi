@@ -15,6 +15,8 @@ export interface MemberProfile {
   role: string;
   role_label: string;
   territory: TerritorySummary | null;
+  /** Localité affichée : celle du membre, sinon le pays (compte de niveau national). */
+  locality?: string;
   address: string;
   phone: string;
   /** Adresse de la photo (réservée à son propriétaire), ou `null` s'il n'y en a pas. */
@@ -40,7 +42,7 @@ export function cardData(profile: MemberProfile): MemberCardData {
   return {
     name: `${profile.first_name} ${profile.last_name}`.trim(),
     number: profile.number,
-    locality: profile.territory?.name ?? '',
+    locality: profile.locality || profile.territory?.name || '',
     date: formatDate(profile.joined_on),
     photo: profile.photo_url,
   };
@@ -54,7 +56,7 @@ export class ProfileService {
     return firstValueFrom(this.http.get<MemberProfile>('/api/members/me/'));
   }
 
-  /** Adresse, téléphone et, si choisie, nouvelle photo. */
+  /** Adresse, téléphone, nom encore vide et, si choisie, nouvelle photo. */
   save(form: FormData): Promise<MemberProfile> {
     return firstValueFrom(this.http.patch<MemberProfile>('/api/members/me/', form));
   }
