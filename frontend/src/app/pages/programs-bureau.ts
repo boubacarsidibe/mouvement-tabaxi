@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { UiIcon } from '../shared/ui-icon';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
 import {
@@ -22,7 +23,7 @@ import { ExportButton } from '../shared/export-button';
 /** Liste des programmes du périmètre : recherche, filtres par localité et par état, pages, export Excel. */
 @Component({
   selector: 'app-programs-list',
-  imports: [FormsModule, RouterLink, DatePipe, ExportButton],
+  imports: [FormsModule, RouterLink, DatePipe, ExportButton, UiIcon],
   template: `
     <div class="filter-bar filter-bar-wide">
       <label
@@ -39,7 +40,7 @@ import { ExportButton } from '../shared/export-button';
           [ngModel]="territory()"
           (ngModelChange)="territory.set($event); reload()"
         >
-          <option value="">Localité · Toutes</option>
+          <option value="">Toutes les localités</option>
           @for (option of territoryOptions(); track option.id) {
             <option [value]="option.id">{{ option.label }}</option>
           }
@@ -50,13 +51,13 @@ import { ExportButton } from '../shared/export-button';
         [ngModel]="status()"
         (ngModelChange)="status.set($event); reload()"
       >
-        <option value="">État · Tous</option>
+        <option value="">Tous les états</option>
         @for (item of statuses; track item.value) {
           <option [value]="item.value">{{ item.label }}</option>
         }
       </select>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>

@@ -132,7 +132,7 @@ describe('Base des membres', () => {
   it('propose les territoires du périmètre, les communes sous leur région', async () => {
     await open('/bureau/membres');
     const labels = Array.from(select('Filtrer par localité')!.options).map((o) => o.textContent);
-    expect(labels).toEqual(['Localité · Toutes', 'Sénégal', '  Dakar', '    Pikine']);
+    expect(labels).toEqual(['Toutes les localités', 'Sénégal', '  Dakar', '    Pikine']);
   });
 
   it('filtre par territoire', async () => {

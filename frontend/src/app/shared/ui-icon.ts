@@ -38,6 +38,9 @@ import { Component, Input } from '@angular/core';
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="M3 10h18M7 15h3" />
         }
+        @case ('close') {
+          <path d="M6 6l12 12M18 6 6 18" />
+        }
         @case ('search') {
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-4-4" />

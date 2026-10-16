@@ -95,8 +95,8 @@ export class RegistrationButton {
           (ngModelChange)="search.set($event)"
           (keydown.enter)="reload()"
       /></label>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="inline-error" role="alert">{{ error() }}</p>
