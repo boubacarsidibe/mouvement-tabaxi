@@ -62,11 +62,9 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
               placeholder="Rechercher un programme…"
               (keydown.enter)="searchPrograms($event)"
           /></label>
-          <button class="icon-button" aria-label="Notifications">
-            <ui-icon name="bell" /><i></i>
-          </button>
-          <button class="profile-chip" aria-label="Menu du profil">{{ auth.initials() }}</button
-          ><span class="chevron" aria-hidden="true">⌄</span>
+          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
+            auth.initials()
+          }}</a>
         </header>
 
         @if (view === 'home') {
@@ -246,7 +244,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
               <button class="btn btn-green" type="button" [disabled]="!card()" (click)="downloadCard()">
                 <ui-icon name="download" />Télécharger en image</button
               ><button class="btn btn-outline" type="button" [disabled]="!card()" (click)="printCard()">
-                <ui-icon name="card" />Enregistrer en PDF
+                <ui-icon name="card" />Imprimer la carte
               </button>
             </div>
             @if (cardError()) {
@@ -359,13 +357,13 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
               <div>
                 <p class="eyebrow">Compte</p>
                 <h1>Sécurité du compte</h1>
-                <p>Gérez votre mot de passe et vos connexions actives.</p>
+                <p>Changez votre mot de passe.</p>
               </div>
             </header>
             <section class="settings-stack">
               <form class="workspace-form panel" (submit)="savePassword($event)">
                 <h2>Changer mon mot de passe</h2>
-                <p>Utilisez au moins 10 caractères, avec une lettre et un chiffre.</p>
+                <p>Utilisez au moins 10 caractères, pas uniquement des chiffres, et évitez votre nom ou votre courriel.</p>
                 <label
                   >Mot de passe actuel
                   <input
@@ -418,13 +416,6 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   <p class="inline-error" role="alert">{{ formError() }}</p>
                 }
               </form>
-              <article class="panel session-panel">
-                <div>
-                  <h2>Session active</h2>
-                  <p><strong>Windows · Codex</strong><small>Dakar · maintenant</small></p>
-                </div>
-                <span class="badge success">Cette session</span>
-              </article>
             </section>
           </div>
         }

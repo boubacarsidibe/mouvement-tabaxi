@@ -17,7 +17,6 @@ import { UiIcon } from './ui-icon';
         <a routerLink="/" fragment="apropos">À propos</a>
         <a routerLink="/" fragment="actions">Nos actions</a>
         <a routerLink="/" fragment="programmes">Nos programmes</a>
-        <a routerLink="/" fragment="actualites">Actualités</a>
         <a routerLink="/adherer">Nous rejoindre</a>
       </nav>
       <div class="header-actions">

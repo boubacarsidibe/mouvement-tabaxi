@@ -42,7 +42,7 @@ import { UiIcon } from '../shared/ui-icon';
                   {{
                     isForgot
                       ? 'Saisissez votre courriel pour recevoir les instructions.'
-                      : 'Utilisez les identifiants transmis lors de votre adhésion.'
+                      : 'Utilisez votre adresse courriel et le mot de passe que vous avez choisi.'
                   }}
                 </p>
                 @if (notice) {
