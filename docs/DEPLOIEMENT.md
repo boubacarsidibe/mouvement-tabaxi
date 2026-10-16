@@ -36,5 +36,6 @@ Créer une base PostgreSQL (Neon ou Supabase, via la Marketplace de Vercel) et c
 ## Limites à connaître
 
 - **Photos de profil** : le disque de Vercel est temporaire ; les photos envoyées disparaissent. Un stockage d'objets (S3, Vercel Blob…) est nécessaire avant l'ouverture au public.
-- **Blocage de connexion** après échecs : compteur gardé en mémoire de chaque instance, donc moins strict qu'avec un cache partagé.
+- **Limites d'envoi** des formulaires publics (demande d'adhésion, finalisation de l'inscription, mot de passe oublié) : les compteurs sont gardés dans la table `tabaxi_cache` de la base, partagée par toutes les instances. Cette table est créée par `python manage.py migrate` (migration `core.0001_table_cache`) : aucune étape en plus. Les entrées expirées sont effacées au fil de l'eau par Django.
+- **Blocage de connexion** après échecs : les échecs sont enregistrés en base, donc communs à toutes les instances.
 - Les fonctions s'endorment : la première requête après une pause est plus lente.
