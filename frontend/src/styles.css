@@ -839,15 +839,24 @@ small {
 
 /* Member and executive workspaces */
 .workspace-shell {
+  --largeur-menu: 238px;
   min-height: calc(100vh / var(--echelle));
   display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-columns: var(--largeur-menu) minmax(0, 1fr);
   background: #f1f5f0;
 }
+.workspace-area {
+  grid-column: 2;
+}
+/* Fixée en haut et en bas de la fenêtre : toute la hauteur, quel que soit le navigateur.
+   (Une hauteur en vh dépend de la façon dont chaque navigateur applique le zoom.) */
 .side-nav {
-  height: calc(100vh / var(--echelle));
-  position: sticky;
+  position: fixed;
   top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  width: var(--largeur-menu);
   display: flex;
   flex-direction: column;
   padding: 20px 14px 18px;
@@ -1068,19 +1077,21 @@ small {
   margin: 0 auto;
   padding: 24px 28px 40px;
 }
+/* Titre de page : une simple ligne de texte, sans bandeau ni sous-titre. */
 .page-heading {
-  min-height: 60px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .page-heading h1 {
   margin: 0;
-  font-size: clamp(25px, calc(2.2vw / var(--echelle)), 34px);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  color: #34483e;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 .page-heading p {
   margin: 3px 0 0;
@@ -2127,7 +2138,7 @@ table input {
     right: 18px;
   }
   .workspace-shell {
-    grid-template-columns: 210px minmax(0, 1fr);
+    --largeur-menu: 210px;
   }
   .member-grid {
     grid-template-columns: 1.4fr 1fr;
@@ -2287,6 +2298,7 @@ table input {
     display: block;
   }
   .side-nav {
+    width: auto;
     height: auto;
     position: relative;
     padding: 10px 14px;

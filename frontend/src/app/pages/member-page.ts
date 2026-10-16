@@ -55,25 +55,11 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <label class="top-search"
-            ><ui-icon name="search" /><input
-              aria-label="Rechercher un programme"
-              placeholder="Rechercher un programme…"
-              (keydown.enter)="searchPrograms($event)"
-          /></label>
-          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
-            auth.initials()
-          }}</a>
-        </header>
 
         @if (view === 'home') {
           <div class="workspace-content member-home">
             <header class="page-heading">
-              <div>
-                <h1>Mon espace</h1>
-                <p>Bienvenue dans votre espace membre du Mouvement TABAXI</p>
-              </div>
+              <h1>Mon espace</h1>
             </header>
             <section class="welcome-banner">
               <img src="hero-tabaxi.jpg" alt="" />
@@ -209,10 +195,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'programs') {
           <div class="workspace-content">
             <header class="page-heading">
-              <div>
-                <h1>Programmes & activités</h1>
-                <p>Les programmes de votre territoire et leurs activités : inscrivez-vous à celles qui vous intéressent.</p>
-              </div>
+              <h1>Programmes & activités</h1>
             </header>
             <app-member-programs />
           </div>
@@ -221,10 +204,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'card') {
           <div class="workspace-content card-view">
             <header class="page-heading">
-              <div>
-                <h1>Ma carte numérique</h1>
-                <p>Votre carte de membre officielle du Mouvement TABAXI</p>
-              </div>
+              <h1>Ma carte numérique</h1>
             </header>
             @if (card(); as data) {
               <app-member-card
@@ -260,11 +240,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'profile') {
           <div class="workspace-content narrow-workspace">
             <header class="page-heading">
-              <div>
-                <p class="eyebrow">Informations personnelles</p>
-                <h1>Mon profil</h1>
-                <p>Mettez à jour vos coordonnées et votre photo.</p>
-              </div>
+              <h1>Mon profil</h1>
             </header>
             @if (profile(); as me) {
               <form class="workspace-form panel" (submit)="saveProfile($event)">
@@ -354,11 +330,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'security') {
           <div class="workspace-content narrow-workspace">
             <header class="page-heading">
-              <div>
-                <p class="eyebrow">Compte</p>
-                <h1>Sécurité du compte</h1>
-                <p>Changez votre mot de passe.</p>
-              </div>
+              <h1>Sécurité du compte</h1>
             </header>
             <section class="settings-stack">
               <form class="workspace-form panel" (submit)="savePassword($event)">
@@ -491,11 +463,6 @@ export class MemberPage {
     }
   }
 
-  /** La recherche du haut de l'écran ouvre la page des programmes avec ce texte. */
-  protected searchPrograms(event: Event): void {
-    const value = (event.target as HTMLInputElement).value.trim();
-    void this.router.navigate(['/membre/programmes'], { queryParams: value ? { q: value } : {} });
-  }
 
   private photoUrl(me: MemberProfile): string {
     return `${me.photo_url}?v=${this.photoVersion()}`;

@@ -63,18 +63,10 @@ import { RequestDetail, RequestsList } from './requests-review';
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
-            auth.initials()
-          }}</a>
-        </header>
 
         <div class="workspace-content admin-content">
           <header class="page-heading">
-            <div>
-              <h1>{{ pageTitle }}</h1>
-              <p>{{ pageSubtitle }}</p>
-            </div>
+            <h1>{{ pageTitle }}</h1>
             @if (hasPrimaryAction) {
               <a class="btn btn-green" [routerLink]="actionLink"
                 ><ui-icon name="plus" />{{ actionLabel }}</a
@@ -299,31 +291,6 @@ export class AdminPage {
         report: 'Compte rendu',
         attendance: 'Présences',
         invite: 'Inviter un coordonnateur',
-      } as Record<string, string>
-    )[this.view];
-  }
-  protected get pageSubtitle(): string {
-    return (
-      {
-        dashboard: 'Vue d’ensemble des activités du Mouvement TABAXI',
-        requests: 'Liste des personnes qui souhaitent rejoindre le Mouvement TABAXI',
-        members: 'Gestion des membres du Mouvement TABAXI',
-        programs: 'Suivi des initiatives du Mouvement TABAXI',
-        territories: 'Gestion des localités et de leurs coordonnateurs',
-        accounts: 'Gestion des utilisateurs et des accès à la plateforme',
-        coordinators: 'Membres du bureau exécutif et territoires rattachés',
-        audit: 'Historique des décisions et opérations sensibles',
-        'request-detail': 'Décider avec les informations utiles et garder une trace',
-        'member-detail': 'Coordonnées, statut du compte et historique',
-        'program-new': 'Définir un objectif, une localité et une période',
-        'program-edit': 'Mettre à jour le programme, son responsable et son état',
-        'program-detail': 'Suivre les activités, la participation et l’avancement',
-        'activity-new': 'Préparer une activité visible par les membres du territoire',
-        'activity-edit': 'Corriger la date, le lieu ou la description',
-        'activity-detail': 'Informations, compte rendu et inscrits',
-        report: 'Documenter les résultats d’une activité terminée',
-        attendance: 'Enregistrer les membres effectivement présents',
-        invite: 'Donner un accès au bureau exécutif',
       } as Record<string, string>
     )[this.view];
   }
