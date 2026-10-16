@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -46,10 +47,15 @@ class User(AbstractUser):
     username = None
     email = models.EmailField('courriel', unique=True)
     role = models.CharField('rôle', max_length=20, choices=Role.choices, default=Role.MEMBRE)
+    # Territoire de rattachement d'un membre, ou territoire de coordination d'un coordonnateur.
+    # Un fondateur voit tout et n'en a pas besoin.
     territory = models.ForeignKey(
-        'territories.Territory', verbose_name='territoire', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='users',
-        help_text='Territoire d’un coordonnateur : il ne voit que les données de ce territoire.',
+        'territories.Territory',
+        verbose_name='territoire',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='users',
     )
 
     USERNAME_FIELD = 'email'
@@ -68,6 +74,15 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def clean(self):
+        super().clean()
+        if self.role == self.Role.COORDONNATEUR and self.territory_id is None:
+            raise ValidationError({'territory': 'Un coordonnateur doit être rattaché à un territoire.'})
+
+    @property
+    def is_founder(self):
+        return self.role == self.Role.FONDATEUR
 
     @property
     def is_bureau(self):
@@ -175,3 +190,23 @@ class InvitationLink(models.Model):
         if updated:
             self.used_at = now
         return bool(updated)
+
+
+class LoginFailure(models.Model):
+    """Échec de connexion, gardé quelques heures pour bloquer les essais répétés.
+
+    Le courriel est enregistré tel que saisi (en minuscules), qu'un compte existe ou
+    non : on ne doit pas pouvoir deviner un mot de passe en changeant d'adresse.
+    """
+
+    email = models.CharField('courriel saisi', max_length=254, db_index=True)
+    ip_address = models.GenericIPAddressField('adresse IP', null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField('date', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'échec de connexion'
+        verbose_name_plural = 'échecs de connexion'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.email} – {self.created_at:%d/%m/%Y %H:%M}'

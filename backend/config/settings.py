@@ -14,21 +14,48 @@ import os
 import sys
 from pathlib import Path
 
-from .env import load_env_file, mailer_from_env
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.csp import CSP
+
+from core.crypto import dev_key_from_secret
+
+from .env import env_flag, load_env_file, mailer_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_env_file(BASE_DIR / '.env')
 
+TESTING = sys.argv[1:2] == ['test']
+
 
 # Les valeurs sensibles viennent de l'environnement (voir .env.example).
-# La clé de repli ci-dessous ne sert qu'en développement local.
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'cle-de-developpement-a-ne-jamais-utiliser-en-production')
+# Sans DJANGO_DEBUG=1, le serveur se comporte comme en production : c'est le choix sûr
+# si une variable est oubliée au déploiement.
+DEBUG = os.environ.get('DJANGO_DEBUG', '0') == '1'
 
-DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+# La clé de repli ne sert qu'en développement local et pendant les tests.
+DEV_SECRET_KEYS = {'cle-de-developpement-a-ne-jamais-utiliser-en-production', 'remplacer-par-une-longue-valeur-aleatoire'}
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'cle-de-developpement-a-ne-jamais-utiliser-en-production')
+if not DEBUG and not TESTING and (SECRET_KEY in DEV_SECRET_KEYS or len(SECRET_KEY) < 50):
+    raise ImproperlyConfigured(
+        'DJANGO_SECRET_KEY doit contenir une valeur aléatoire d\'au moins 50 caractères en production. '
+        'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
+    )
 
 ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h]
+
+# Clés de chiffrement des données sensibles en base (voir core/crypto.py), séparées par des
+# virgules : la première chiffre, toutes déchiffrent. Obligatoires en production ; en local
+# et pendant les tests, une clé est dérivée de la clé secrète.
+FIELD_ENCRYPTION_KEYS = [k.strip() for k in os.environ.get('FIELD_ENCRYPTION_KEYS', '').split(',') if k.strip()]
+if not FIELD_ENCRYPTION_KEYS:
+    if not DEBUG and not TESTING:
+        raise ImproperlyConfigured(
+            'FIELD_ENCRYPTION_KEYS est obligatoire en production. Générer une clé avec : '
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        )
+    FIELD_ENCRYPTION_KEYS = [dev_key_from_secret(SECRET_KEY)]
 
 
 # Application definition
@@ -62,6 +89,7 @@ CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.SessionAuthentication'],
+    'EXCEPTION_HANDLER': 'core.exceptions.api_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
     # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
@@ -70,6 +98,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
         'password_reset': os.environ.get('PASSWORD_RESET_RATE', '10/hour'),
+        'registration': os.environ.get('REGISTRATION_RATE', '30/hour'),
     },
 }
 
@@ -80,9 +109,52 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.BureauInactivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
+
+
+# Sécurité des échanges
+# https://docs.djangoproject.com/en/6.1/topics/security/
+
+# Politique de contenu des pages servies par Django (API, administration). L'API ne
+# renvoie que du JSON : rien ne doit s'exécuter ailleurs que depuis le serveur lui-même,
+# et aucune page ne peut être affichée dans le cadre d'un autre site.
+SECURE_CSP = {
+    'default-src': [CSP.SELF],
+    'script-src': [CSP.SELF],
+    # L'administration Django utilise quelques attributs « style ».
+    'style-src': [CSP.SELF, CSP.UNSAFE_INLINE],
+    'img-src': [CSP.SELF, 'data:'],
+    'object-src': [CSP.NONE],
+    'base-uri': [CSP.SELF],
+    'form-action': [CSP.SELF],
+    'frame-ancestors': [CSP.NONE],
+}
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+if not DEBUG and not TESTING:
+    # En production, tout passe par https : redirection, HSTS, cookies jamais envoyés en clair.
+    # (Les tests parlent en http ; cette configuration est vérifiée par « check --deploy ».)
+    SECURE_SSL_REDIRECT = env_flag(os.environ.get('SECURE_SSL_REDIRECT', '1'))
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', str(365 * 24 * 3600)))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag(os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', '1'))
+    # L'inscription à la liste « preload » des navigateurs est quasi définitive : décision à prendre
+    # une fois le nom de domaine choisi.
+    SECURE_HSTS_PRELOAD = env_flag(os.environ.get('SECURE_HSTS_PRELOAD', '0'))
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Derrière l'hébergeur, le proxy indique si la requête d'origine était en https.
+    if env_flag(os.environ.get('DJANGO_BEHIND_HTTPS_PROXY', '0')):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -134,9 +206,30 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Empreintes des mots de passe : Argon2id pour tout nouveau mot de passe. Les anciennes
+# empreintes (PBKDF2) restent reconnues et sont converties à la connexion suivante.
+SECURE_PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+PASSWORD_HASHERS = SECURE_PASSWORD_HASHERS
+
+# La session d'un membre du bureau se ferme après cette durée sans action (besoin B4).
+BUREAU_INACTIVITY_MINUTES = int(os.environ.get('BUREAU_INACTIVITY_MINUTES', '30'))
+
+# Blocage temporaire de la connexion après plusieurs échecs (voir accounts/lockout.py).
+LOGIN_MAX_FAILURES_PER_ACCOUNT = int(os.environ.get('LOGIN_MAX_FAILURES_PER_ACCOUNT', '5'))
+LOGIN_MAX_FAILURES_PER_IP = int(os.environ.get('LOGIN_MAX_FAILURES_PER_IP', '20'))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', '15'))
+# Nombre de proxys de confiance devant Django (hébergeur, répartiteur de charge) : l'adresse
+# du visiteur est alors lue dans X-Forwarded-For. 0 = connexion directe.
+LOGIN_TRUSTED_PROXIES = int(os.environ.get('LOGIN_TRUSTED_PROXIES', '0'))
+
 # Les tests créent beaucoup de comptes : un hachage rapide les accélère.
-# Partout ailleurs, le hachage lent et sûr par défaut de Django reste utilisé.
-if sys.argv[1:2] == ['test']:
+# Partout ailleurs, Argon2id est utilisé (les tests de sécurité le vérifient).
+if TESTING:
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 
@@ -156,6 +249,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Fichiers envoyés (photos de profil). Ils ne sont jamais servis directement : l'API les
+# renvoie après contrôle d'accès. Le dossier est ignoré par Git.
+MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
 
 # Email

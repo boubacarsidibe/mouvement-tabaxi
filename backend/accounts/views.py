@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from core.mail import EmailNotSent
 
-from . import invitations, password_reset
+from . import invitations, lockout, password_reset
 from .models import User
 from .permissions import IsFounder
 from .serializers import (
@@ -38,6 +38,17 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
         password = serializer.validated_data['password']
+        ip = lockout.client_ip(request)
+
+        # Le blocage est vérifié avant le mot de passe : pendant un blocage, même le bon
+        # mot de passe est refusé, sinon les essais pourraient continuer.
+        remaining = lockout.remaining_lock(email, ip)
+        if remaining is not None:
+            return Response(
+                {'detail': lockout.lock_message(remaining), 'code': 'too_many_attempts'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={'Retry-After': str(max(1, int(remaining.total_seconds())))},
+            )
 
         user = authenticate(request, email=email, password=password)
         if user is None:
@@ -47,10 +58,12 @@ class LoginView(APIView):
                 return Response(
                     {'detail': INACTIVE_ACCOUNT, 'code': 'inactive_account'}, status=status.HTTP_403_FORBIDDEN
                 )
+            lockout.record_failure(email, ip)
             return Response(
                 {'detail': INVALID_CREDENTIALS, 'code': 'invalid_credentials'}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        lockout.clear_failures(email)
         login(request, user)
         if not serializer.validated_data['remember']:
             request.session.set_expiry(0)  # session fermée avec le navigateur

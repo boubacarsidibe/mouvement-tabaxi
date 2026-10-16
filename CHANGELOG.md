@@ -24,3 +24,14 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Frontend : écran d'examen des demandes du bureau relié à `/api/applications/` (liste filtrable par statut, fiche, acceptation, refus avec motif obligatoire, erreur d'envoi du courriel affichée), réservé aux fondateurs, sans données fictives (#21).
 - Mot de passe oublié : `POST /api/auth/password/forgot/`, `reset/check/` et `reset/` (lien valable une heure, à usage unique, réponse identique que le compte existe ou non), écrans `/mot-de-passe-oublie` et `/nouveau-mot-de-passe` (#29).
 - Invitation d'un coordonnateur ou d'un fondateur par un fondateur : compte du bureau rattaché à un territoire, lien personnel valable 7 jours, page `/invitation` pour choisir son mot de passe ; aucun compte n'est créé si le courriel ne part pas.
+- Backend : blocage temporaire de la connexion après 5 échecs pour un compte ou 20 depuis une adresse (#32).
+- Backend : fermeture de la session du bureau après 30 minutes sans action ; chaque erreur de l'API porte un code stable (#31).
+- Backend : mots de passe en Argon2id, https obligatoire et cookies sécurisés en production, en-têtes de sécurité (CSP), refus de démarrer sans vraie clé secrète (#63).
+- Backend : chiffrement en base des données sensibles des demandes (motivation, motif de refus, note interne), avec changement de clé sans perte (#64).
+- Backend : rattachement des comptes à un territoire et règle d'accès par territoire (un coordonnateur voit son territoire et ceux qui en dépendent, un fondateur voit tout) (#36).
+- Backend : dossier de membre avec numéro TBX-AAAA-NNNNN attribué automatiquement, unique et jamais réutilisé (#34).
+- Backend : finalisation de l'inscription avec le lien personnel (mot de passe, adresse et téléphone chiffrés, photo nettoyée), création du compte membre et passage de la demande à « Inscrite » (#25).
+
+### Modifié
+
+- Backend : sans `DJANGO_DEBUG=1`, le serveur se comporte désormais comme en production. En local, copier `backend/.env.example` en `backend/.env` (#63).

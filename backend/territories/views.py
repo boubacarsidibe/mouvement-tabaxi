@@ -1,10 +1,15 @@
 import unicodedata
 
+from rest_framework import generics
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from accounts.permissions import IsBureau
+
 from .models import Territory
+from .scope import visible_territories
+from .serializers import ManagedTerritorySerializer, territory_path
 
 
 def french_sort_key(name):
@@ -47,3 +52,32 @@ def active_tree():
 def territory_tree(request):
     """Liste publique des territoires, pour le formulaire d'adhésion."""
     return Response(active_tree())
+
+
+class ManagedTerritoryListView(generics.ListAPIView):
+    """Territoires du périmètre de la personne connectée (bureau exécutif).
+
+    Un coordonnateur reçoit son territoire et ceux qui en dépendent ; un fondateur, tous
+    les territoires, actifs ou non.
+    """
+
+    permission_classes = [IsBureau]
+    serializer_class = ManagedTerritorySerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return visible_territories(self.request.user).select_related('parent__parent').order_by('kind', 'name')
+
+    def list(self, request, *args, **kwargs):
+        territories = sorted(self.get_queryset(), key=lambda t: french_sort_key(territory_path(t)))
+        return Response(self.get_serializer(territories, many=True).data)
+
+
+class ManagedTerritoryDetailView(generics.RetrieveAPIView):
+    """Un territoire du périmètre. Hors périmètre : 404, même en changeant l'adresse à la main."""
+
+    permission_classes = [IsBureau]
+    serializer_class = ManagedTerritorySerializer
+
+    def get_queryset(self):
+        return visible_territories(self.request.user).select_related('parent__parent')

@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from accounts.models import User
 from territories.models import Territory
+from territories.serializers import TerritorySummarySerializer
 
 from .models import Application
 
@@ -68,22 +69,6 @@ class ApplicationSubmitSerializer(serializers.ModelSerializer):
         # La réponse confirme la demande sans renvoyer les informations personnelles.
         data = super().to_representation(instance)
         return {key: data[key] for key in ('reference', 'status', 'status_label', 'created_at')}
-
-
-class TerritorySummarySerializer(serializers.ModelSerializer):
-    kind_label = serializers.CharField(source='get_kind_display', read_only=True)
-    path = serializers.SerializerMethodField(help_text='Exemple : « Sénégal › Saint-Louis › Podor ».')
-
-    class Meta:
-        model = Territory
-        fields = ('id', 'name', 'kind', 'kind_label', 'path')
-
-    def get_path(self, territory):
-        names = []
-        while territory is not None:
-            names.append(territory.name)
-            territory = territory.parent
-        return ' › '.join(reversed(names))
 
 
 class DeciderSerializer(serializers.ModelSerializer):
