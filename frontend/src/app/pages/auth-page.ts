@@ -19,18 +19,10 @@ import { UiIcon } from '../shared/ui-icon';
             <p>
               {{
                 isForgot
-                  ? 'Indiquez l’adresse courriel associée à votre compte. Nous vous enverrons un lien valable pendant 30 minutes.'
+                  ? 'Indiquez l’adresse courriel associée à votre compte. Nous vous enverrons un lien valable pendant une heure.'
                   : 'Une seule connexion pour les membres, les coordonnateurs et les fondateurs.'
               }}
             </p>
-            <div class="auth-assurance">
-              <ui-icon name="key" />
-              <span
-                ><strong>Vos accès restent privés</strong>Les droits sont vérifiés selon votre rôle
-                et votre territoire.</span
-              >
-            </div>
-            <blockquote>« Agir près de chez soi, avancer ensemble. »</blockquote>
           </aside>
 
           <section class="auth-panel">

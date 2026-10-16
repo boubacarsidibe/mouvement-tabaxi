@@ -25,23 +25,6 @@ import { UiIcon } from '../shared/ui-icon';
               plus solidaires et un avenir meilleur dans tous nos territoires.
             </p>
           </div>
-
-          <div class="commitment-note">
-            Notre engagement<br />pour des communautés<br />plus fortes <i></i>
-          </div>
-
-          <aside class="member-strip" aria-label="Exemples de membres du mouvement">
-            <h2>Découvrez des membres du mouvement</h2>
-            <div class="member-faces">
-              @for (person of members; track person.name) {
-                <div>
-                  <img [src]="person.image" alt="" />
-                  <strong>{{ person.name }}</strong>
-                  <span>{{ person.city }}</span>
-                </div>
-              }
-            </div>
-          </aside>
         </div>
       </section>
 
@@ -60,7 +43,6 @@ import { UiIcon } from '../shared/ui-icon';
       </section>
 
       <section class="public-story" id="apropos">
-        <div class="story-number" aria-hidden="true">01</div>
         <div class="story-copy">
           <p class="overline"><span></span>Pourquoi TABAXI</p>
           <h2>Les décisions prennent racine dans les territoires.</h2>
@@ -70,20 +52,6 @@ import { UiIcon } from '../shared/ui-icon';
             identifiés et un suivi concret.
           </p>
         </div>
-        <dl>
-          <div>
-            <dt>12</dt>
-            <dd>localités déjà structurées</dd>
-          </div>
-          <div>
-            <dt>1 248</dt>
-            <dd>membres engagés</dd>
-          </div>
-          <div>
-            <dt>86</dt>
-            <dd>coordonnateurs de terrain</dd>
-          </div>
-        </dl>
       </section>
 
       <section class="public-programs" id="programmes">
