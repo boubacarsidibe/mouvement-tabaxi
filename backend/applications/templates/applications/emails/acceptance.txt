@@ -1,6 +1,6 @@
 {% autoescape off %}Bonjour {{ application.first_name }},
 
-Bonne nouvelle : votre demande d'adhésion {{ application.reference }} au Mouvement TABAXI a été acceptée.
+{% if resent %}Votre demande d'adhésion {{ application.reference }} au Mouvement TABAXI a été acceptée, et voici un nouveau lien personnel pour finaliser votre inscription. Les liens envoyés auparavant ne fonctionnent plus.{% else %}Bonne nouvelle : votre demande d'adhésion {{ application.reference }} au Mouvement TABAXI a été acceptée.{% endif %}
 
 Pour devenir officiellement membre, finalisez votre inscription avec votre lien personnel :
 

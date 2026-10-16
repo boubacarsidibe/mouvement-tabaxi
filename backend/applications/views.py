@@ -122,6 +122,10 @@ class DecisionView(APIView):
     """Base des décisions : la demande doit attendre, et le courriel doit partir."""
 
     permission_classes = [IsFounder]
+    email_not_sent_detail = (
+        "Le courriel n'a pas pu être envoyé : la décision n'est pas enregistrée et la demande "
+        'reste « À examiner ». Réessayez dans quelques minutes.'
+    )
 
     def get_application(self, pk):
         return generics.get_object_or_404(Application, pk=pk)
@@ -131,13 +135,12 @@ class DecisionView(APIView):
             application = decide()
         except services.AlreadyDecided as error:
             return Response({'detail': str(error), 'code': 'already_decided'}, status=status.HTTP_409_CONFLICT)
+        except services.NotAccepted as error:
+            return Response({'detail': str(error), 'code': 'not_accepted'}, status=status.HTTP_409_CONFLICT)
         except EmailNotSent:
             return Response(
                 {
-                    'detail': (
-                        "Le courriel n'a pas pu être envoyé : la décision n'est pas enregistrée et la demande "
-                        'reste « À examiner ». Réessayez dans quelques minutes.'
-                    ),
+                    'detail': self.email_not_sent_detail,
                     'code': 'email_not_sent',
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -172,3 +175,15 @@ class RejectView(DecisionView):
                 note=serializer.validated_data['internal_note'],
             )
         )
+
+
+class ResendLinkView(DecisionView):
+    """Nouveau lien personnel d'inscription pour une demande acceptée (lien expiré ou perdu)."""
+
+    email_not_sent_detail = (
+        "Le courriel n'a pas pu être envoyé : aucun nouveau lien n'a été créé. Réessayez dans quelques minutes."
+    )
+
+    def post(self, request, pk):
+        application = self.get_application(pk)
+        return self.respond(lambda: services.resend_link(application, by=request.user))

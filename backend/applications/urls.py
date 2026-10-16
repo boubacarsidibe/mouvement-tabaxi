@@ -8,4 +8,5 @@ urlpatterns = [
     path('<int:pk>/', views.ApplicationDetailView.as_view(), name='application-detail'),
     path('<int:pk>/accept/', views.AcceptView.as_view(), name='application-accept'),
     path('<int:pk>/reject/', views.RejectView.as_view(), name='application-reject'),
+    path('<int:pk>/resend-link/', views.ResendLinkView.as_view(), name='application-resend-link'),
 ]

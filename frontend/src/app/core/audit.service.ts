@@ -6,6 +6,7 @@ import { Download, fetchFile } from './download';
 export type AuditAction =
   | 'demande_acceptee'
   | 'demande_refusee'
+  | 'lien_renvoye'
   | 'statut_modifie'
   | 'invitation_envoyee'
   | 'liste_exportee';

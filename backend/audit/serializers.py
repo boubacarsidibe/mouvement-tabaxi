@@ -7,7 +7,7 @@ def describe(entry):
     """Phrase qui complète l'action, tirée des détails enregistrés."""
     d = entry.details
     action = AuditEntry.Action
-    if entry.action in (action.APPLICATION_ACCEPTED, action.APPLICATION_REJECTED):
+    if entry.action in (action.APPLICATION_ACCEPTED, action.APPLICATION_REJECTED, action.LINK_RESENT):
         text = ' · '.join(part for part in (d.get('reference'), d.get('territory')) if part)
         if d.get('reason'):
             text += f" · Motif : {d['reason']}"

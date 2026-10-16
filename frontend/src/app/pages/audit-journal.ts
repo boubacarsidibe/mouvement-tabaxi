@@ -17,6 +17,7 @@ const ACTIONS: { value: AuditAction | ''; label: string }[] = [
   { value: '', label: 'Action · Toutes' },
   { value: 'demande_acceptee', label: 'Demande acceptée' },
   { value: 'demande_refusee', label: 'Demande refusée' },
+  { value: 'lien_renvoye', label: 'Lien d’inscription renvoyé' },
   { value: 'statut_modifie', label: 'Statut modifié' },
   { value: 'invitation_envoyee', label: 'Invitation envoyée' },
   { value: 'liste_exportee', label: 'Liste exportée' },
