@@ -309,7 +309,7 @@ MAILERS = {
 
 # En production, un courriel « envoyé » dans la console n'arrive à personne : une demande serait
 # marquée « Acceptée » sans que la personne reçoive son lien. Un vrai service d'envoi est donc exigé
-# (Brevo : voir docs/DEPLOIEMENT.md), sauf pour un aperçu de test déclaré (courriels dans les journaux).
+# (voir docs/DEPLOIEMENT.md), sauf pour un aperçu de test déclaré (courriels dans les journaux).
 if (
     not DEBUG
     and not TESTING
@@ -317,7 +317,7 @@ if (
     and not env_flag(os.environ.get('EMAIL_CONSOLE_IN_PRODUCTION', '0'))
 ):
     raise ImproperlyConfigured(
-        'EMAIL_HOST est obligatoire en production (par exemple smtp-relay.brevo.com, voir docs/DEPLOIEMENT.md). '
+        'EMAIL_HOST est obligatoire en production (par exemple smtp.gmail.com, voir docs/DEPLOIEMENT.md). '
         'Pour un aperçu de test seulement, EMAIL_CONSOLE_IN_PRODUCTION=1 affiche les courriels dans les journaux.'
     )
 

@@ -1,6 +1,6 @@
 # Déploiement sur Vercel
 
-Deux projets Vercel, plus une base Neon et un service d'envoi de courriels (Brevo) :
+Deux projets Vercel, plus une base Neon et un service d'envoi de courriels (Gmail, par SMTP) :
 
 | Élément | Où | Détail |
 |---|---|---|
@@ -8,7 +8,7 @@ Deux projets Vercel, plus une base Neon et un service d'envoi de courriels (Brev
 | API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django | `backend/vercel.json` applique les migrations à chaque mise en ligne |
 | Base de données | Neon `mouvement-tabaxi-db`, reliée au projet de l'API | fournit `DATABASE_URL` |
 | Photos de profil | dans la base, chiffrées | par défaut en production (le disque de Vercel est effacé entre deux appels) |
-| Courriels | Brevo, par SMTP | obligatoire en production |
+| Courriels | Gmail du mouvement, par SMTP | obligatoire en production |
 
 Le navigateur reste sur l'adresse du site : les cookies de session et la protection CSRF fonctionnent sans réglage de domaine.
 
@@ -24,23 +24,30 @@ Le navigateur reste sur l'adresse du site : les cookies de session et la protect
 | `FRONTEND_URL` | adresse https du site (liens envoyés par courriel) |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
 | `LOGIN_TRUSTED_PROXIES` | `1` |
-| `EMAIL_HOST` | `smtp-relay.brevo.com` |
+| `EMAIL_HOST` | `smtp.gmail.com` |
 | `EMAIL_PORT` | `587` |
-| `EMAIL_HOST_USER` | identifiant SMTP Brevo (de la forme `xxxx@smtp-brevo.com`) |
-| `EMAIL_HOST_PASSWORD` | clé SMTP Brevo |
-| `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <adresse d'expéditeur vérifiée dans Brevo>` |
+| `EMAIL_HOST_USER` | adresse Gmail qui envoie |
+| `EMAIL_HOST_PASSWORD` | mot de passe d'application Gmail (type « Secret » sur Vercel) |
+| `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <la même adresse Gmail>` |
 
 Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`.
 
-## Courriels avec Brevo
+## Courriels
 
-1. Créer un compte gratuit sur https://www.brevo.com (300 courriels par jour).
-2. Vérifier l'adresse d'expéditeur : « Senders, Domains & Dedicated IPs » → « Senders ».
-3. Dans « SMTP & API » → « SMTP » : noter l'identifiant SMTP et créer une clé SMTP.
-4. Renseigner les variables `EMAIL_*` et `DEFAULT_FROM_EMAIL` ci-dessus, puis redéployer l'API.
-5. Tester avec « Mot de passe oublié » sur son propre compte.
+**Aujourd'hui : Gmail.** Les courriels partent du compte Gmail du mouvement, par son propre serveur SMTP
+(environ 500 par jour au plus) :
 
-Avec une adresse Gmail comme expéditeur, des courriels peuvent arriver dans les indésirables ; avec un nom de domaine du mouvement, le déclarer dans Brevo (« Domains ») améliore la remise.
+1. Activer la validation en deux étapes du compte Google : https://myaccount.google.com/signinoptions/twosv
+2. Créer un mot de passe d'application : https://myaccount.google.com/apppasswords
+3. Renseigner les variables `EMAIL_*` et `DEFAULT_FROM_EMAIL` ci-dessus, puis redéployer l'API.
+4. Tester vers une **autre** adresse que celle du compte : un courriel envoyé à sa propre adresse Gmail
+   n'apparaît que dans « Messages envoyés ».
+
+**Pourquoi pas Brevo pour l'instant.** Brevo accepte les courriels mais refuse de les distribuer quand
+l'expéditeur est une adresse `@gmail.com` (journal Brevo : « Envoyé » puis « Erreur ») : Gmail exige que
+ses adresses envoient depuis ses propres serveurs. Avec un nom de domaine du mouvement, déclaré dans Brevo
+(« Domains », enregistrements DKIM et DMARC), on pourra revenir à Brevo en changeant seulement les
+variables `EMAIL_*` (`smtp-relay.brevo.com`, identifiant et clé SMTP Brevo).
 
 ## Mettre en ligne
 
