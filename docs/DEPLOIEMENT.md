@@ -77,7 +77,7 @@ Premier compte fondateur : `python manage.py createsuperuser` depuis un poste, a
 
 ## Limites connues
 
-- Les limites d'envoi des formulaires publics sont comptées par instance de fonction ; le blocage de connexion après plusieurs échecs, lui, est enregistré en base.
+- Les limites d'envoi des formulaires publics (demande d'adhésion, finalisation de l'inscription, mot de passe oublié) sont comptées dans la table `tabaxi_cache` de la base, partagée par toutes les instances ; elle est créée par `python manage.py migrate` (migration `core.0002_table_cache`). Le blocage de connexion après plusieurs échecs est lui aussi enregistré en base.
 - La base gratuite Neon se met en veille sans activité : la première requête après une pause est plus lente.
 
 ## Railway : serveur Django (préparé)
