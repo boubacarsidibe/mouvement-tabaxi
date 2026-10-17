@@ -83,15 +83,23 @@ class ApplicationSerializer(serializers.ModelSerializer):
     territory = TerritorySummarySerializer(read_only=True)
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     decided_by = DeciderSerializer(read_only=True)
+    link_expires_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
         fields = (
             'id', 'reference', 'first_name', 'last_name', 'email', 'territory', 'profession', 'motivation',
             'status', 'status_label', 'created_at', 'consent_at',
-            'decided_by', 'decided_at', 'rejection_reason', 'internal_note',
+            'decided_by', 'decided_at', 'rejection_reason', 'internal_note', 'link_expires_at',
         )
         read_only_fields = fields
+
+    def get_link_expires_at(self, application):
+        """Fin de validité du dernier lien d'inscription envoyé, tant que la personne n'est pas inscrite."""
+        if application.status != Application.Status.ACCEPTEE:
+            return None
+        link = application.registration_links.order_by('-created_at', '-pk').first()
+        return serializers.DateTimeField().to_representation(link.expires_at) if link else None
 
 
 class AcceptSerializer(serializers.Serializer):

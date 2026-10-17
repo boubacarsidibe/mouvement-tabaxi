@@ -240,6 +240,24 @@ export class RequestsList implements OnInit {
               </button>
               <button class="btn btn-wide" type="button" (click)="rejecting.set(false)">Annuler</button>
             }
+          } @else if (app.status === 'acceptee') {
+            <p>
+              Demande acceptée : la personne doit finaliser son inscription avec son lien personnel.
+              @if (app.link_expires_at) {
+                @if (linkExpired(app)) {
+                  Son lien a expiré le {{ app.link_expires_at | date: 'dd/MM/yyyy à HH:mm' }}.
+                } @else {
+                  Son lien est valable jusqu’au {{ app.link_expires_at | date: 'dd/MM/yyyy à HH:mm' }}.
+                }
+              }
+            </p>
+            <p>Si le lien a expiré ou s’est perdu, envoyez-en un nouveau : l’ancien cessera de fonctionner.</p>
+            @if (error()) {
+              <p class="form-error" role="alert">{{ error() }}</p>
+            }
+            <button class="btn btn-green btn-wide" type="button" [disabled]="busy()" (click)="resendLink()">
+              Renvoyer le lien d’inscription
+            </button>
           } @else {
             <p>Cette demande est déjà traitée : {{ app.status_label }}.</p>
           }
@@ -278,6 +296,17 @@ export class RequestDetail implements OnInit {
     return this.decide(
       (id) => this.review.accept(id, this.note()),
       'Demande acceptée : le lien d’inscription a été envoyé par courriel.',
+    );
+  }
+
+  protected linkExpired(item: ReviewedApplication) {
+    return !!item.link_expires_at && new Date(item.link_expires_at).getTime() <= Date.now();
+  }
+
+  protected resendLink() {
+    return this.decide(
+      (id) => this.review.resendLink(id),
+      'Un nouveau lien d’inscription a été envoyé par courriel. L’ancien ne fonctionne plus.',
     );
   }
 

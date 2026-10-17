@@ -16,6 +16,7 @@ class AuditEntry(AppendOnlyModel):
     class Action(models.TextChoices):
         APPLICATION_ACCEPTED = 'demande_acceptee', 'Demande acceptée'
         APPLICATION_REJECTED = 'demande_refusee', 'Demande refusée'
+        LINK_RESENT = 'lien_renvoye', "Lien d'inscription renvoyé"
         STATUS_CHANGED = 'statut_modifie', 'Statut modifié'
         INVITATION_SENT = 'invitation_envoyee', 'Invitation envoyée'
         LIST_EXPORTED = 'liste_exportee', 'Liste exportée'
@@ -24,6 +25,7 @@ class AuditEntry(AppendOnlyModel):
     CATEGORIES = {
         Action.APPLICATION_ACCEPTED: ('adhesion', 'Adhésion'),
         Action.APPLICATION_REJECTED: ('adhesion', 'Adhésion'),
+        Action.LINK_RESENT: ('adhesion', 'Adhésion'),
         Action.STATUS_CHANGED: ('membres', 'Membres'),
         Action.INVITATION_SENT: ('acces', 'Accès'),
         Action.LIST_EXPORTED: ('export', 'Export'),

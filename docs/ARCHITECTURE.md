@@ -70,7 +70,7 @@ Modèle `applications.Application` : référence, prénom, nom, courriel, locali
 - Examen réservé aux fondateurs (`accounts.permissions.IsFounder`). Seule une demande « À examiner » peut être acceptée ou refusée ; chaque décision enregistre son auteur, sa date et une note interne facultative.
 - Un refus exige un motif écrit, envoyé par courriel à la personne. Toute décision n'est enregistrée que si son courriel est parti : sinon la demande reste « À examiner » et le fondateur voit l'erreur (`503 email_not_sent`). Logique dans `applications/services.py`.
 - L'acceptation crée un lien personnel (`RegistrationLink`) et l'envoie par courriel : `FRONTEND_URL/finaliser?jeton=…`. Le jeton (256 bits aléatoires) n'est jamais conservé, seule son empreinte SHA-256 l'est (`core/tokens.py`). Le lien est valable 7 jours et ne sert qu'une fois (consommation atomique). Si le courriel ne part pas, le lien n'existe pas et la demande reste « À examiner ».
-- Écran du bureau (`/bureau/demandes`, `/bureau/demandes/:id`, fondateurs seulement) : `core/review.service.ts` appelle `GET /api/applications/` (filtre `status`, recherche `search`, pagination), `GET /api/applications/:id/`, `POST …/accept/` et `POST …/reject/` (motif obligatoire, contrôlé aussi côté serveur). L'erreur `email_not_sent` est affichée telle quelle ; la demande reste « À examiner ». Aucune donnée fictive.
+- Écran du bureau (`/bureau/demandes`, `/bureau/demandes/:id`, fondateurs seulement) : `core/review.service.ts` appelle `GET /api/applications/` (filtre `status`, recherche `search`, pagination), `GET /api/applications/:id/`, `POST …/accept/`, `POST …/reject/` (motif obligatoire, contrôlé aussi côté serveur) et `POST …/resend-link/` (bouton « Renvoyer le lien d'inscription » sur une demande acceptée, avec la date de fin de validité du dernier lien). L'erreur `email_not_sent` est affichée telle quelle ; la demande reste « À examiner ». Aucune donnée fictive.
 
 ### Membres
 
@@ -200,6 +200,7 @@ Chaque liste du bureau a son export `.xlsx` : `GET /api/members/export/` (base d
 | `GET /api/members/<id>/photo/` | bureau | Photo d'un membre du périmètre (JPEG) ; 404 sans photo ou hors périmètre |
 | `POST /api/members/<id>/status/` | fondateur | Change le statut. Corps : `status` (`actif`, `suspendu`, `radie`), `reason` (obligatoire pour suspendre ou radier). Renvoie la fiche ; 400 par champ ; 409 `same_status` (déjà dans ce statut) ou `own_status` (son propre statut) ; 403 hors fondateur |
 | `POST /api/applications/<id>/reject/` | fondateur | Refus. Corps : `reason` (obligatoire), `internal_note`. Envoie le motif par courriel. 409 `already_decided` ; 503 `email_not_sent` |
+| `POST /api/applications/<id>/resend-link/` | fondateur | Nouveau lien d'inscription pour une demande « Acceptée » (lien expiré ou perdu) : les liens précédents cessent de fonctionner, le renvoi est noté au journal (`lien_renvoye`). 409 `not_accepted` si la demande n'est pas « Acceptée » ; 503 `email_not_sent` (aucun nouveau lien) |
 
 ## Frontend
 

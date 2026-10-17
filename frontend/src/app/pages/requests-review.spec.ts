@@ -22,6 +22,16 @@ const APPLICATION = {
   decided_at: null,
   rejection_reason: '',
   internal_note: '',
+  link_expires_at: null,
+};
+
+const ACCEPTED = {
+  ...APPLICATION,
+  status: 'acceptee',
+  status_label: 'Acceptée',
+  decided_by: { id: 1, first_name: 'Boubacar', last_name: 'Sidibe', email: 'fondateur@example.org' },
+  decided_at: '2026-10-01T09:00:00Z',
+  link_expires_at: '2026-10-08T09:00:00Z',
 };
 
 describe('Examen des demandes', () => {
@@ -141,4 +151,48 @@ describe('Examen des demandes', () => {
     await settle();
     expect(saved).toEqual(['demandes-2026-10-16.xlsx']);
   });
+
+  it('renvoie un lien d’inscription expiré à une personne acceptée', async () => {
+    await open('/bureau/demandes/7');
+    http.expectOne('/api/applications/7/').flush(ACCEPTED);
+    await settle();
+    expect(root.textContent).toContain('Son lien a expiré le 08/10/2026');
+    const button = Array.from(root.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Renvoyer le lien'),
+    )!;
+    button.click();
+    const request = http.expectOne('/api/applications/7/resend-link/');
+    expect(request.request.method).toBe('POST');
+    request.flush({ ...ACCEPTED, link_expires_at: '2099-01-01T09:00:00Z' });
+    await settle();
+    expect(root.textContent).toContain('Un nouveau lien d’inscription a été envoyé');
+    expect(root.textContent).toContain('Son lien est valable jusqu’au 01/01/2099');
+  });
+
+  it('affiche le message du serveur si le nouveau lien ne part pas', async () => {
+    await open('/bureau/demandes/7');
+    http.expectOne('/api/applications/7/').flush(ACCEPTED);
+    await settle();
+    Array.from(root.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Renvoyer le lien'))!
+      .click();
+    http
+      .expectOne('/api/applications/7/resend-link/')
+      .flush(
+        { detail: 'Le courriel n’a pas pu être envoyé : aucun nouveau lien n’a été créé.', code: 'email_not_sent' },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+    await settle();
+    expect(root.querySelector('[role=alert]')?.textContent).toContain('aucun nouveau lien');
+  });
+
+  it.each(['a_examiner', 'rejetee', 'inscrite'])(
+    'ne propose pas de renvoyer un lien pour une demande au statut %s',
+    async (status) => {
+      await open('/bureau/demandes/7');
+      http.expectOne('/api/applications/7/').flush({ ...APPLICATION, status });
+      await settle();
+      expect(root.textContent).not.toContain('Renvoyer le lien');
+    },
+  );
 });

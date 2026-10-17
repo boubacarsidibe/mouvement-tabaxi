@@ -21,6 +21,17 @@ from .models import Application, RegistrationLink
 DECISION_SUBJECT = "Votre demande d'adhésion au Mouvement TABAXI"
 
 
+class NotAccepted(Exception):
+    """Le lien d'inscription ne se renvoie qu'à une demande « Acceptée » (pas encore inscrite)."""
+
+    def __init__(self, application):
+        self.application = application
+        super().__init__(
+            "Le lien d'inscription ne peut être renvoyé que pour une demande « Acceptée » "
+            f'(statut actuel : {application.get_status_display()}).'
+        )
+
+
 class AlreadyDecided(Exception):
     """La demande n'est plus « À examiner » : une décision a déjà été prise."""
 
@@ -50,6 +61,16 @@ def registration_url(token):
     return f'{settings.FRONTEND_URL.rstrip("/")}/finaliser?{urlencode({"jeton": token})}'
 
 
+def _send_registration_link(application, *, resent=False):
+    link, token = RegistrationLink.issue(application)
+    body = render_to_string(
+        'applications/emails/acceptance.txt',
+        {'application': application, 'link': link, 'url': registration_url(token), 'resent': resent},
+    )
+    send_email(to=application.email, subject=DECISION_SUBJECT, body=body)
+    return link
+
+
 def accept(application, *, by, note=''):
     """Accepte la demande et envoie le lien personnel d'inscription (7 jours, usage unique).
 
@@ -58,7 +79,6 @@ def accept(application, *, by, note=''):
     with transaction.atomic():
         application = _lock_pending(application)
         _record_decision(application, Application.Status.ACCEPTEE, by, note)
-        link, token = RegistrationLink.issue(application)
         record(
             AuditEntry.Action.APPLICATION_ACCEPTED,
             actor=by,
@@ -66,11 +86,33 @@ def accept(application, *, by, note=''):
             reference=application.reference,
             territory=application.territory.name,
         )
-        body = render_to_string(
-            'applications/emails/acceptance.txt',
-            {'application': application, 'link': link, 'url': registration_url(token)},
+        _send_registration_link(application)
+    return application
+
+
+def resend_link(application, *, by):
+    """Envoie un nouveau lien personnel à une personne acceptée qui n'a pas finalisé son inscription.
+
+    Utile quand le lien a expiré ou que le courriel s'est perdu. Les liens précédents
+    cessent de fonctionner : seul le dernier envoyé est valable. Si le courriel ne part
+    pas, tout est annulé et les anciens liens restent tels quels.
+    """
+    with transaction.atomic():
+        application = Application.objects.select_for_update().get(pk=application.pk)
+        if application.status != Application.Status.ACCEPTEE:
+            raise NotAccepted(application)
+        now = timezone.now()
+        RegistrationLink.objects.filter(application=application, used_at__isnull=True, expires_at__gt=now).update(
+            expires_at=now
         )
-        send_email(to=application.email, subject=DECISION_SUBJECT, body=body)
+        record(
+            AuditEntry.Action.LINK_RESENT,
+            actor=by,
+            subject=f'{application.first_name} {application.last_name}',
+            reference=application.reference,
+            territory=application.territory.name,
+        )
+        _send_registration_link(application, resent=True)
     return application
 
 

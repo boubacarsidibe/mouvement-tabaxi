@@ -24,6 +24,8 @@ export interface ReviewedApplication {
   decided_at: string | null;
   rejection_reason: string;
   internal_note: string;
+  /** Fin de validité du dernier lien d'inscription envoyé (demande « Acceptée » seulement). */
+  link_expires_at: string | null;
 }
 
 export interface ApplicationPage {
@@ -71,6 +73,13 @@ export class ReviewService {
       this.http.post<ReviewedApplication>(`/api/applications/${id}/accept/`, {
         internal_note: internalNote,
       }),
+    );
+  }
+
+  /** Nouveau lien d'inscription pour une personne acceptée : les liens précédents cessent de fonctionner. */
+  resendLink(id: number): Promise<ReviewedApplication> {
+    return firstValueFrom(
+      this.http.post<ReviewedApplication>(`/api/applications/${id}/resend-link/`, {}),
     );
   }
 
