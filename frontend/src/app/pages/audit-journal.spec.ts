@@ -98,7 +98,7 @@ describe('Journal des actions', () => {
     next((p) => p.get('action') === 'liste_exportee').flush(PAGE([]));
     await settle();
     expect(Array.from(select('Filtrer par auteur').options).map((o) => o.textContent)).toEqual([
-      'Auteur · Tous',
+      'Tous les auteurs',
       'Ibrahima Sow',
       'Aïssatou Ba',
     ]);

@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { UiIcon } from '../shared/ui-icon';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
 import {
@@ -17,7 +18,7 @@ import { TerritoryService, territoryChoices } from '../core/territories.service'
 import { ExportButton } from '../shared/export-button';
 
 const STATUSES: { value: MemberStatus | ''; label: string }[] = [
-  { value: '', label: 'Statut · Tous' },
+  { value: '', label: 'Tous les statuts' },
   { value: 'actif', label: 'Actif' },
   { value: 'suspendu', label: 'Suspendu' },
   { value: 'radie', label: 'Radié' },
@@ -38,7 +39,7 @@ export type MembersListKind = 'members' | 'bureau' | 'accounts';
 
 const BUREAU_ROLES = 'coordonnateur,fondateur';
 const FUNCTIONS: { value: string; label: string }[] = [
-  { value: '', label: 'Fonction · Toutes' },
+  { value: '', label: 'Toutes les fonctions' },
   { value: 'coordonnateur', label: 'Coordonnateur' },
   { value: 'fondateur', label: 'Membre fondateur' },
 ];
@@ -56,7 +57,7 @@ function messageOf(error: unknown): string {
  */
 @Component({
   selector: 'app-members-list',
-  imports: [FormsModule, RouterLink, DatePipe, ExportButton],
+  imports: [FormsModule, RouterLink, DatePipe, ExportButton, UiIcon],
   template: `
     <div class="filter-bar filter-bar-wide">
       <label
@@ -73,7 +74,7 @@ function messageOf(error: unknown): string {
           [ngModel]="territory()"
           (ngModelChange)="territory.set($event); reload()"
         >
-          <option value="">Localité · Toutes</option>
+          <option value="">Toutes les localités</option>
           @for (option of territoryOptions(); track option.id) {
             <option [value]="option.id">{{ option.label }}</option>
           }
@@ -100,7 +101,7 @@ function messageOf(error: unknown): string {
         }
       </select>
       <label class="date-filter"
-        ><span>{{ kind() === 'members' ? 'Adhésion du' : 'Entrée du' }}</span
+        ><span><span class="date-word">{{ kind() === 'members' ? 'Adhésion' : 'Entrée' }} </span>du</span
         ><input
           type="date"
           name="joined_from"
@@ -117,8 +118,8 @@ function messageOf(error: unknown): string {
           [ngModel]="to()"
           (ngModelChange)="to.set($event); reload()"
       /></label>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>
@@ -334,18 +335,13 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
 /** Fiche d'un membre : coordonnées, statut du compte, et pour les fondateurs le changement de statut. */
 @Component({
   selector: 'app-member-detail',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
-    @if (isBureauFile()) {
-      <a class="back-link" routerLink="/bureau/coordonnateurs">← Retour à la base des coordonnateurs</a>
-    } @else {
-      <a class="back-link" routerLink="/bureau/membres">← Retour à la base des membres</a>
-    }
     @if (error() && !member()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
     @if (member(); as person) {
-      <section class="review-grid member-detail-grid">
+      <section class="review-grid member-detail-grid" [class.single]="!canManage()">
         <article class="panel member-record">
           <div class="identity-row">
             @if (person.photo_url) {
@@ -410,14 +406,9 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
             }
           }
         </article>
+        @if (canManage()) {
         <aside class="panel decision-panel">
-          <p class="eyebrow">Statut du compte</p>
           <h2>Gérer l’accès</h2>
-          @if (!auth.isFounder()) {
-            <p>Seuls les membres fondateurs peuvent changer le statut d’un membre.</p>
-          } @else if (isSelf()) {
-            <p>Vous ne pouvez pas changer votre propre statut.</p>
-          } @else {
             <p>
               Une suspension ou une radiation bloque immédiatement la connexion sans effacer
               l’historique.
@@ -469,11 +460,11 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
                 </button>
               }
             }
-          }
           @if (done()) {
             <p class="inline-success" role="status">✓ {{ done() }}</p>
           }
         </aside>
+        }
       </section>
     }
   `,
@@ -497,6 +488,8 @@ export class MemberDetail implements OnInit {
   protected readonly isSelf = computed(
     () => !!this.member() && this.member()?.email === this.auth.user()?.email,
   );
+  /** L'encadré « Gérer l'accès » n'est utile qu'à un fondateur, sur la fiche d'une autre personne. */
+  protected readonly canManage = computed(() => this.auth.isFounder() && !this.isSelf());
 
   async ngOnInit() {
     try {

@@ -8,8 +8,8 @@ import { TEST_FOUNDER, TEST_MEMBER } from '../core/testing';
 import { AdminPage } from './admin-page';
 import { MemberPage } from './member-page';
 
-/** Barre du haut et page Sécurité : aucun bouton sans effet ni information inventée. */
-describe('Barre du haut et sécurité du compte', () => {
+/** Haut des écrans et page Sécurité : un simple titre, aucun bouton sans effet ni information inventée. */
+describe('Haut des écrans et sécurité du compte', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
 
@@ -27,19 +27,19 @@ describe('Barre du haut et sécurité du compte', () => {
     await harness.navigateByUrl('/' + path);
   }
   const root = () => harness.routeNativeElement as HTMLElement;
-  const topbar = () => root().querySelector('.workspace-topbar') as HTMLElement;
 
   afterEach(() => {
     // Les données chargées par les écrans ne sont pas l'objet de ces tests.
     http.match(() => true).forEach((request) => request.flush({}));
   });
 
-  it('espace membre : pas de notifications factices, la pastille mène au profil', async () => {
+  it('espace membre : pas de bande en haut, le titre est une simple ligne de texte', async () => {
     await open('membre', MemberPage, 'security');
-    expect(topbar().querySelector('[aria-label=Notifications]')).toBeNull();
-    expect(topbar().querySelector('button.profile-chip')).toBeNull();
-    const chip = topbar().querySelector('a.profile-chip') as HTMLAnchorElement;
-    expect(chip.getAttribute('href')).toBe('/membre/profil');
+    expect(root().querySelector('.workspace-topbar')).toBeNull();
+    expect(root().querySelector('[aria-label=Notifications]')).toBeNull();
+    const heading = root().querySelector('.page-heading') as HTMLElement;
+    expect(heading.querySelector('h1')?.textContent?.trim()).toBe('Sécurité du compte');
+    expect(heading.querySelector('p')).toBeNull();
   });
 
   it('sécurité : pas de session inventée ni de promesse de gérer les connexions', async () => {
@@ -59,12 +59,13 @@ describe('Barre du haut et sécurité du compte', () => {
     expect(text).not.toContain('Enregistrer en PDF');
   });
 
-  it('bureau : ni recherche sans effet ni notifications factices', async () => {
+  it('bureau : pas de bande en haut, le titre est une simple ligne de texte', async () => {
     await open('bureau', AdminPage, 'invite', TEST_FOUNDER);
-    expect(topbar().querySelector('input')).toBeNull();
-    expect(topbar().textContent).not.toContain('Rechercher dans la plateforme');
-    expect(topbar().querySelector('[aria-label=Notifications]')).toBeNull();
-    const chip = topbar().querySelector('a.profile-chip') as HTMLAnchorElement;
-    expect(chip.getAttribute('href')).toBe('/membre/profil');
+    expect(root().querySelector('.workspace-topbar')).toBeNull();
+    expect(root().textContent).not.toContain('Rechercher dans la plateforme');
+    expect(root().textContent).not.toContain('Donner un accès au bureau exécutif');
+    const heading = root().querySelector('.page-heading') as HTMLElement;
+    expect(heading.querySelector('h1')?.textContent?.trim()).toBe('Inviter un coordonnateur');
+    expect(heading.querySelector('p')).toBeNull();
   });
 });

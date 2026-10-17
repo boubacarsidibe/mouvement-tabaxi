@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from accounts.models import User
 from accounts.serializers import check_new_password
+from territories.models import Territory
 from territories.scope import ancestor_ids
 from territories.serializers import TerritorySummarySerializer
 
@@ -59,22 +60,25 @@ class RegistrationSerializer(serializers.Serializer):
         return data
 
 
-LOCKED_FIELDS = ('first_name', 'last_name', 'email', 'territory', 'number', 'joined_on')
+LOCKED_FIELDS = ('email', 'territory', 'number', 'joined_on')
+# Le nom se renseigne une fois, s'il manque (compte créé sans nom) ; ensuite seul le bureau le change.
+NAME_FIELDS = ('first_name', 'last_name')
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
     """Profil et carte du membre connecté.
 
     Le membre modifie son adresse, son téléphone et sa photo. Son nom, son courriel et son
-    territoire ne changent que par le bureau.
+    territoire ne changent que par le bureau ; seul un nom encore vide peut être renseigné.
     """
 
-    first_name = serializers.CharField(source='user.first_name', read_only=True)
-    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', required=False, max_length=150)
+    last_name = serializers.CharField(source='user.last_name', required=False, max_length=150)
     email = serializers.EmailField(source='user.email', read_only=True)
     role = serializers.CharField(source='user.role', read_only=True)
     role_label = serializers.CharField(source='user.get_role_display', read_only=True)
     territory = TerritorySummarySerializer(source='user.territory', read_only=True)
+    locality = serializers.SerializerMethodField()
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True, validators=[PHONE_FORMAT])
     photo = serializers.FileField(write_only=True, required=False)
     photo_url = serializers.SerializerMethodField()
@@ -84,10 +88,17 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         model = Member
         fields = (
             'number', 'joined_on', 'first_name', 'last_name', 'email', 'role', 'role_label', 'territory',
-            'address', 'phone', 'photo', 'photo_url', 'coordinator',
+            'locality', 'address', 'phone', 'photo', 'photo_url', 'coordinator',
         )
         read_only_fields = ('number', 'joined_on')
         extra_kwargs = {'address': {'max_length': 255}}
+
+    def get_locality(self, member):
+        """Localité affichée sur la carte : celle du membre, sinon le pays (compte de niveau national)."""
+        if member.user.territory is not None:
+            return member.user.territory.name
+        country = Territory.objects.filter(kind=Territory.Kind.PAYS).order_by('id').first()
+        return country.name if country else ''
 
     def get_photo_url(self, member):
         return '/api/members/me/photo/' if member.photo else None
@@ -116,6 +127,8 @@ class MemberProfileSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         locked = [name for name in LOCKED_FIELDS if name in self.initial_data]
+        user = self.instance.user if self.instance else None
+        locked += [name for name in NAME_FIELDS if name in self.initial_data and user and getattr(user, name)]
         if locked:
             raise serializers.ValidationError(
                 {name: ['Seul le bureau peut modifier cette information.'] for name in locked}
@@ -128,7 +141,24 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         except DjangoValidationError as error:
             raise serializers.ValidationError(error.messages)
 
+    def validate_first_name(self, value):
+        return self._required_name(value)
+
+    def validate_last_name(self, value):
+        return self._required_name(value)
+
+    def _required_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Ce champ est obligatoire.')
+        return value
+
     def update(self, member, validated_data):
+        names = validated_data.pop('user', {})
+        if names:
+            for field, value in names.items():
+                setattr(member.user, field, value)
+            member.user.save(update_fields=list(names))
         old_photo = member.photo.name if 'photo' in validated_data and member.photo else None
         member = super().update(member, validated_data)
         if old_photo and old_photo != member.photo.name:

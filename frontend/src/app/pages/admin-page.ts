@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { UiIcon } from '../shared/ui-icon';
@@ -34,10 +34,18 @@ import { TerritoriesManager } from './territories-bureau';
   ],
   template: `
     <main class="workspace-shell admin-shell">
-      <aside class="side-nav">
+      <aside class="side-nav" [class.menu-open]="menuOpen()" (click)="closeMenuOnLink($event)">
         <a class="side-logo" routerLink="/"
           ><img src="logo-tabaxi-sidebar.png" alt="Mouvement TABAXI"
         /></a>
+        <button
+          class="menu-toggle"
+          type="button"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
+        >
+          {{ menuOpen() ? 'Fermer' : 'Menu' }}
+        </button>
         <p class="side-label">Bureau exécutif</p>
         <nav aria-label="Bureau exécutif">
           @for (item of visibleNavItems(); track item.view) {
@@ -65,18 +73,10 @@ import { TerritoriesManager } from './territories-bureau';
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
-            auth.initials()
-          }}</a>
-        </header>
 
         <div class="workspace-content admin-content">
-          <header class="page-heading">
-            <div>
-              <h1>{{ pageTitle }}</h1>
-              <p>{{ pageSubtitle }}</p>
-            </div>
+          <header class="page-heading" [class.sr-only]="titleInCard">
+            <h1>{{ pageTitle }}</h1>
             @if (hasPrimaryAction) {
               <a class="btn btn-green" [routerLink]="actionLink"
                 ><ui-icon name="plus" />{{ actionLabel }}</a
@@ -109,14 +109,6 @@ import { TerritoriesManager } from './territories-bureau';
           }
 
           @if (view === 'accounts') {
-            <div class="security-alert">
-              <ui-icon name="key" />
-              <p>
-                <strong>Sécurité</strong>Veillez à n’accorder des accès qu’aux personnes de
-                confiance. Suspendez ou radiez les comptes qui ne servent plus : leur connexion est
-                aussitôt bloquée.
-              </p>
-            </div>
             <app-members-list kind="accounts" />
           }
 
@@ -170,6 +162,13 @@ import { TerritoriesManager } from './territories-bureau';
 })
 export class AdminPage {
   protected readonly auth = inject(AuthService);
+  /** Téléphone et tablette : liste des pages ouverte ou fermée. */
+  protected readonly menuOpen = signal(false);
+
+  /** Un lien du menu a été choisi : on referme la liste. */
+  protected closeMenuOnLink(event: Event): void {
+    if ((event.target as HTMLElement).closest('a')) this.menuOpen.set(false);
+  }
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly view = this.route.snapshot.data['view'] as string;
@@ -230,30 +229,9 @@ export class AdminPage {
       } as Record<string, string>
     )[this.view];
   }
-  protected get pageSubtitle(): string {
-    return (
-      {
-        dashboard: 'Vue d’ensemble des activités du Mouvement TABAXI',
-        requests: 'Liste des personnes qui souhaitent rejoindre le Mouvement TABAXI',
-        members: 'Gestion des membres du Mouvement TABAXI',
-        programs: 'Suivi des initiatives du Mouvement TABAXI',
-        territories: 'Pays, régions et communes du Mouvement TABAXI',
-        accounts: 'Gestion des utilisateurs et des accès à la plateforme',
-        coordinators: 'Membres du bureau exécutif et territoires rattachés',
-        audit: 'Historique des décisions et opérations sensibles',
-        'request-detail': 'Décider avec les informations utiles et garder une trace',
-        'member-detail': 'Coordonnées, statut du compte et historique',
-        'program-new': 'Définir un objectif, une localité et une période',
-        'program-edit': 'Mettre à jour le programme, son responsable et son état',
-        'program-detail': 'Suivre les activités, la participation et l’avancement',
-        'activity-new': 'Préparer une activité visible par les membres du territoire',
-        'activity-edit': 'Corriger la date, le lieu ou la description',
-        'activity-detail': 'Informations, compte rendu et inscrits',
-        report: 'Documenter les résultats d’une activité terminée',
-        attendance: 'Enregistrer les membres effectivement présents',
-        invite: 'Donner un accès au bureau exécutif',
-      } as Record<string, string>
-    )[this.view];
+  /** Formulaires : leur carte affiche déjà le même titre (le titre de page reste pour les lecteurs d'écran). */
+  protected get titleInCard(): boolean {
+    return ['invite', 'program-new', 'program-edit', 'activity-new', 'activity-edit'].includes(this.view);
   }
   protected get actionLabel(): string {
     return (

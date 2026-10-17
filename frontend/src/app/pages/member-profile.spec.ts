@@ -118,4 +118,39 @@ describe('Profil et carte du membre', () => {
     await settle();
     expect(root().textContent).toContain('Vos informations ont été enregistrées');
   });
+
+  it('fait renseigner le prénom et le nom quand ils manquent (compte créé sans nom)', async () => {
+    await open('profile');
+    http.expectOne('/api/members/me/').flush({ ...PROFILE, first_name: '', last_name: '', territory: null, locality: 'Sénégal' });
+    await settle();
+    const first = root().querySelector('[name=first_name]') as HTMLInputElement;
+    const last = root().querySelector('[name=last_name]') as HTMLInputElement;
+    expect(first.disabled).toBe(false);
+    first.value = 'Boubacar';
+    last.value = 'Sidibe';
+    root().querySelector('form')!.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+    const request = http.expectOne('/api/members/me/');
+    const body = request.request.body as FormData;
+    expect([body.get('first_name'), body.get('last_name')]).toEqual(['Boubacar', 'Sidibe']);
+    request.flush({ ...PROFILE, first_name: 'Boubacar', last_name: 'Sidibe', territory: null, locality: 'Sénégal' });
+    await settle();
+    expect(TestBed.inject(AuthService).displayName()).toBe('Boubacar Sidibe');
+    // Une fois renseignés, ils ne sont plus modifiables ici.
+    expect(root().querySelector('[name=first_name]')).toBeNull();
+  });
+
+  it('ne propose pas de changer un nom déjà renseigné', async () => {
+    await open('profile');
+    http.expectOne('/api/members/me/').flush(PROFILE);
+    await settle();
+    expect(root().querySelector('[name=first_name]')).toBeNull();
+    expect(root().querySelector('[name=last_name]')).toBeNull();
+  });
+
+  it('montre le pays sur la carte d’un compte de niveau national', async () => {
+    await open('card');
+    http.expectOne('/api/members/me/').flush({ ...PROFILE, territory: null, locality: 'Sénégal' });
+    await settle();
+    expect(root().textContent).toContain('Sénégal');
+  });
 });
