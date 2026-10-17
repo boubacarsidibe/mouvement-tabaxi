@@ -5162,3 +5162,22 @@ textarea[aria-invalid='true'] {
     order: 3;
   }
 }
+
+/* Menu latéral : avec un zoom fort ou une fenêtre basse, il défile au lieu de couper
+   les derniers liens (« Mon espace membre », « Se déconnecter »). */
+@media (min-width: 901px) {
+  .workspace-shell .side-nav {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-shell .side-nav.menu-open {
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
