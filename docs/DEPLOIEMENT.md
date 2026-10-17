@@ -4,15 +4,17 @@ Aujourd'hui, tout tourne sur deux projets Vercel, avec une base Neon et un servi
 
 | Élément | Où | Détail |
 |---|---|---|
-| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend`, `https://mouvement-tabaxi-app.vercel.app` | `frontend/vercel.json` renvoie `/api/…` vers `https://mouvement-tabaxi-api.vercel.app/api/$1` et les autres pages vers `index.html` |
+| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend`, adresse stable **`https://tabaxi.vercel.app`** | `frontend/vercel.json` renvoie `/api/…` vers `https://mouvement-tabaxi-api.vercel.app/api/$1` et les autres pages vers `index.html` |
 | API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django, `https://mouvement-tabaxi-api.vercel.app` | `backend/vercel.json` applique les migrations à chaque mise en ligne (`python manage.py migrate --noinput`) |
 | Base de données | Neon `mouvement-tabaxi-db`, reliée au projet de l'API | fournit `DATABASE_URL` |
 | Photos de profil | dans la base, chiffrées | par défaut en production (le disque de Vercel est effacé entre deux appels) |
 | Courriels | Gmail du mouvement, par SMTP | obligatoire en production |
 
+**Adresse stable du site : `https://tabaxi.vercel.app`.** C'est elle qui porte la dernière version en production et qu'on donne aux membres et pour le rendu. Les adresses `mouvement-tabaxi-app-git-…vercel.app` ne sont que des aperçus des PR.
+
 Le navigateur reste sur l'adresse du site : les cookies de session et la protection CSRF fonctionnent sans réglage de domaine.
 
-Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` répond `{"status": "ready"}` quand l'API et la base répondent.
+Vérification rapide : `https://tabaxi.vercel.app/api/health/` répond `{"status": "ready"}` quand l'API et la base répondent.
 
 ## Variables de l'API (Production)
 
@@ -22,9 +24,9 @@ Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` ré
 | `FIELD_ENCRYPTION_KEYS` | clé Fernet (voir `backend/.env.example`), **à sauvegarder hors de Vercel** |
 | `DATABASE_URL` | fournie par Neon (obligatoire : sans elle, l'API refuse de démarrer) |
 | `DJANGO_ALLOWED_HOSTS` | domaine de l'API, par exemple `mouvement-tabaxi-api.vercel.app` |
-| `CORS_ALLOWED_ORIGINS` | adresse https du site (sert aussi à la protection CSRF) |
+| `CORS_ALLOWED_ORIGINS` | adresse https du site, `https://tabaxi.vercel.app` (sert aussi à la protection CSRF) |
 | `CSRF_TRUSTED_ORIGINS` | facultatif ; par défaut les origines CORS, plus l'origine de `FRONTEND_URL` |
-| `FRONTEND_URL` | adresse https du site (liens envoyés par courriel) |
+| `FRONTEND_URL` | adresse https du site, `https://tabaxi.vercel.app` (liens envoyés par courriel) |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
 | `LOGIN_TRUSTED_PROXIES` | `1` |
 | `EMAIL_HOST` | `smtp.gmail.com` |
@@ -116,7 +118,7 @@ Le contrôle de santé de Railway appelle `/api/health/` en http, directement su
 | `DJANGO_SECRET_KEY` | Longue valeur aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(64))"`). |
 | `FIELD_ENCRYPTION_KEYS` | **Les mêmes clés que sur Vercel** si les données sont reprises : sans elles, motivations, adresses et téléphones restent illisibles. |
 | `DJANGO_ALLOWED_HOSTS` | Domaine personnalisé éventuel. Le domaine public du service (`RAILWAY_PUBLIC_DOMAIN`) et `healthcheck.railway.app` sont ajoutés d'office. |
-| `CORS_ALLOWED_ORIGINS` | Adresse https du site, par exemple `https://mouvement-tabaxi-app.vercel.app`. |
+| `CORS_ALLOWED_ORIGINS` | Adresse https du site, par exemple `https://tabaxi.vercel.app`. |
 | `CSRF_TRUSTED_ORIGINS` | Facultatif. Par défaut, les origines CORS ; l'origine de `FRONTEND_URL` est toujours ajoutée. |
 | `FRONTEND_URL` | Adresse https du site, utilisée dans les liens des courriels. `python manage.py check --deploy` signale une adresse en http ou locale. |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` : Railway termine le https devant Django. |
