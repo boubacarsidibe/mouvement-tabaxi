@@ -92,6 +92,8 @@ class ProgramDetailView(generics.RetrieveUpdateAPIView):
     """Fiche d'un programme avec ses activités (GET) et modification (PATCH). Hors périmètre : 404."""
 
     permission_classes = [IsBureau]
+    lookup_field = 'public_id'
+    lookup_url_kwarg = 'pk'
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_serializer_class(self):
@@ -171,7 +173,7 @@ class ActivityCreateView(APIView):
     permission_classes = [IsBureau]
 
     def post(self, request, pk):
-        program = generics.get_object_or_404(bureau_programs(request.user), pk=pk)
+        program = generics.get_object_or_404(bureau_programs(request.user), public_id=pk)
         serializer = ActivityWriteSerializer(data=request.data, context={'program': program})
         serializer.is_valid(raise_exception=True)
         activity = serializer.save(program=program, created_by=request.user)
@@ -186,6 +188,8 @@ class ActivityDetailView(generics.RetrieveUpdateAPIView):
     """Fiche d'une activité avec son compte rendu (GET) et modification (PATCH). Hors périmètre : 404."""
 
     permission_classes = [IsBureau]
+    lookup_field = 'public_id'
+    lookup_url_kwarg = 'pk'
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):
@@ -219,7 +223,7 @@ class ActivityReportView(APIView):
     permission_classes = [IsBureau]
 
     def put(self, request, pk):
-        activity = generics.get_object_or_404(bureau_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(bureau_activities(request.user), public_id=pk)
         serializer = ReportSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if not activity.has_started:
@@ -242,7 +246,7 @@ def attendance_payload(activity):
     registered = set(activity.registrations.values_list('member_id', flat=True))
     members = [
         {
-            'id': member.pk,
+            'id': member.public_id,
             'number': member.number,
             'first_name': member.user.first_name,
             'last_name': member.user.last_name,
@@ -267,22 +271,23 @@ class ActivityAttendanceView(APIView):
     permission_classes = [IsBureau]
 
     def get(self, request, pk):
-        activity = generics.get_object_or_404(bureau_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(bureau_activities(request.user), public_id=pk)
         return Response(attendance_payload(activity))
 
     def put(self, request, pk):
-        activity = generics.get_object_or_404(bureau_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(bureau_activities(request.user), public_id=pk)
         serializer = AttendanceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if not activity.has_started:
             return Response(NOT_STARTED, status=status.HTTP_409_CONFLICT)
-        ids = set(serializer.validated_data['members'])
-        allowed = set(attendance_candidates(activity).values_list('pk', flat=True))
-        if not ids <= allowed:
+        public_ids = set(serializer.validated_data['members'])
+        allowed = dict(attendance_candidates(activity).values_list('public_id', 'pk'))
+        if not public_ids <= set(allowed):
             return Response(
                 {'members': ["Certains membres ne font pas partie de la localité du programme ni des inscrits : ils ne peuvent pas être cochés."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        ids = {allowed[public_id] for public_id in public_ids}
         with transaction.atomic():
             Attendance.objects.filter(activity=activity).exclude(member_id__in=ids).delete()
             existing = set(Attendance.objects.filter(activity=activity).values_list('member_id', flat=True))
@@ -308,10 +313,10 @@ class ActivityRegistrationsView(APIView):
     permission_classes = [IsBureau]
 
     def get(self, request, pk):
-        activity = generics.get_object_or_404(bureau_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(bureau_activities(request.user), public_id=pk)
         results = [
             {
-                'member': registration.member_id,
+                'member': registration.member.public_id,
                 'number': registration.member.number,
                 'first_name': registration.member.user.first_name,
                 'last_name': registration.member.user.last_name,
@@ -330,7 +335,7 @@ class ActivityRegistrationsExportView(APIView):
     permission_classes = [IsBureau]
 
     def get(self, request, pk):
-        activity = generics.get_object_or_404(bureau_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(bureau_activities(request.user), public_id=pk)
         rows = (
             (
                 registration.member.number,
@@ -398,6 +403,8 @@ class MemberActivityView(generics.RetrieveAPIView):
     """Une activité d'un programme du territoire du membre, avec son inscription. Autre territoire : 404."""
 
     permission_classes = [IsAuthenticated]
+    lookup_field = 'public_id'
+    lookup_url_kwarg = 'pk'
     serializer_class = MemberActivitySerializer
 
     def get_queryset(self):
@@ -410,7 +417,7 @@ class MemberRegistrationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def activity_and_member(self, request, pk):
-        activity = generics.get_object_or_404(member_activities(request.user), pk=pk)
+        activity = generics.get_object_or_404(member_activities(request.user), public_id=pk)
         member = getattr(request.user, 'member', None)
         if member is None:
             return activity, None
@@ -418,7 +425,7 @@ class MemberRegistrationView(APIView):
 
     def current(self, request, pk):
         queryset = with_registration(member_activities(request.user), request.user.member)
-        return MemberActivitySerializer(queryset.get(pk=pk), context={'request': request}).data
+        return MemberActivitySerializer(queryset.get(public_id=pk), context={'request': request}).data
 
     def post(self, request, pk):
         activity, member = self.activity_and_member(request, pk)

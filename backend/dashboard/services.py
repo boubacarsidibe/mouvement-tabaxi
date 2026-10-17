@@ -100,7 +100,7 @@ def upcoming_programs(programs, today):
     rows = programs.filter(status__in=Program.OPEN, end_date__gte=today).order_by('start_date', 'id')[:UPCOMING]
     return [
         {
-            'id': program.pk,
+            'id': program.public_id,
             'name': program.name,
             'territory': program.territory.name,
             'start_date': program.start_date,
@@ -139,7 +139,7 @@ def build(user):
     if user.is_founder:
         data['recent_applications'] = [
             {
-                'id': application.pk,
+                'id': application.public_id,
                 'reference': application.reference,
                 'first_name': application.first_name,
                 'last_name': application.last_name,

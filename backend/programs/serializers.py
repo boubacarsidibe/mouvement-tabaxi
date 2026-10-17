@@ -27,6 +27,7 @@ def local_date(moment):
 class ActivitySerializer(serializers.ModelSerializer):
     """Activité telle que le bureau la voit : avec son compte rendu, ses inscrits et ses présences."""
 
+    id = serializers.UUIDField(source='public_id', read_only=True)
     program = serializers.SerializerMethodField()
     report_author = serializers.SerializerMethodField()
     has_started = serializers.BooleanField(read_only=True)
@@ -46,7 +47,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     def get_program(self, activity):
         program = activity.program
         return {
-            'id': program.pk,
+            'id': program.public_id,
             'name': program.name,
             'status': program.status,
             'status_label': program.get_status_display(),
@@ -73,6 +74,7 @@ class ProgramSerializer(serializers.ModelSerializer):
     territory = TerritorySummarySerializer(read_only=True)
     manager = serializers.SerializerMethodField()
     status_label = serializers.CharField(source='get_status_display', read_only=True)
+    id = serializers.UUIDField(source='public_id', read_only=True)
     activities_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
@@ -229,10 +231,10 @@ class ReportSerializer(serializers.Serializer):
 
 
 class AttendanceSerializer(serializers.Serializer):
-    """Liste des membres présents à une activité (leurs identifiants de dossier)."""
+    """Liste des membres présents à une activité (identifiants publics de leurs fiches)."""
 
     members = serializers.ListField(
-        child=serializers.IntegerField(min_value=1, error_messages={'invalid': 'Identifiant de membre invalide.'}),
+        child=serializers.UUIDField(error_messages={'invalid': 'Identifiant de membre invalide.'}),
         allow_empty=True,
         error_messages={'required': 'Envoyez la liste des membres présents.', 'not_a_list': 'Envoyez la liste des membres présents.'},
     )
@@ -241,6 +243,7 @@ class AttendanceSerializer(serializers.Serializer):
 class MemberActivitySerializer(serializers.ModelSerializer):
     """Activité telle que le membre la voit : sans compte rendu, avec son inscription."""
 
+    id = serializers.UUIDField(source='public_id', read_only=True)
     program = serializers.SerializerMethodField()
     registered = serializers.BooleanField(read_only=True, default=False)
     registrations_count = serializers.IntegerField(read_only=True, default=0)
@@ -257,7 +260,7 @@ class MemberActivitySerializer(serializers.ModelSerializer):
     def get_program(self, activity):
         program = activity.program
         return {
-            'id': program.pk,
+            'id': program.public_id,
             'name': program.name,
             'status': program.status,
             'status_label': program.get_status_display(),
@@ -281,6 +284,7 @@ class MemberProgramSerializer(serializers.ModelSerializer):
     manager = serializers.SerializerMethodField()
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     activities = serializers.SerializerMethodField()
+    id = serializers.UUIDField(source='public_id', read_only=True)
 
     class Meta:
         model = Program

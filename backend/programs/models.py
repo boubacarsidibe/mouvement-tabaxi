@@ -3,6 +3,8 @@ from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
 
+from core.fields import public_id_field
+
 
 class Program(models.Model):
     """Programme d'un territoire : objectif, responsable, période et état.
@@ -20,6 +22,7 @@ class Program(models.Model):
     # Un membre voit les programmes qui se déroulent ou vont se dérouler, pas ceux qui sont annulés.
     OPEN = (Status.PLANNED, Status.ONGOING)
 
+    public_id = public_id_field()
     name = models.CharField('nom', max_length=150)
     objective = models.TextField('objectif', max_length=2000)
     territory = models.ForeignKey(
@@ -64,6 +67,7 @@ class Program(models.Model):
 class Activity(models.Model):
     """Activité d'un programme : titre, date, lieu, description, puis compte rendu et présences."""
 
+    public_id = public_id_field()
     program = models.ForeignKey(Program, verbose_name='programme', on_delete=models.PROTECT, related_name='activities')
     title = models.CharField('titre', max_length=150)
     starts_at = models.DateTimeField('début')

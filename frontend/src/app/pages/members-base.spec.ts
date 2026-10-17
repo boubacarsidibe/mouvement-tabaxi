@@ -9,7 +9,8 @@ import { MemberDetail, MembersList } from './members-base';
 
 const TERRITORY = { id: 4, name: 'Pikine', kind: 'commune', kind_label: 'Commune', path: 'Sénégal › Dakar › Pikine' };
 const LISTED = {
-  id: 12,
+  // Identifiant public aléatoire, comme le renvoie l'API : jamais un numéro qui se suit.
+  id: '6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93',
   number: 'TBX-2026-00012',
   first_name: 'Aminata',
   last_name: 'Ndiaye',
@@ -127,7 +128,7 @@ describe('Base des membres', () => {
     expect(root.textContent).toContain('Pikine');
     expect(root.textContent).toContain('12/03/2026');
     expect(root.textContent).toContain('1 résultat');
-    expect(root.querySelector('a.row-action')?.getAttribute('href')).toBe('/bureau/membres/12');
+    expect(root.querySelector('a.row-action')?.getAttribute('href')).toBe('/bureau/membres/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93');
   });
 
   it('propose les territoires du périmètre, les communes sous leur région', async () => {
@@ -375,9 +376,9 @@ describe('Fiche d’un membre', () => {
   async function open(user = TEST_FOUNDER, record: object = RECORD) {
     TestBed.inject(AuthService).signedIn(user);
     harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/bureau/membres/12');
+    await harness.navigateByUrl('/bureau/membres/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93');
     root = harness.routeNativeElement as HTMLElement;
-    http.expectOne('/api/members/12/').flush(record);
+    http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/').flush(record);
     await settle();
   }
   async function settle() {
@@ -409,7 +410,7 @@ describe('Fiche d’un membre', () => {
     reason.value = 'Propos contraires au règlement.';
     reason.dispatchEvent(new Event('input'));
     button('Confirmer la suspension')!.click();
-    const request = http.expectOne('/api/members/12/status/');
+    const request = http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/status/');
     expect(request.request.body).toEqual({ status: 'suspendu', reason: 'Propos contraires au règlement.' });
     request.flush({
       ...RECORD,
@@ -445,7 +446,7 @@ describe('Fiche d’un membre', () => {
     reason.value = 'Fraude constatée.';
     reason.dispatchEvent(new Event('input'));
     button('Confirmer la radiation')!.click();
-    const request = http.expectOne('/api/members/12/status/');
+    const request = http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/status/');
     expect(request.request.body).toEqual({ status: 'radie', reason: 'Fraude constatée.' });
     request.flush({ ...RECORD, status: 'radie', status_label: 'Radié' });
     await settle();
@@ -455,7 +456,7 @@ describe('Fiche d’un membre', () => {
   it('rend le membre actif sans motif', async () => {
     await open(TEST_FOUNDER, { ...RECORD, status: 'suspendu', status_label: 'Suspendu' });
     button('Rendre actif')!.click();
-    const request = http.expectOne('/api/members/12/status/');
+    const request = http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/status/');
     expect(request.request.body).toEqual({ status: 'actif', reason: '' });
     request.flush(RECORD);
     await settle();
@@ -471,7 +472,7 @@ describe('Fiche d’un membre', () => {
     reason.dispatchEvent(new Event('input'));
     button('Confirmer la suspension')!.click();
     http
-      .expectOne('/api/members/12/status/')
+      .expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/status/')
       .flush(
         { detail: 'Ce membre est déjà « Suspendu » : rien à changer.', code: 'same_status' },
         { status: 409, statusText: 'Conflict' },
@@ -489,7 +490,7 @@ describe('Fiche d’un membre', () => {
     reason.value = 'Absences répétées.';
     reason.dispatchEvent(new Event('input'));
     button('Confirmer la suspension')!.click();
-    const request = http.expectOne('/api/members/12/status/');
+    const request = http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/status/');
     expect(request.request.body).toEqual({ status: 'suspendu', reason: 'Absences répétées.' });
     request.flush({ ...RECORD, status: 'suspendu', status_label: 'Suspendu' });
     await settle();
@@ -515,9 +516,9 @@ describe('Fiche d’un membre', () => {
   it('explique qu’un membre est introuvable', async () => {
     TestBed.inject(AuthService).signedIn(TEST_FOUNDER);
     harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl('/bureau/membres/12');
+    await harness.navigateByUrl('/bureau/membres/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93');
     root = harness.routeNativeElement as HTMLElement;
-    http.expectOne('/api/members/12/').flush({ detail: 'Pas trouvé.' }, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/members/6f1c2a7e-3b9d-4c51-9a8e-2d4f0b7c1e93/').flush({ detail: 'Pas trouvé.' }, { status: 404, statusText: 'Not Found' });
     await settle();
     expect(root.textContent).toContain('introuvable ou ne fait pas partie de votre territoire');
   });

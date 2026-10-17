@@ -14,7 +14,8 @@ export interface TerritoryFigures {
 
 /** Programme prévu ou en cours, pour la liste « Programmes à venir ». */
 export interface UpcomingProgram {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   name: string;
   territory: string;
   start_date: string;
@@ -24,7 +25,8 @@ export interface UpcomingProgram {
 }
 
 export interface RecentApplication {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   reference: string;
   first_name: string;
   last_name: string;

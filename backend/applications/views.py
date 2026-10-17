@@ -112,6 +112,8 @@ class ApplicationExportView(APIView):
 
 class ApplicationDetailView(generics.RetrieveAPIView):
     permission_classes = [IsFounder]
+    lookup_field = 'public_id'
+    lookup_url_kwarg = 'pk'
     serializer_class = ApplicationSerializer
 
     def get_queryset(self):
@@ -128,7 +130,7 @@ class DecisionView(APIView):
     )
 
     def get_application(self, pk):
-        return generics.get_object_or_404(Application, pk=pk)
+        return generics.get_object_or_404(Application, public_id=pk)
 
     def respond(self, decide):
         try:

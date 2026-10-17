@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
-from core.fields import EncryptedTextField
+from core.fields import EncryptedTextField, public_id_field
 from core.tokens import new_token, token_digest
 
 
@@ -22,6 +22,7 @@ class Application(models.Model):
     # Une demande est « en cours » tant que la personne n'est ni refusée ni inscrite.
     IN_PROGRESS = (Status.A_EXAMINER, Status.ACCEPTEE)
 
+    public_id = public_id_field()
     reference = models.CharField('référence', max_length=20, unique=True, null=True, editable=False)
     first_name = models.CharField('prénom', max_length=150)
     last_name = models.CharField('nom', max_length=150)

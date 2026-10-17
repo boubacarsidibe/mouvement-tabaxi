@@ -137,7 +137,7 @@ class MemberExportTests(ExportTestCase):
 
     def test_les_suspendus_figurent_avec_leur_statut(self):
         self.client.force_login(self.founder)
-        self.client.post(f'/api/members/{self.awa_member.pk}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type=JSON)
+        self.client.post(f'/api/members/{self.awa_member.public_id}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type=JSON)
         _, rows = table(self.client.get(self.url, {'status': 'suspendu'}))
         self.assertEqual([(row[2], row[7]) for row in rows], [('Awa', 'Suspendu')])
 
@@ -271,7 +271,7 @@ class JournalExportTests(ExportTestCase):
 
     def test_le_journal_s_exporte_avec_ses_filtres_et_l_export_est_note(self):
         self.client.force_login(self.founder)
-        self.client.post(f'/api/members/{self.awa_member.pk}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type=JSON)
+        self.client.post(f'/api/members/{self.awa_member.public_id}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type=JSON)
         self.client.get('/api/members/export/')
         response = self.client.get(self.url, {'action': 'statut_modifie'})
         self.assertEqual(response.status_code, 200)

@@ -34,6 +34,11 @@ TESTING = sys.argv[1:2] == ['test']
 # si une variable est oubliée au déploiement.
 DEBUG = os.environ.get('DJANGO_DEBUG', '0') == '1'
 
+# Administration Django (/admin/) : en développement seulement. En ligne, sa page de connexion
+# n'a pas le blocage après plusieurs échecs de l'API ; on ne l'ouvre qu'à la demande
+# (DJANGO_ADMIN_ENABLED=1), le temps d'une intervention.
+ADMIN_ENABLED = DEBUG or TESTING or os.environ.get('DJANGO_ADMIN_ENABLED', '0') == '1'
+
 # La clé de repli ne sert qu'en développement local et pendant les tests.
 DEV_SECRET_KEYS = {'cle-de-developpement-a-ne-jamais-utiliser-en-production', 'remplacer-par-une-longue-valeur-aleatoire'}
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'cle-de-developpement-a-ne-jamais-utiliser-en-production')

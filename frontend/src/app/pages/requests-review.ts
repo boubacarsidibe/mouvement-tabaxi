@@ -281,7 +281,7 @@ export class RequestDetail implements OnInit {
 
   async ngOnInit() {
     try {
-      this.application.set(await this.review.get(Number(this.route.snapshot.paramMap.get('id'))));
+      this.application.set(await this.review.get(this.route.snapshot.paramMap.get('id') ?? ''));
     } catch (error) {
       this.error.set(readProblem(error).message);
     }
@@ -320,7 +320,7 @@ export class RequestDetail implements OnInit {
     );
   }
 
-  private async decide(run: (id: number) => Promise<ReviewedApplication>, success: string) {
+  private async decide(run: (id: string) => Promise<ReviewedApplication>, success: string) {
     const current = this.application();
     if (!current) return;
     this.busy.set(true);

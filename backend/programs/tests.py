@@ -109,7 +109,7 @@ class ProgramCreationTests(ProgramsTestCase):
         self.assertEqual(data['territory']['name'], 'Pikine')
         self.assertEqual(data['manager']['name'], 'Rokhaya Gueye')
         self.assertEqual(data['activities'], [])
-        program = Program.objects.get(pk=data['id'])
+        program = Program.objects.get(public_id=data['id'])
         self.assertEqual(program.created_by, self.coord_pikine)
 
     def test_le_coordonnateur_d_une_region_gere_ses_communes(self):
@@ -261,21 +261,30 @@ class ProgramListAndDetailTests(ProgramsTestCase):
             program=self.pikine_program, title='Lancement', starts_at=days(-20), place='Mairie', description='Lancement.'
         )
         self.login(self.coord_pikine)
-        data = self.client.get(f'{self.url}{self.pikine_program.pk}/').json()
+        data = self.client.get(f'{self.url}{self.pikine_program.public_id}/').json()
         self.assertEqual([a['title'] for a in data['activities']], ['Lancement', 'Nettoyage de la plage', 'Atelier de quartier', 'Bilan'])
         self.assertEqual(data['activities_count'], 4)
-        self.assertEqual(data['activities'][-1]['id'], later.pk)
+        self.assertEqual(data['activities'][-1]['id'], str(later.public_id))
 
     def test_la_fiche_hors_perimetre_n_existe_pas(self):
         self.login(self.coord_pikine)
         for program in (self.thies_program, self.region_program):
-            self.assertEqual(self.client.get(f'{self.url}{program.pk}/').status_code, 404)
-            self.assertEqual(self.patch(f'{self.url}{program.pk}/', {'name': 'Piraté'}).status_code, 404)
+            self.assertEqual(self.client.get(f'{self.url}{program.public_id}/').status_code, 404)
+            self.assertEqual(self.patch(f'{self.url}{program.public_id}/', {'name': 'Piraté'}).status_code, 404)
         self.assertEqual(Program.objects.get(pk=self.thies_program.pk).name, 'Éducation civique')
+
+    def test_adresses_par_identifiant_public(self):
+        self.login(self.founder)
+        program = self.client.get(f'{self.url}{self.pikine_program.public_id}/').json()
+        self.assertEqual(program['id'], str(self.pikine_program.public_id))
+        self.assertEqual(self.client.get(f'{self.url}{self.pikine_program.pk}/').status_code, 404)
+        activity = program['activities'][0]
+        self.assertEqual(self.client.get(f"/api/activities/{activity['id']}/").status_code, 200)
+        self.assertEqual(self.client.get(f'/api/activities/{Activity.objects.get(public_id=activity["id"]).pk}/').status_code, 404)
 
     def test_pas_de_suppression(self):
         self.login(self.founder)
-        self.assertEqual(self.client.delete(f'{self.url}{self.pikine_program.pk}/').status_code, 405)
+        self.assertEqual(self.client.delete(f'{self.url}{self.pikine_program.public_id}/').status_code, 405)
         self.assertTrue(Program.objects.filter(pk=self.pikine_program.pk).exists())
 
     def test_un_territoire_qui_a_un_programme_ne_se_supprime_pas(self):
@@ -285,7 +294,7 @@ class ProgramListAndDetailTests(ProgramsTestCase):
 
 class ProgramUpdateTests(ProgramsTestCase):
     def url(self, program):
-        return f'/api/programs/{program.pk}/'
+        return f'/api/programs/{program.public_id}/'
 
     def test_un_coordonnateur_modifie_son_programme(self):
         self.login(self.coord_pikine)
@@ -345,7 +354,7 @@ class ProgramUpdateTests(ProgramsTestCase):
 
 class ActivityTests(ProgramsTestCase):
     def url(self, program):
-        return f'/api/programs/{program.pk}/activities/'
+        return f'/api/programs/{program.public_id}/activities/'
 
     def payload(self, **changes):
         start = timezone.localtime(days(10)).replace(hour=9, minute=0, second=0, microsecond=0)
@@ -363,7 +372,7 @@ class ActivityTests(ProgramsTestCase):
         self.assertEqual((data['title'], data['place']), ('Distribution de livres', 'Bibliothèque de Pikine'))
         self.assertEqual(data['program']['name'], 'Brigades citoyennes')
         self.assertEqual((data['registrations_count'], data['attendance_noted'], data['attendance_count']), (0, False, None))
-        self.assertEqual(Activity.objects.get(pk=data['id']).created_by, self.coord_pikine)
+        self.assertEqual(Activity.objects.get(public_id=data['id']).created_by, self.coord_pikine)
 
     def test_sans_heure_de_fin(self):
         self.login(self.coord_pikine)
@@ -405,28 +414,28 @@ class ActivityTests(ProgramsTestCase):
     def test_hors_perimetre(self):
         self.login(self.coord_pikine)
         self.assertEqual(self.post(self.url(self.thies_program), self.payload()).status_code, 404)
-        self.assertEqual(self.client.get(f'/api/activities/{self.thies_activity.pk}/').status_code, 404)
-        self.assertEqual(self.patch(f'/api/activities/{self.thies_activity.pk}/', {'title': 'x'}).status_code, 404)
+        self.assertEqual(self.client.get(f'/api/activities/{self.thies_activity.public_id}/').status_code, 404)
+        self.assertEqual(self.patch(f'/api/activities/{self.thies_activity.public_id}/', {'title': 'x'}).status_code, 404)
         self.login(self.founder)
         self.assertEqual(self.post(self.url(self.thies_program), self.payload()).status_code, 201)
 
     def test_modification(self):
         self.login(self.coord_pikine)
-        response = self.patch(f'/api/activities/{self.future_activity.pk}/', {'place': 'Salle des fêtes'})
+        response = self.patch(f'/api/activities/{self.future_activity.public_id}/', {'place': 'Salle des fêtes'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['place'], 'Salle des fêtes')
-        response = self.patch(f'/api/activities/{self.future_activity.pk}/', {'title': ''})
+        response = self.patch(f'/api/activities/{self.future_activity.public_id}/', {'title': ''})
         self.assertEqual(response.status_code, 400)
 
     def test_un_membre_ne_planifie_rien(self):
         self.login(self.awa)
         self.assertEqual(self.post(self.url(self.pikine_program), self.payload()).status_code, 403)
-        self.assertEqual(self.patch(f'/api/activities/{self.future_activity.pk}/', {'title': 'x'}).status_code, 403)
+        self.assertEqual(self.patch(f'/api/activities/{self.future_activity.public_id}/', {'title': 'x'}).status_code, 403)
 
 
 class ReportTests(ProgramsTestCase):
     def url(self, activity):
-        return f'/api/activities/{activity.pk}/report/'
+        return f'/api/activities/{activity.public_id}/report/'
 
     def test_compte_rendu_apres_l_activite(self):
         self.login(self.coord_pikine)
@@ -442,11 +451,11 @@ class ReportTests(ProgramsTestCase):
         self.put(self.url(self.past_activity), {'report': 'Bilan de la journée.'})
         for viewer in (self.coord_dakar, self.founder, self.coord_pikine):
             self.login(viewer)
-            self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.pk}/').json()['report'], 'Bilan de la journée.')
-            program = self.client.get(f'/api/programs/{self.pikine_program.pk}/').json()
+            self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.public_id}/').json()['report'], 'Bilan de la journée.')
+            program = self.client.get(f'/api/programs/{self.pikine_program.public_id}/').json()
             self.assertIn('Bilan de la journée.', [a['report'] for a in program['activities']])
         self.login(self.coord_thies)  # un autre territoire ne le voit pas
-        self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.pk}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.public_id}/').status_code, 404)
 
     def test_pas_de_compte_rendu_avant_l_activite(self):
         self.login(self.coord_pikine)
@@ -496,14 +505,14 @@ class ReportTests(ProgramsTestCase):
         self.login(self.coord_pikine)
         self.put(self.url(self.past_activity), {'report': 'Bilan interne.'})
         self.login(self.awa)
-        data = self.client.get(f'/api/member/activities/{self.past_activity.pk}/').json()
+        data = self.client.get(f'/api/member/activities/{self.past_activity.public_id}/').json()
         self.assertNotIn('report', data)
         self.assertNotIn('Bilan interne.', str(self.client.get('/api/member/programs/', {'status': 'en_cours'}).json()))
 
 
 class AttendanceTests(ProgramsTestCase):
     def url(self, activity):
-        return f'/api/activities/{activity.pk}/attendance/'
+        return f'/api/activities/{activity.public_id}/attendance/'
 
     def setUp(self):
         super().setUp()
@@ -528,23 +537,23 @@ class AttendanceTests(ProgramsTestCase):
 
     def test_le_total_des_presents(self):
         self.login(self.coord_pikine)
-        response = self.put(self.url(self.past_activity), {'members': [self.awa_member.pk, self.bineta_member.pk]})
+        response = self.put(self.url(self.past_activity), {'members': [str(self.awa_member.public_id), str(self.bineta_member.public_id)]})
         self.assertEqual(response.status_code, 200, response.content)
         data = response.json()
         self.assertEqual((data['noted'], data['present_count']), (True, 2))
         self.assertEqual(data['noted_by']['name'], 'Rokhaya Gueye')
         self.assertTrue(all(m['present'] for m in data['members']))
-        activity = self.client.get(f'/api/activities/{self.past_activity.pk}/').json()
+        activity = self.client.get(f'/api/activities/{self.past_activity.public_id}/').json()
         self.assertEqual((activity['attendance_noted'], activity['attendance_count']), (True, 2))
-        program = self.client.get(f'/api/programs/{self.pikine_program.pk}/').json()
+        program = self.client.get(f'/api/programs/{self.pikine_program.public_id}/').json()
         counts = {a['id']: a['attendance_count'] for a in program['activities']}
-        self.assertEqual(counts[self.past_activity.pk], 2)
-        self.assertIsNone(counts[self.future_activity.pk])  # pas encore noté
+        self.assertEqual(counts[str(self.past_activity.public_id)], 2)
+        self.assertIsNone(counts[str(self.future_activity.public_id)])  # pas encore noté
 
     def test_l_enregistrement_remplace_la_liste(self):
         self.login(self.coord_pikine)
-        self.put(self.url(self.past_activity), {'members': [self.awa_member.pk, self.bineta_member.pk]})
-        response = self.put(self.url(self.past_activity), {'members': [self.bineta_member.pk]})
+        self.put(self.url(self.past_activity), {'members': [str(self.awa_member.public_id), str(self.bineta_member.public_id)]})
+        response = self.put(self.url(self.past_activity), {'members': [str(self.bineta_member.public_id)]})
         self.assertEqual(response.json()['present_count'], 1)
         self.assertEqual(list(Attendance.objects.values_list('member_id', flat=True)), [self.bineta_member.pk])
 
@@ -552,7 +561,7 @@ class AttendanceTests(ProgramsTestCase):
         self.login(self.coord_pikine)
         data = self.put(self.url(self.past_activity), {'members': []}).json()
         self.assertEqual((data['noted'], data['present_count']), (True, 0))
-        self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.pk}/').json()['attendance_count'], 0)
+        self.assertEqual(self.client.get(f'/api/activities/{self.past_activity.public_id}/').json()['attendance_count'], 0)
 
     def test_pas_de_presence_avant_l_activite(self):
         self.login(self.coord_pikine)
@@ -563,8 +572,11 @@ class AttendanceTests(ProgramsTestCase):
     def test_on_ne_coche_que_des_membres_du_territoire_ou_inscrits(self):
         self.login(self.coord_pikine)
         for outsider in (self.dame_member, self.fatou_member, self.founder_member):
-            response = self.put(self.url(self.past_activity), {'members': [self.awa_member.pk, outsider.pk]})
+            response = self.put(self.url(self.past_activity), {'members': [str(self.awa_member.public_id), str(outsider.public_id)]})
             self.assertEqual(response.status_code, 400, outsider)
+            self.assertIn('ne font pas partie', response.json()['members'][0])
+        # L'ancien identifiant (entier) n'est plus accepté.
+        self.assertEqual(self.put(self.url(self.past_activity), {'members': [self.awa_member.pk]}).status_code, 400)
         self.assertFalse(Attendance.objects.exists())
         self.assertEqual(self.put(self.url(self.past_activity), {'members': 'tous'}).status_code, 400)
         self.assertEqual(self.put(self.url(self.past_activity), {'members': [0]}).status_code, 400)
@@ -580,7 +592,7 @@ class AttendanceTests(ProgramsTestCase):
 
     def test_les_presences_sont_notees_par_activite(self):
         self.login(self.coord_pikine)
-        self.put(self.url(self.past_activity), {'members': [self.awa_member.pk]})
+        self.put(self.url(self.past_activity), {'members': [str(self.awa_member.public_id)]})
         other = Activity.objects.create(
             program=self.pikine_program, title='Autre', starts_at=days(-1), place='Mairie', description='Autre activité.'
         )
@@ -617,7 +629,7 @@ class MemberProgramsTests(ProgramsTestCase):
         for status in ('', 'prevu', 'en_cours', 'termine'):
             self.assertNotIn('Brigades citoyennes', self.names(status=status) if status else self.names())
         self.assertEqual(self.client.get(self.url, {'status': 'annule'}).status_code, 400)
-        self.assertEqual(self.client.get(f'/api/member/activities/{self.past_activity.pk}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/member/activities/{self.past_activity.public_id}/').status_code, 404)
 
     def test_recherche(self):
         self.login(self.awa)
@@ -662,7 +674,7 @@ class MemberProgramsTests(ProgramsTestCase):
 
 class RegistrationTests(ProgramsTestCase):
     def url(self, activity):
-        return f'/api/member/activities/{activity.pk}/registration/'
+        return f'/api/member/activities/{activity.public_id}/registration/'
 
     def test_inscription_puis_desinscription(self):
         self.login(self.awa)
@@ -742,11 +754,11 @@ class RegistrationTests(ProgramsTestCase):
     def test_la_fiche_d_une_activite(self):
         Registration.objects.create(activity=self.future_activity, member=self.awa_member)
         self.login(self.awa)
-        data = self.client.get(f'/api/member/activities/{self.future_activity.pk}/').json()
+        data = self.client.get(f'/api/member/activities/{self.future_activity.public_id}/').json()
         self.assertEqual((data['title'], data['registered'], data['registration_open']), ('Atelier de quartier', True, True))
         self.assertEqual(data['program']['name'], 'Brigades citoyennes')
         self.login(self.dame)
-        self.assertEqual(self.client.get(f'/api/member/activities/{self.future_activity.pk}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/member/activities/{self.future_activity.public_id}/').status_code, 404)
 
 
 class RegistrantsTests(ProgramsTestCase):
@@ -756,7 +768,7 @@ class RegistrantsTests(ProgramsTestCase):
         Registration.objects.create(activity=self.future_activity, member=self.bineta_member)
 
     def url(self, activity, suffix=''):
-        return f'/api/activities/{activity.pk}/registrations/{suffix}'
+        return f'/api/activities/{activity.public_id}/registrations/{suffix}'
 
     def test_le_coordonnateur_voit_la_liste_des_inscrits(self):
         self.login(self.coord_pikine)
@@ -765,7 +777,7 @@ class RegistrantsTests(ProgramsTestCase):
         self.assertEqual([(r['last_name'], r['first_name']) for r in data['results']], [('Fall', 'Bineta'), ('Ndiaye', 'Awa')])
         self.assertEqual(data['results'][1]['email'], 'awa@example.org')
         self.assertEqual(data['results'][1]['number'], self.awa_member.number)
-        activity = self.client.get(f'/api/activities/{self.future_activity.pk}/').json()
+        activity = self.client.get(f'/api/activities/{self.future_activity.public_id}/').json()
         self.assertEqual(activity['registrations_count'], 2)
 
     def test_droits(self):

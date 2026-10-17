@@ -3,7 +3,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from core.append_only import AppendOnlyModel
-from core.fields import EncryptedTextField
+from core.fields import EncryptedTextField, public_id_field
 
 
 class Member(models.Model):
@@ -26,6 +26,7 @@ class Member(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, verbose_name='compte', on_delete=models.PROTECT, related_name='member'
     )
+    public_id = public_id_field()
     number = models.CharField('numéro de membre', max_length=20, unique=True, null=True, editable=False)
     joined_on = models.DateField("date d'adhésion", default=timezone.localdate)
     address = EncryptedTextField('adresse', max_length=255, blank=True)

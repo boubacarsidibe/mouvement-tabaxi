@@ -25,7 +25,8 @@ export interface PersonRef {
 
 /** Un programme dans une liste du bureau. */
 export interface ProgramRow {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   name: string;
   objective: string;
   territory: TerritorySummary;
@@ -39,7 +40,7 @@ export interface ProgramRow {
 }
 
 export interface ProgramSummary {
-  id: number;
+  id: string;
   name: string;
   status: ProgramStatus;
   status_label: string;
@@ -48,7 +49,8 @@ export interface ProgramSummary {
 
 /** Activité telle que le bureau la voit : avec son compte rendu, ses inscrits et ses présences. */
 export interface ProgramActivity {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   program: ProgramSummary;
   title: string;
   starts_at: string;
@@ -109,7 +111,7 @@ export interface Manager {
 }
 
 export interface AttendanceMember {
-  id: number;
+  id: string;
   number: string;
   first_name: string;
   last_name: string;
@@ -127,7 +129,7 @@ export interface AttendanceSheet {
 }
 
 export interface Registrant {
-  member: number;
+  member: string;
   number: string;
   first_name: string;
   last_name: string;
@@ -138,7 +140,8 @@ export interface Registrant {
 
 /** Activité telle que le membre la voit : sans compte rendu, avec sa propre inscription. */
 export interface MemberActivity {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   program: ProgramSummary & { manager: PersonRef | null };
   title: string;
   starts_at: string;
@@ -152,7 +155,7 @@ export interface MemberActivity {
 }
 
 export interface MemberProgram {
-  id: number;
+  id: string;
   name: string;
   objective: string;
   territory: TerritorySummary;
@@ -217,7 +220,7 @@ export class ProgramsService {
     return params;
   }
 
-  get(id: number): Promise<ProgramRecord> {
+  get(id: string): Promise<ProgramRecord> {
     return firstValueFrom(this.http.get<ProgramRecord>(`/api/programs/${id}/`));
   }
 
@@ -225,7 +228,7 @@ export class ProgramsService {
     return firstValueFrom(this.http.post<ProgramRecord>('/api/programs/', input));
   }
 
-  update(id: number, input: Partial<ProgramInput>): Promise<ProgramRecord> {
+  update(id: string, input: Partial<ProgramInput>): Promise<ProgramRecord> {
     return firstValueFrom(this.http.patch<ProgramRecord>(`/api/programs/${id}/`, input));
   }
 
@@ -234,39 +237,39 @@ export class ProgramsService {
     return firstValueFrom(this.http.get<Manager[]>('/api/programs/managers/', { params }));
   }
 
-  createActivity(program: number, input: ActivityInput): Promise<ProgramActivity> {
+  createActivity(program: string, input: ActivityInput): Promise<ProgramActivity> {
     return firstValueFrom(this.http.post<ProgramActivity>(`/api/programs/${program}/activities/`, input));
   }
 
-  activity(id: number): Promise<ProgramActivity> {
+  activity(id: string): Promise<ProgramActivity> {
     return firstValueFrom(this.http.get<ProgramActivity>(`/api/activities/${id}/`));
   }
 
-  updateActivity(id: number, input: Partial<ActivityInput>): Promise<ProgramActivity> {
+  updateActivity(id: string, input: Partial<ActivityInput>): Promise<ProgramActivity> {
     return firstValueFrom(this.http.patch<ProgramActivity>(`/api/activities/${id}/`, input));
   }
 
-  saveReport(id: number, report: string, programStatus?: ProgramStatus): Promise<ProgramActivity> {
+  saveReport(id: string, report: string, programStatus?: ProgramStatus): Promise<ProgramActivity> {
     const body: { report: string; program_status?: ProgramStatus } = { report };
     if (programStatus) body.program_status = programStatus;
     return firstValueFrom(this.http.put<ProgramActivity>(`/api/activities/${id}/report/`, body));
   }
 
-  attendance(id: number): Promise<AttendanceSheet> {
+  attendance(id: string): Promise<AttendanceSheet> {
     return firstValueFrom(this.http.get<AttendanceSheet>(`/api/activities/${id}/attendance/`));
   }
 
-  saveAttendance(id: number, members: number[]): Promise<AttendanceSheet> {
+  saveAttendance(id: string, members: string[]): Promise<AttendanceSheet> {
     return firstValueFrom(this.http.put<AttendanceSheet>(`/api/activities/${id}/attendance/`, { members }));
   }
 
-  registrants(id: number): Promise<{ count: number; results: Registrant[] }> {
+  registrants(id: string): Promise<{ count: number; results: Registrant[] }> {
     return firstValueFrom(
       this.http.get<{ count: number; results: Registrant[] }>(`/api/activities/${id}/registrations/`),
     );
   }
 
-  exportRegistrants(id: number): Promise<Download> {
+  exportRegistrants(id: string): Promise<Download> {
     return fetchFile(this.http, `/api/activities/${id}/registrations/export/`, new HttpParams());
   }
 
@@ -280,15 +283,15 @@ export class ProgramsService {
     return firstValueFrom(this.http.get<MemberProgramPage>('/api/member/programs/', { params }));
   }
 
-  memberActivity(id: number): Promise<MemberActivity> {
+  memberActivity(id: string): Promise<MemberActivity> {
     return firstValueFrom(this.http.get<MemberActivity>(`/api/member/activities/${id}/`));
   }
 
-  register(id: number): Promise<MemberActivity> {
+  register(id: string): Promise<MemberActivity> {
     return firstValueFrom(this.http.post<MemberActivity>(`/api/member/activities/${id}/registration/`, {}));
   }
 
-  unregister(id: number): Promise<MemberActivity> {
+  unregister(id: string): Promise<MemberActivity> {
     return firstValueFrom(this.http.delete<MemberActivity>(`/api/member/activities/${id}/registration/`));
   }
 }

@@ -1,8 +1,22 @@
 import json
+import uuid
 
 from django.db import models
 
 from . import crypto
+
+PUBLIC_ID_HELP = (
+    "Identifiant des adresses (URL) de l'API et du site : aléatoire, il ne révèle ni l'ordre ni le "
+    'nombre des fiches et ne se devine pas en changeant un chiffre.'
+)
+
+
+def public_id_field():
+    """Identifiant public d'une fiche, à la place de la clé primaire dans les adresses.
+
+    La clé primaire (entier qui se suit) reste utilisée en interne, pour les liens entre tables.
+    """
+    return models.UUIDField('identifiant public', default=uuid.uuid4, unique=True, editable=False, help_text=PUBLIC_ID_HELP)
 
 
 class EncryptedTextField(models.TextField):

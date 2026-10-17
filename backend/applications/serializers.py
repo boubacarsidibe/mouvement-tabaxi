@@ -80,6 +80,7 @@ class DeciderSerializer(serializers.ModelSerializer):
 class ApplicationSerializer(serializers.ModelSerializer):
     """Demande complète, telle que les fondateurs l'examinent."""
 
+    id = serializers.UUIDField(source='public_id', read_only=True)
     territory = TerritorySummarySerializer(read_only=True)
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     decided_by = DeciderSerializer(read_only=True)

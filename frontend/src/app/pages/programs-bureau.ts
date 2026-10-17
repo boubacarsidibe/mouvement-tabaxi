@@ -294,7 +294,7 @@ export class ProgramForm implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   protected readonly statuses = PROGRAM_STATUSES;
-  private readonly id = Number(this.route.snapshot.paramMap.get('id')) || null;
+  private readonly id = this.route.snapshot.paramMap.get('id');
   protected readonly editing = computed(() => this.id !== null);
   protected readonly backLink = computed(() => (this.id ? ['/bureau/programmes', this.id] : ['/bureau/programmes']));
 
@@ -473,7 +473,7 @@ export class ProgramDetail implements OnInit {
 
   async ngOnInit() {
     try {
-      this.program.set(await this.programs.get(Number(this.route.snapshot.paramMap.get('id'))));
+      this.program.set(await this.programs.get(this.route.snapshot.paramMap.get('id') ?? ''));
     } catch (error) {
       const problem = readProblem(error);
       this.error.set(
