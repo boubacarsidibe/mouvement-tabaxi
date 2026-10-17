@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { UiIcon } from '../shared/ui-icon';
 import { readProblem } from '../core/api-problem';
 import {
   ApplicationFilters,
@@ -13,7 +14,7 @@ import {
 import { ExportButton } from '../shared/export-button';
 
 const STATUSES: { value: ApplicationStatus | ''; label: string }[] = [
-  { value: '', label: 'Statut · Tous' },
+  { value: '', label: 'Tous les statuts' },
   { value: 'a_examiner', label: 'À examiner' },
   { value: 'acceptee', label: 'Acceptée' },
   { value: 'rejetee', label: 'Rejetée' },
@@ -31,7 +32,7 @@ function badgeClass(status: ApplicationStatus) {
 /** Liste des demandes d'adhésion, filtrable par statut et par recherche. */
 @Component({
   selector: 'app-requests-list',
-  imports: [FormsModule, RouterLink, DatePipe, ExportButton],
+  imports: [FormsModule, RouterLink, DatePipe, ExportButton, UiIcon],
   template: `
     <div class="filter-bar">
       <label
@@ -51,8 +52,8 @@ function badgeClass(status: ApplicationStatus) {
           <option [value]="item.value">{{ item.label }}</option>
         }
       </select>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>
@@ -168,9 +169,8 @@ export class RequestsList implements OnInit {
 /** Fiche d'une demande : informations déposées, décision (acceptation ou refus motivé). */
 @Component({
   selector: 'app-request-detail',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, DatePipe],
   template: `
-    <a class="back-link" routerLink="/bureau/demandes">← Retour aux demandes</a>
     @if (error() && !application()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
@@ -210,7 +210,6 @@ export class RequestsList implements OnInit {
           </div>
         </article>
         <aside class="panel decision-panel">
-          <p class="eyebrow">Décision du fondateur</p>
           <h2>Examiner la demande</h2>
           @if (app.status === 'a_examiner') {
             <p>Chaque décision est datée et ajoutée au journal d’actions.</p>

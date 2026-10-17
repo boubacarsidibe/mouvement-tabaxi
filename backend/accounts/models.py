@@ -64,7 +64,8 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    # createsuperuser demande aussi le prénom et le nom (carte de membre, en-têtes).
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
     objects = UserManager()
 

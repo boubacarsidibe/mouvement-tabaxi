@@ -128,6 +128,16 @@ class ProductionConfigurationTests(SimpleTestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('FIELD_ENCRYPTION_KEYS est obligatoire en production', result.stderr)
 
+    def test_refus_de_demarrer_sans_service_d_envoi(self):
+        # Sans EMAIL_HOST, les courriels n'iraient que dans les journaux : personne ne recevrait ses liens.
+        result = run_production('check', EMAIL_HOST='')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('EMAIL_HOST est obligatoire en production', result.stderr)
+
+    def test_apercu_de_test_avec_courriels_dans_les_journaux(self):
+        result = run_production('check', EMAIL_HOST='', EMAIL_CONSOLE_IN_PRODUCTION='1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_refus_de_demarrer_sans_base_de_donnees(self):
         # Sans DATABASE_URL, le serveur tournerait sur un fichier SQLite figé au déploiement.
         result = run_production('check', DATABASE_URL='')

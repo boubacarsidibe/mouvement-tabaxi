@@ -1,44 +1,67 @@
 # Déploiement
 
-Aujourd'hui, le site et le serveur Django sont sur Vercel (deux projets liés au même dépôt GitHub), avec une base PostgreSQL Neon. À terme, le serveur Django passera sur Railway et le site restera sur Vercel : la configuration Railway est prête dans le dépôt (voir [Railway](#railway--serveur-django-préparé)), la bascule attend le choix d'un plan Railway.
+Aujourd'hui, tout tourne sur deux projets Vercel, avec une base Neon et un service d'envoi de courriels (Gmail, par SMTP). À terme, le serveur Django passera sur Railway et le site restera sur Vercel : la configuration Railway est prête dans le dépôt (voir [Railway](#railway--serveur-django-préparé)), la bascule attend le choix d'un plan Railway.
 
-## 1. Base de données PostgreSQL
+| Élément | Où | Détail |
+|---|---|---|
+| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend` | `frontend/vercel.json` renvoie `/api/…` vers l'API et les autres pages vers `index.html` |
+| API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django | `backend/vercel.json` applique les migrations à chaque mise en ligne |
+| Base de données | Neon `mouvement-tabaxi-db`, reliée au projet de l'API | fournit `DATABASE_URL` |
+| Photos de profil | dans la base, chiffrées | par défaut en production (le disque de Vercel est effacé entre deux appels) |
+| Courriels | Gmail du mouvement, par SMTP | obligatoire en production |
 
-Créer une base PostgreSQL (Neon ou Supabase, via la Marketplace de Vercel) et copier son adresse de connexion : elle devient `DATABASE_URL`. Sans elle, Django retombe sur SQLite, qui ne survit pas sur Vercel.
+Le navigateur reste sur l'adresse du site : les cookies de session et la protection CSRF fonctionnent sans réglage de domaine.
 
-## 2. Projet backend (Django)
-
-- Nouveau projet Vercel, dépôt `mouvement-tabaxi`, **Root Directory : `backend`**, Framework : Other.
-- Variables d'environnement (Production) :
+## Variables de l'API (Production)
 
 | Variable | Valeur |
 |---|---|
-| `DJANGO_SECRET_KEY` | longue valeur aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(64))"`) |
-| `FIELD_ENCRYPTION_KEYS` | clé Fernet (voir `backend/.env.example`), à sauvegarder hors de Vercel |
-| `DATABASE_URL` | adresse PostgreSQL |
-| `DJANGO_ALLOWED_HOSTS` | domaine du projet backend, par exemple `mouvement-tabaxi-cye7.vercel.app` |
-| `CORS_ALLOWED_ORIGINS` | adresse https du frontend |
-| `FRONTEND_URL` | adresse https du frontend (liens des courriels) |
+| `DJANGO_SECRET_KEY` | valeur aléatoire de 50 caractères au moins |
+| `FIELD_ENCRYPTION_KEYS` | clé Fernet (voir `backend/.env.example`), **à sauvegarder hors de Vercel** |
+| `DATABASE_URL` | fournie par Neon (obligatoire : sans elle, l'API refuse de démarrer) |
+| `DJANGO_ALLOWED_HOSTS` | domaine de l'API, par exemple `mouvement-tabaxi-api.vercel.app` |
+| `CORS_ALLOWED_ORIGINS` | adresse https du site (sert aussi à la protection CSRF) |
+| `FRONTEND_URL` | adresse https du site (liens envoyés par courriel) |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
 | `LOGIN_TRUSTED_PROXIES` | `1` |
-| `DJANGO_MEDIA_ROOT` | `/tmp/media` |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | service SMTP |
+| `EMAIL_HOST` | `smtp.gmail.com` |
+| `EMAIL_PORT` | `587` |
+| `EMAIL_HOST_USER` | adresse Gmail qui envoie |
+| `EMAIL_HOST_PASSWORD` | mot de passe d'application Gmail (type « Secret » sur Vercel) |
+| `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <la même adresse Gmail>` |
 
-- Migrations, depuis un poste avec les mêmes variables : `python manage.py migrate`, puis `python manage.py createsuperuser`.
+Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`.
 
-## 3. Projet frontend (Angular)
+## Courriels
 
-- **Root Directory : `frontend`** ; `frontend/vercel.json` règle la compilation (`dist/frontend/browser`) et renvoie toutes les pages vers `index.html`.
-- `frontend/vercel.json` renvoie `/api/…` vers le projet du serveur, `mouvement-tabaxi-cye7` :
-  `{ "source": "/api/(.*)", "destination": "https://mouvement-tabaxi-cye7.vercel.app/api/$1" }`, placé avant la règle de `index.html`.
-- Côté serveur, `CORS_ALLOWED_ORIGINS` doit contenir l'adresse exacte du site (par exemple `https://mouvement-tabaxi-app-git-….vercel.app`) : elle sert aussi à la protection CSRF des formulaires.
-  Le navigateur reste ainsi sur un seul domaine : les cookies de session et la protection CSRF fonctionnent sans réglage.
+**Aujourd'hui : Gmail.** Les courriels partent du compte Gmail du mouvement, par son propre serveur SMTP
+(environ 500 par jour au plus) :
 
-## Limites à connaître
+1. Activer la validation en deux étapes du compte Google : https://myaccount.google.com/signinoptions/twosv
+2. Créer un mot de passe d'application : https://myaccount.google.com/apppasswords
+3. Renseigner les variables `EMAIL_*` et `DEFAULT_FROM_EMAIL` ci-dessus, puis redéployer l'API.
+4. Tester vers une **autre** adresse que celle du compte : un courriel envoyé à sa propre adresse Gmail
+   n'apparaît que dans « Messages envoyés ».
 
-- **Photos de profil** : le disque de Vercel est temporaire ; les photos envoyées disparaissent. Un stockage d'objets (S3, Vercel Blob…) est nécessaire avant l'ouverture au public.
-- **Blocage de connexion** après échecs : compteur gardé en mémoire de chaque instance, donc moins strict qu'avec un cache partagé.
-- Les fonctions s'endorment : la première requête après une pause est plus lente.
+**Pourquoi pas Brevo pour l'instant.** Brevo accepte les courriels mais refuse de les distribuer quand
+l'expéditeur est une adresse `@gmail.com` (journal Brevo : « Envoyé » puis « Erreur ») : Gmail exige que
+ses adresses envoient depuis ses propres serveurs. Avec un nom de domaine du mouvement, déclaré dans Brevo
+(« Domains », enregistrements DKIM et DMARC), on pourra revenir à Brevo en changeant seulement les
+variables `EMAIL_*` (`smtp-relay.brevo.com`, identifiant et clé SMTP Brevo).
+
+## Mettre en ligne
+
+```bash
+cd backend && vercel deploy --prod      # API (projet mouvement-tabaxi-api) : migrations comprises
+cd .. && vercel deploy --prod           # site (projet mouvement-tabaxi-app), depuis la racine du dépôt
+```
+
+Premier compte fondateur : `python manage.py createsuperuser` depuis un poste, avec `DATABASE_URL` de Neon et `DJANGO_DEBUG=1` (le fichier téléchargé par `vercel env pull` contient des valeurs masquées `[SENSITIVE]` à retirer).
+
+## Limites connues
+
+- Les limites d'envoi des formulaires publics sont comptées par instance de fonction ; le blocage de connexion après plusieurs échecs, lui, est enregistré en base.
+- La base gratuite Neon se met en veille sans activité : la première requête après une pause est plus lente.
 
 ## Railway : serveur Django (préparé)
 
@@ -81,7 +104,7 @@ Le contrôle de santé de Railway appelle `/api/health/` en http, directement su
 | `FRONTEND_URL` | Adresse https du site, utilisée dans les liens des courriels. `python manage.py check --deploy` signale une adresse en http ou locale. |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` : Railway termine le https devant Django. |
 | `LOGIN_TRUSTED_PROXIES` | `2` quand les appels passent par la réécriture `/api` du site Vercel puis par Railway, `1` si le site appelle Railway directement. À vérifier au premier essai : l'adresse notée lors d'un échec de connexion doit être celle du visiteur. |
-| `DJANGO_MEDIA_ROOT` | `/data/media`, avec un volume Railway monté sur `/data`. Sans volume, les photos de profil disparaissent à chaque déploiement. |
+| `DJANGO_FILE_STORAGE` | Facultatif. Par défaut en production, les photos de profil sont gardées en base, chiffrées, et rien n'est à prévoir. Avec `filesystem`, elles vont sur disque : ajouter alors `DJANGO_MEDIA_ROOT=/data/media` et un volume Railway monté sur `/data`, sinon elles disparaissent à chaque déploiement. |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Service SMTP, comme sur Vercel. |
 | `WEB_CONCURRENCY` | Facultatif : nombre de processus gunicorn (2 par défaut). |
 

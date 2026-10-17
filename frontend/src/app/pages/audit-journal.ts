@@ -14,7 +14,7 @@ import { ExportButton } from '../shared/export-button';
 import { UiIcon } from '../shared/ui-icon';
 
 const ACTIONS: { value: AuditAction | ''; label: string }[] = [
-  { value: '', label: 'Action · Toutes' },
+  { value: '', label: 'Toutes les actions' },
   { value: 'demande_acceptee', label: 'Demande acceptée' },
   { value: 'demande_refusee', label: 'Demande refusée' },
   { value: 'lien_renvoye', label: 'Lien d’inscription renvoyé' },
@@ -59,7 +59,7 @@ const BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date 
         [ngModel]="actor()"
         (ngModelChange)="actor.set($event); reload()"
       >
-        <option value="">Auteur · Tous</option>
+        <option value="">Tous les auteurs</option>
         @for (person of actors(); track person.id) {
           <option [value]="person.id">{{ person.name }}</option>
         }
@@ -80,8 +80,8 @@ const BAD_PERIOD = 'La date de fin doit être égale ou postérieure à la date 
           [ngModel]="to()"
           (ngModelChange)="to.set($event); reload()"
       /></label>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>
