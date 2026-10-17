@@ -10,6 +10,7 @@ from territories.serializers import TerritorySummarySerializer
 
 from .models import Member, MemberStatusChange
 from .photos import prepare_photo
+from .status import can_change_status
 
 PHONE_FORMAT = RegexValidator(
     r'^\+?[0-9][0-9 ().-]{6,24}$',
@@ -205,23 +206,34 @@ class MemberStatusChangeSerializer(serializers.ModelSerializer):
 
 
 class MemberDetailSerializer(MemberListSerializer):
-    """Fiche d'un membre : coordonnées et, pour les fondateurs seulement, l'historique des statuts."""
+    """Fiche d'un membre : coordonnées et, pour qui peut changer son statut, l'historique des statuts.
+
+    ``can_change_status`` dit à l'écran s'il doit proposer « Suspendre », « Radier » ou « Rendre actif » :
+    un fondateur pour tout compte, un coordonnateur pour les membres simples de sa zone.
+    """
 
     phone = serializers.CharField(read_only=True)
     address = serializers.CharField(read_only=True)
     photo_url = serializers.SerializerMethodField()
     status_history = serializers.SerializerMethodField()
+    can_change_status = serializers.SerializerMethodField()
 
     class Meta(MemberListSerializer.Meta):
-        fields = MemberListSerializer.Meta.fields + ('phone', 'address', 'photo_url', 'status_history')
+        fields = MemberListSerializer.Meta.fields + (
+            'phone', 'address', 'photo_url', 'status_history', 'can_change_status'
+        )
         read_only_fields = fields
+
+    def get_can_change_status(self, member):
+        request = self.context.get('request')
+        return request is not None and can_change_status(request.user, member)
 
     def get_photo_url(self, member):
         return f'/api/members/{member.pk}/photo/' if member.photo else None
 
     def get_status_history(self, member):
         request = self.context.get('request')
-        if request is None or not request.user.is_founder:
+        if request is None or not (request.user.is_founder or can_change_status(request.user, member)):
             return None
         changes = member.status_changes.select_related('changed_by')
         return MemberStatusChangeSerializer(changes, many=True).data
