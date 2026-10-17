@@ -9,7 +9,7 @@ import { InviteForm } from './invite-form';
 import { MemberDetail, MembersList } from './members-base';
 import { ProgramDetail, ProgramForm, ProgramsList } from './programs-bureau';
 import { RequestDetail, RequestsList } from './requests-review';
-import { TerritoriesOverview } from './territories-overview';
+import { TerritoriesManager } from './territories-bureau';
 
 @Component({
   selector: 'app-admin-page',
@@ -17,7 +17,6 @@ import { TerritoriesOverview } from './territories-overview';
     RouterLink,
     UiIcon,
     RequestsList,
-    TerritoriesOverview,
     RequestDetail,
     InviteForm,
     MembersList,
@@ -31,6 +30,7 @@ import { TerritoriesOverview } from './territories-overview';
     ActivityDetail,
     ActivityReport,
     ActivityAttendance,
+    TerritoriesManager,
   ],
   template: `
     <main class="workspace-shell admin-shell">
@@ -142,7 +142,7 @@ import { TerritoriesOverview } from './territories-overview';
           }
 
           @if (view === 'territories') {
-            <app-territories-overview />
+            <app-territories-manager />
           }
 
           @if (view === 'audit') {
@@ -257,6 +257,7 @@ export class AdminPage {
   }
   protected get hasPrimaryAction(): boolean {
     // Inviter au bureau est réservé aux fondateurs ; le reste de la page reste lisible par les coordonnateurs.
+    // Les territoires s'ajoutent depuis l'écran lui-même, réservé aux fondateurs.
     if (this.view === 'coordinators' || this.view === 'accounts') return this.auth.isFounder();
     return this.view === 'programs';
   }

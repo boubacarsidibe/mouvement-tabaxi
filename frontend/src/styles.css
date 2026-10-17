@@ -2252,90 +2252,6 @@ table input {
   width: 12px;
   height: 12px;
 }
-.territory-summary {
-  max-width: 650px;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 0 0 -93px auto;
-  position: relative;
-  z-index: 2;
-}
-.territory-summary article {
-  min-height: 74px;
-  align-items: center;
-}
-.territory-summary article > ui-icon {
-  width: 28px;
-  height: 28px;
-  color: #0a9950;
-}
-.territory-summary article strong {
-  font-size: 22px;
-}
-.territory-summary article p {
-  margin-left: -5px;
-}
-.territory-layout {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 22px;
-  align-items: center;
-  margin-top: 100px;
-}
-.territory-map-card {
-  min-height: 420px;
-  position: relative;
-  overflow: hidden;
-  border-radius: 9px;
-  background: #e0f1e4;
-}
-.territory-map-card::after {
-  position: absolute;
-  inset: 0;
-  background: rgba(205, 235, 214, 0.42);
-  content: '';
-}
-.territory-map-card img {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  object-fit: cover;
-  object-position: 47% 10%;
-  filter: saturate(0.55) contrast(0.8);
-}
-.territory-map-card > div {
-  position: absolute;
-  z-index: 2;
-  top: 45px;
-  left: 20px;
-  display: grid;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.9);
-}
-.territory-map-card small {
-  color: #5f6b64;
-}
-.map-city {
-  width: 11px;
-  height: 11px;
-  position: absolute;
-  z-index: 3;
-  border-radius: 50%;
-  background: var(--green-700);
-  box-shadow: 0 0 0 6px rgba(8, 125, 81, 0.14);
-}
-.city-one {
-  left: 22%;
-  bottom: 25%;
-}
-.city-two {
-  left: 55%;
-  top: 31%;
-}
-.city-three {
-  right: 18%;
-  bottom: 32%;
-}
 
 @media (max-width: 1180px) {
   .public-header {
@@ -2595,14 +2511,6 @@ table input {
   .admin-program-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .territory-summary {
-    max-width: none;
-    margin: 0;
-  }
-  .territory-layout {
-    grid-template-columns: 1fr;
-    margin-top: 18px;
-  }
 }
 
 @media (max-width: 600px) {
@@ -2697,9 +2605,6 @@ table input {
     grid-column: auto;
   }
   .admin-program-grid,
-  .territory-summary {
-    grid-template-columns: 1fr;
-  }
   .program-list article {
     grid-template-columns: 36px 1fr;
   }
@@ -4967,18 +4872,15 @@ textarea[aria-invalid='true'] {
   margin: 0;
 }
 /* Chiffres en trois colonnes (espace membre, localités), y compris sur téléphone. */
-.dashboard-summary.member-stats,
-.dashboard-summary.territories-summary {
+.dashboard-summary.member-stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 @media (max-width: 900px) {
-  .dashboard-summary.member-stats > div:nth-child(3),
-  .dashboard-summary.territories-summary > div:nth-child(3) {
+  .dashboard-summary.member-stats > div:nth-child(3) {
     border-top: 0;
     border-left: 1px solid #e3ebe5;
   }
-  .dashboard-summary.member-stats > div,
-  .dashboard-summary.territories-summary > div {
+  .dashboard-summary.member-stats > div {
     padding: 12px 10px;
   }
 }
@@ -5180,4 +5082,18 @@ textarea[aria-invalid='true'] {
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+}
+
+/* Localités : « Réinitialiser » reste un bouton secondaire, même seul dans la barre. */
+.filter-bar:not(.attendance-tools) > button.filter-reset {
+  border: 1px solid #cfd9d2;
+  background: #fff;
+  color: #34483e;
+}
+.territory-form {
+  scroll-margin-top: 16px;
+  margin-bottom: 18px;
+}
+.row-actions {
+  white-space: nowrap;
 }

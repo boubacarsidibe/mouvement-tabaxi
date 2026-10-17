@@ -23,6 +23,27 @@ export interface ManagedTerritory {
   is_active: boolean;
 }
 
+/** Territoire du bureau avec ce qui y est rattaché directement : un territoire non vide ne se supprime pas. */
+export interface TerritoryUsage extends ManagedTerritory {
+  members_count: number;
+  coordinators_count: number;
+  programs_count: number;
+  applications_count: number;
+  children_count: number;
+  /** Rien ni personne ne s'y rattache : le serveur accepte de le supprimer. */
+  deletable: boolean;
+}
+
+/** Ce qu'un fondateur envoie pour ajouter, renommer, rattacher ou désactiver un territoire. */
+export interface TerritoryInput {
+  name: string;
+  kind: ManagedTerritory['kind'];
+  parent: number | null;
+  is_active: boolean;
+}
+
+const MANAGED = '/api/territories/managed/';
+
 @Injectable({ providedIn: 'root' })
 export class TerritoryService {
   private readonly http = inject(HttpClient);
@@ -34,7 +55,27 @@ export class TerritoryService {
 
   /** Territoires que la personne connectée peut gérer, en ordre d'arbre (un coordonnateur : le sien et ceux qui en dépendent). */
   managed(): Promise<ManagedTerritory[]> {
-    return firstValueFrom(this.http.get<ManagedTerritory[]>('/api/territories/managed/'));
+    return firstValueFrom(this.http.get<ManagedTerritory[]>(MANAGED));
+  }
+
+  /** Même liste, avec le nombre de membres, de programmes et de territoires rattachés à chacun. */
+  usage(): Promise<TerritoryUsage[]> {
+    return firstValueFrom(this.http.get<TerritoryUsage[]>(MANAGED));
+  }
+
+  /** Ajoute un territoire (fondateurs). */
+  create(input: TerritoryInput): Promise<TerritoryUsage> {
+    return firstValueFrom(this.http.post<TerritoryUsage>(MANAGED, input));
+  }
+
+  /** Renomme, rattache ailleurs ou désactive un territoire (fondateurs). */
+  update(id: number, input: Partial<TerritoryInput>): Promise<TerritoryUsage> {
+    return firstValueFrom(this.http.patch<TerritoryUsage>(`${MANAGED}${id}/`, input));
+  }
+
+  /** Supprime un territoire vide (fondateurs) ; le serveur refuse s'il contient des membres ou des programmes. */
+  remove(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${MANAGED}${id}/`));
   }
 }
 
