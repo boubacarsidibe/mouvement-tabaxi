@@ -197,6 +197,18 @@ else:
     }
 
 
+# Cache partagé en base : les limites d'envoi des formulaires publics (adhésion, inscription,
+# mot de passe oublié) sont comptées une seule fois pour toutes les instances, y compris sur
+# Vercel où chaque requête peut tomber sur une instance différente.
+# La table est créée par la migration core.0001_table_cache.
+CACHE_TABLE = 'tabaxi_cache'
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': CACHE_TABLE,
+    }
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
