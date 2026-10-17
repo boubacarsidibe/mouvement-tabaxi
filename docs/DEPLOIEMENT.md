@@ -4,8 +4,8 @@ Aujourd'hui, tout tourne sur deux projets Vercel, avec une base Neon et un servi
 
 | Élément | Où | Détail |
 |---|---|---|
-| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend` | `frontend/vercel.json` renvoie `/api/…` vers l'API et les autres pages vers `index.html` |
-| API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django | `backend/vercel.json` applique les migrations à chaque mise en ligne |
+| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend`, `https://mouvement-tabaxi-app.vercel.app` | `frontend/vercel.json` renvoie `/api/…` vers `https://mouvement-tabaxi-api.vercel.app/api/$1` et les autres pages vers `index.html` |
+| API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django, `https://mouvement-tabaxi-api.vercel.app` | `backend/vercel.json` applique les migrations à chaque mise en ligne (`python manage.py migrate --noinput`) |
 | Base de données | Neon `mouvement-tabaxi-db`, reliée au projet de l'API | fournit `DATABASE_URL` |
 | Photos de profil | dans la base, chiffrées | par défaut en production (le disque de Vercel est effacé entre deux appels) |
 | Courriels | Gmail du mouvement, par SMTP | obligatoire en production |
