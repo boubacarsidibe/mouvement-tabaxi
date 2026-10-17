@@ -91,7 +91,7 @@ Si le lien a expiré ou s'est perdu : sur la fiche d'une demande « Acceptée »
 ### 4. Finalisation (fenêtre privée)
 
 1. Ouvrir le lien du courriel : page « Finalisez votre adhésion ».
-2. Saisir l'adresse, le téléphone (facultatif), une photo (JPG ou PNG, 5 Mo au plus) et un mot de passe de 10 caractères au moins, deux fois. Accepter les statuts et le règlement intérieur.
+2. Saisir l'adresse, le téléphone (facultatif), une photo (JPG ou PNG) et un mot de passe de 10 caractères au moins, deux fois. Accepter les statuts et le règlement intérieur. Une photo prise au téléphone est réduite dans le navigateur avant l'envoi (800 pixels, moins de 500 Ko).
 3. **Finaliser mon adhésion**. Le compte est créé, la personne est connectée et arrive dans **Mon espace** (`/membre`).
 
 La demande est maintenant **Inscrite**. Rouvrir le même lien affiche qu'il a déjà servi et propose de se connecter.
