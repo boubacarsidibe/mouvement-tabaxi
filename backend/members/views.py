@@ -22,7 +22,7 @@ from .serializers import (
     RegistrationSerializer,
     StatusChangeSerializer,
 )
-from .status import StatusChangeRefused, can_change_status, change_status
+from .status import StatusChangeRefused, can_change_status, change_status, refusal_detail
 
 
 def link_problem_response(problem):
@@ -199,8 +199,9 @@ class MemberPhotoView(APIView):
 class MemberStatusView(APIView):
     """Rendre actif, suspendre ou radier un membre ; le compte suit, l'historique est conservé.
 
-    Un fondateur le fait pour tout compte ; un coordonnateur, pour les membres simples de sa
-    zone. Hors de la zone : 404, comme pour la fiche.
+    Un fondateur le fait pour les membres simples et les coordonnateurs ; un coordonnateur,
+    pour les membres simples de sa zone. Le compte d'un fondateur est refusé à tous (403).
+    Hors de la zone : 404, comme pour la fiche.
     """
 
     permission_classes = [IsBureau]
@@ -208,10 +209,7 @@ class MemberStatusView(APIView):
     def post(self, request, pk):
         member = generics.get_object_or_404(scoped_members(request.user), public_id=pk)
         if member.user_id != request.user.pk and not can_change_status(request.user, member):
-            return Response(
-                {'detail': 'Un coordonnateur ne change que le statut des membres simples de sa zone.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({'detail': refusal_detail(member)}, status=status.HTTP_403_FORBIDDEN)
         serializer = StatusChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:

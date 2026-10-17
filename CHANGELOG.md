@@ -62,6 +62,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Les coordonnateurs rendent actif, suspendent ou radient les membres simples de leur zone, avec le même motif obligatoire et le même historique que les fondateurs ; ils voient cet historique sur leurs fiches. Les comptes du bureau (coordonnateurs, fondateurs) restent gérés par les fondateurs seuls.
 - Adresses non devinables : un membre, une demande d'adhésion, un programme ou une activité se désigne, dans l'API comme dans les pages du site, par un identifiant aléatoire (UUID) au lieu d'un numéro qui se suit ; changer un chiffre de l'adresse ne mène plus à aucune fiche. Les fiches existantes reçoivent leur identifiant par migration (trois étapes, vérifiées sur PostgreSQL avec des données).
 - Administration Django fermée en ligne (`/admin/` n'existe qu'en développement, ou avec `DJANGO_ADMIN_ENABLED=1`).
+- Le compte d'un membre fondateur ne peut plus être suspendu ni radié depuis la plateforme, même par un autre fondateur ; sa fiche l'explique. Pour ce cas rare, le développeur dispose de `python manage.py statut_compte` (motif obligatoire, historique « par le développeur », journal « Système »).
 
 ### Modifié
 

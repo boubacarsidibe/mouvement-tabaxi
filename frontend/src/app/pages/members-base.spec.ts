@@ -507,6 +507,33 @@ describe('Fiche d’un membre', () => {
     expect(root.textContent).not.toContain('Historique du statut');
   });
 
+  it('ne propose pas de révoquer un autre membre fondateur, et explique pourquoi', async () => {
+    await open(TEST_FOUNDER, { ...RECORD, role: 'fondateur', role_label: 'Membre fondateur', can_change_status: false });
+    expect(root.querySelector('.decision-panel')).toBeNull();
+    expect(button('Suspendre')).toBeUndefined();
+    expect(button('Radier')).toBeUndefined();
+    expect(root.querySelector('.founder-note')?.textContent).toContain('ne peut être ni suspendu ni radié depuis la plateforme');
+  });
+
+  it('nomme le développeur comme auteur d’un changement fait hors de la plateforme', async () => {
+    await open(TEST_FOUNDER, {
+      ...RECORD,
+      status_history: [
+        {
+          id: 1,
+          from_status: 'actif',
+          from_status_label: 'Actif',
+          to_status: 'suspendu',
+          to_status_label: 'Suspendu',
+          reason: 'Demande écrite du bureau.',
+          changed_by: null,
+          changed_at: '2026-10-17T09:30:00Z',
+        },
+      ],
+    });
+    expect(root.textContent).toContain('par le développeur');
+  });
+
   it('ne laisse pas un fondateur changer son propre statut', async () => {
     await open(TEST_FOUNDER, { ...RECORD, email: TEST_FOUNDER.email, can_change_status: false });
     expect(root.querySelector('.decision-panel')).toBeNull();

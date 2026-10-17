@@ -28,24 +28,45 @@ class StatusChangeRefused(Exception):
         super().__init__(detail)
 
 
+FOUNDER_PROTECTED = (
+    "Le compte d'un membre fondateur ne peut être ni suspendu ni radié depuis la plateforme. "
+    "Si c'est vraiment nécessaire, le bureau le demande au développeur."
+)
+COORDINATOR_LIMIT = 'Un coordonnateur ne change que le statut des membres simples de sa zone.'
+
+
 def can_change_status(actor, member):
     """Qui peut changer le statut de ce membre, déjà pris dans le périmètre de ``actor``.
 
-    Un fondateur gère tous les comptes ; un coordonnateur, les membres simples de sa zone
-    (pas les autres membres du bureau). Personne ne change son propre statut.
+    Un fondateur gère les membres simples et les coordonnateurs ; un coordonnateur, les membres
+    simples de sa zone. Le compte d'un fondateur ne se suspend ni ne se radie depuis la
+    plateforme, même par un autre fondateur : seul le développeur le fait, avec
+    ``manage.py statut_compte``. Personne ne change son propre statut.
     """
     if member.user_id == actor.pk:
         return False
+    role = member.user.role
+    if role == User.Role.FONDATEUR:
+        return False
     if actor.is_founder:
         return True
-    return actor.is_bureau and member.user.role == User.Role.MEMBRE
+    return actor.is_bureau and role == User.Role.MEMBRE
+
+
+def refusal_detail(member):
+    """Message du refus (403) quand ``can_change_status`` répond non pour le compte d'un autre."""
+    return FOUNDER_PROTECTED if member.user.role == User.Role.FONDATEUR else COORDINATOR_LIMIT
 
 
 def change_status(member, new_status, *, by, reason=''):
-    """Passe le membre au statut demandé. Lève ``StatusChangeRefused`` si c'est impossible."""
+    """Passe le membre au statut demandé. Lève ``StatusChangeRefused`` si c'est impossible.
+
+    ``by`` est la personne qui agit ; ``None`` pour le développeur (``manage.py statut_compte``),
+    noté « Système » au journal.
+    """
     with transaction.atomic():
         member = Member.objects.select_for_update().select_related('user').get(pk=member.pk)
-        if member.user_id == by.pk:
+        if by is not None and member.user_id == by.pk:
             raise StatusChangeRefused('own_status', 'Vous ne pouvez pas changer votre propre statut.')
         if member.status == new_status:
             raise StatusChangeRefused(
