@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK"
+  },
+  "deploy": {
+    "startCommand": "gunicorn config.wsgi --config gunicorn.conf.py",
+    "preDeployCommand": ["python manage.py migrate --noinput"],
+    "healthcheckPath": "/api/health/",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

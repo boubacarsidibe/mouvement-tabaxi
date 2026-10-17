@@ -11,19 +11,62 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.csp import CSP
+
+from core.crypto import dev_key_from_secret
+
+from .env import env_flag, env_list, load_env_file, mailer_from_env, origin_of, origins_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_env_file(BASE_DIR / '.env')
+
+TESTING = sys.argv[1:2] == ['test']
+
 
 # Les valeurs sensibles viennent de l'environnement (voir .env.example).
-# La clé de repli ci-dessous ne sert qu'en développement local.
+# Sans DJANGO_DEBUG=1, le serveur se comporte comme en production : c'est le choix sûr
+# si une variable est oubliée au déploiement.
+DEBUG = os.environ.get('DJANGO_DEBUG', '0') == '1'
+
+# Administration Django (/admin/) : en développement seulement. En ligne, sa page de connexion
+# n'a pas le blocage après plusieurs échecs de l'API ; on ne l'ouvre qu'à la demande
+# (DJANGO_ADMIN_ENABLED=1), le temps d'une intervention.
+ADMIN_ENABLED = DEBUG or TESTING or os.environ.get('DJANGO_ADMIN_ENABLED', '0') == '1'
+
+# La clé de repli ne sert qu'en développement local et pendant les tests.
+DEV_SECRET_KEYS = {'cle-de-developpement-a-ne-jamais-utiliser-en-production', 'remplacer-par-une-longue-valeur-aleatoire'}
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'cle-de-developpement-a-ne-jamais-utiliser-en-production')
+if not DEBUG and not TESTING and (SECRET_KEY in DEV_SECRET_KEYS or len(SECRET_KEY) < 50):
+    raise ImproperlyConfigured(
+        'DJANGO_SECRET_KEY doit contenir une valeur aléatoire d\'au moins 50 caractères en production. '
+        'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
+    )
 
-DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+ALLOWED_HOSTS = env_list(os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1'))
+# Sur Railway, le domaine public du service et l'hôte du contrôle de santé (appelé avant
+# chaque mise en service) sont ajoutés d'eux-mêmes : un oubli bloquerait le déploiement.
+if os.environ.get('RAILWAY_ENVIRONMENT_NAME'):
+    for host in (os.environ.get('RAILWAY_PUBLIC_DOMAIN', ''), 'healthcheck.railway.app'):
+        if host and host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
-ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h]
+# Clés de chiffrement des données sensibles en base (voir core/crypto.py), séparées par des
+# virgules : la première chiffre, toutes déchiffrent. Obligatoires en production ; en local
+# et pendant les tests, une clé est dérivée de la clé secrète.
+FIELD_ENCRYPTION_KEYS = [k.strip() for k in os.environ.get('FIELD_ENCRYPTION_KEYS', '').split(',') if k.strip()]
+if not FIELD_ENCRYPTION_KEYS:
+    if not DEBUG and not TESTING:
+        raise ImproperlyConfigured(
+            'FIELD_ENCRYPTION_KEYS est obligatoire en production. Générer une clé avec : '
+            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        )
+    FIELD_ENCRYPTION_KEYS = [dev_key_from_secret(SECRET_KEY)]
 
 
 # Application definition
@@ -37,30 +80,107 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'core',
     'accounts',
+    'territories',
+    'applications',
+    'members',
+    'audit',
+    'dashboard',
+    'programs',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
 
-CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200').split(',') if o]
+# Adresse publique du frontend, pour les liens personnels envoyés par courriel.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+CORS_ALLOWED_ORIGINS = origins_from_env(os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200'))
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+# Sites autorisés à envoyer des formulaires (connexion, demandes…). Par défaut, les origines
+# CORS ; l'origine de FRONTEND_URL y est toujours ajoutée, car le site appelle l'API depuis
+# sa propre adresse (réécriture /api de Vercel).
+CSRF_TRUSTED_ORIGINS = origins_from_env(os.environ.get('CSRF_TRUSTED_ORIGINS') or ','.join(CORS_ALLOWED_ORIGINS))
+if origin_of(FRONTEND_URL) not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(origin_of(FRONTEND_URL))
+
+# Noms attendus par défaut par le client HTTP d'Angular : il lit le cookie XSRF-TOKEN
+# et renvoie sa valeur dans l'en-tête X-XSRF-TOKEN pour chaque requête qui modifie.
+CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.SessionAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.SessionAuthentication'],
+    'EXCEPTION_HANDLER': 'core.exceptions.api_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    # L'API ne parle que JSON ; l'interface navigable de DRF reste disponible en développement.
+    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer']
+    + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
+    # Limite les envois répétés depuis une même adresse sur les formulaires publics.
+    'DEFAULT_THROTTLE_RATES': {
+        'adhesion': os.environ.get('ADHESION_RATE', '10/hour'),
+        'password_reset': os.environ.get('PASSWORD_RESET_RATE', '10/hour'),
+        'registration': os.environ.get('REGISTRATION_RATE', '30/hour'),
+    },
 }
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.BureauInactivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
+
+
+# Sécurité des échanges
+# https://docs.djangoproject.com/en/6.1/topics/security/
+
+# Politique de contenu des pages servies par Django (API, administration). L'API ne
+# renvoie que du JSON : rien ne doit s'exécuter ailleurs que depuis le serveur lui-même,
+# et aucune page ne peut être affichée dans le cadre d'un autre site.
+SECURE_CSP = {
+    'default-src': [CSP.SELF],
+    'script-src': [CSP.SELF],
+    # L'administration Django utilise quelques attributs « style ».
+    'style-src': [CSP.SELF, CSP.UNSAFE_INLINE],
+    'img-src': [CSP.SELF, 'data:'],
+    'object-src': [CSP.NONE],
+    'base-uri': [CSP.SELF],
+    'form-action': [CSP.SELF],
+    'frame-ancestors': [CSP.NONE],
+}
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+if not DEBUG and not TESTING:
+    # En production, tout passe par https : redirection, HSTS, cookies jamais envoyés en clair.
+    # (Les tests parlent en http ; cette configuration est vérifiée par « check --deploy ».)
+    SECURE_SSL_REDIRECT = env_flag(os.environ.get('SECURE_SSL_REDIRECT', '1'))
+    # Sauf le point de contrôle : Railway l'appelle en http, directement sur le port du
+    # serveur, et n'accepte qu'une réponse 2xx (une redirection bloquerait la mise en service).
+    SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', str(365 * 24 * 3600)))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag(os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', '1'))
+    # L'inscription à la liste « preload » des navigateurs est quasi définitive : décision à prendre
+    # une fois le nom de domaine choisi.
+    SECURE_HSTS_PRELOAD = env_flag(os.environ.get('SECURE_HSTS_PRELOAD', '0'))
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Derrière l'hébergeur, le proxy indique si la requête d'origine était en https.
+    if env_flag(os.environ.get('DJANGO_BEHIND_HTTPS_PROXY', '0')):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -85,13 +205,46 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
+# En production, DATABASE_URL (PostgreSQL) ; sans elle, un fichier SQLite local.
+# En production, l'absence de DATABASE_URL est une erreur : le serveur tournerait sur un fichier
+# SQLite figé au déploiement (lecture seule sur l'hébergeur), et toute écriture échouerait.
+if not os.environ.get('DATABASE_URL') and not DEBUG and not TESTING:
+    raise ImproperlyConfigured(
+        'DATABASE_URL est obligatoire en production (base PostgreSQL). '
+        'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
+    )
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+
+    DATABASES = {'default': dj_database_url.parse(os.environ['DATABASE_URL'], conn_max_age=60)}
+    # Une connexion gardée peut avoir été coupée pendant la mise en veille de la base (Neon) :
+    # elle est vérifiée avant d'être réutilisée.
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    if DATABASES['default']['ENGINE'].endswith('postgresql'):
+        # Le répartiteur de connexions de Neon ne garde pas les requêtes préparées côté serveur
+        # d'une transaction à l'autre, ni les curseurs côté serveur.
+        DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+
+# Cache partagé en base : les limites d'envoi des formulaires publics (adhésion, inscription,
+# mot de passe oublié) sont comptées une seule fois pour toutes les instances, y compris sur
+# Vercel où chaque requête peut tomber sur une instance différente.
+# La table est créée par la migration core.0002_table_cache.
+CACHE_TABLE = 'tabaxi_cache'
+CACHES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': CACHE_TABLE,
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -112,6 +265,32 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Empreintes des mots de passe : Argon2id pour tout nouveau mot de passe. Les anciennes
+# empreintes (PBKDF2) restent reconnues et sont converties à la connexion suivante.
+SECURE_PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+PASSWORD_HASHERS = SECURE_PASSWORD_HASHERS
+
+# La session d'un membre du bureau se ferme après cette durée sans action (besoin B4).
+BUREAU_INACTIVITY_MINUTES = int(os.environ.get('BUREAU_INACTIVITY_MINUTES', '30'))
+
+# Blocage temporaire de la connexion après plusieurs échecs (voir accounts/lockout.py).
+LOGIN_MAX_FAILURES_PER_ACCOUNT = int(os.environ.get('LOGIN_MAX_FAILURES_PER_ACCOUNT', '5'))
+LOGIN_MAX_FAILURES_PER_IP = int(os.environ.get('LOGIN_MAX_FAILURES_PER_IP', '20'))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', '15'))
+# Nombre de proxys de confiance devant Django (hébergeur, répartiteur de charge) : l'adresse
+# du visiteur est alors lue dans X-Forwarded-For. 0 = connexion directe.
+LOGIN_TRUSTED_PROXIES = int(os.environ.get('LOGIN_TRUSTED_PROXIES', '0'))
+
+# Les tests créent beaucoup de comptes : un hachage rapide les accélère.
+# Partout ailleurs, Argon2id est utilisé (les tests de sécurité le vérifient).
+if TESTING:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
@@ -129,13 +308,61 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Styles de l'administration servis par Django lui-même (hébergement sans serveur de fichiers).
+WHITENOISE_USE_FINDERS = True
+
+# Fichiers envoyés (photos de profil). Ils ne sont jamais servis directement : l'API les
+# renvoie après contrôle d'accès. Le dossier est ignoré par Git.
+MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
+
+# Photos : en production, gardées en base, chiffrées (core/storage.py), pour ne jamais dépendre
+# d'un disque que l'hébergeur peut effacer (Vercel efface le sien entre deux appels).
+# DJANGO_FILE_STORAGE=filesystem (disque, MEDIA_ROOT) seulement avec un disque durable ;
+# en développement, le disque est utilisé par défaut.
+FILE_STORAGE = os.environ.get('DJANGO_FILE_STORAGE', '').strip().lower() or ('filesystem' if DEBUG else 'database')
+if FILE_STORAGE not in ('database', 'filesystem'):
+    raise ImproperlyConfigured("DJANGO_FILE_STORAGE doit valoir « database » ou « filesystem ».")
+STORAGES = {
+    'default': {
+        'BACKEND': 'core.storage.DatabaseStorage'
+        if FILE_STORAGE == 'database'
+        else 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# Console en développement, SMTP dès que EMAIL_HOST est défini (voir .env.example).
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
+    'default': mailer_from_env(os.environ),
+}
+
+# En production, un courriel « envoyé » dans la console n'arrive à personne : une demande serait
+# marquée « Acceptée » sans que la personne reçoive son lien. Un vrai service d'envoi est donc exigé
+# (voir docs/DEPLOIEMENT.md), sauf pour un aperçu de test déclaré (courriels dans les journaux).
+if (
+    not DEBUG
+    and not TESTING
+    and not os.environ.get('EMAIL_HOST', '').strip()
+    and not env_flag(os.environ.get('EMAIL_CONSOLE_IN_PRODUCTION', '0'))
+):
+    raise ImproperlyConfigured(
+        'EMAIL_HOST est obligatoire en production (par exemple smtp.gmail.com, voir docs/DEPLOIEMENT.md). '
+        'Pour un aperçu de test seulement, EMAIL_CONSOLE_IN_PRODUCTION=1 affiche les courriels dans les journaux.'
+    )
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
+
+
+# Journaux : en production, les erreurs du serveur (500) sont écrites sur la sortie d'erreur,
+# lue par l'hébergeur. Sans ce réglage, Django ne les envoie qu'aux ADMINS par courriel.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'django': {'handlers': ['console'], 'level': 'ERROR' if not DEBUG else 'INFO'}},
 }

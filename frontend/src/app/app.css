@@ -1,6 +1,4 @@
-.accueil {
-  max-width: 40rem;
-  margin: 4rem auto;
-  padding: 0 1rem;
-  text-align: center;
+:host {
+  display: block;
+  min-height: 100vh;
 }

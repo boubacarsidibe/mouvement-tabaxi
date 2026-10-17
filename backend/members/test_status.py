@@ -1,0 +1,496 @@
+import os
+import uuid
+from datetime import date
+from unittest import mock
+
+from django.contrib.admin.sites import site
+from django.contrib.sessions.models import Session
+from django.core.cache import cache
+from django.core.management import CommandError, call_command
+from django.test import RequestFactory, TestCase
+
+from accounts.admin import TabaxiUserAdmin
+from accounts.models import User
+from audit.models import AuditEntry
+from core.append_only import ImmutableRecordError
+from territories.models import Territory
+
+from .models import Member, MemberStatusChange
+
+PASSWORD = 'un-mot-de-passe-long'
+JSON = 'application/json'
+
+
+def commune(name):
+    return Territory.objects.get(name=name, kind=Territory.Kind.COMMUNE)
+
+
+class StatusTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.dakar_region = Territory.objects.get(name='Dakar', kind=Territory.Kind.REGION)
+        cls.pikine = commune('Pikine')
+        cls.mbour = commune('Mbour')
+
+        def person(email, first, last, role, territory, joined=date(2026, 3, 12)):
+            user = User.objects.create_user(
+                email, PASSWORD, first_name=first, last_name=last, role=role, territory=territory
+            )
+            return user, Member.objects.create(user=user, joined_on=joined, address='1, rue du Marché')
+
+        cls.founder, cls.founder_member = person('fondateur@example.org', 'Ibrahima', 'Sow', User.Role.FONDATEUR, None)
+        cls.coordinator, cls.coordinator_member = person('coord@example.org', 'Mamadou', 'Diop', User.Role.COORDONNATEUR, cls.dakar_region)
+        cls.other_coordinator, _ = person('thies@example.org', 'Khady', 'Ba', User.Role.COORDONNATEUR, cls.mbour)
+        cls.aminata, cls.aminata_member = person(
+            'aminata@example.org', 'Aminata', 'Ndiaye', User.Role.MEMBRE, cls.pikine, date(2026, 1, 20)
+        )
+        cls.moussa, cls.moussa_member = person(
+            'moussa@example.org', 'Moussa', 'Fall', User.Role.MEMBRE, cls.mbour, date(2026, 2, 10)
+        )
+
+    def setUp(self):
+        cache.clear()
+
+    def status_url(self, member):
+        return f'/api/members/{member.public_id}/status/'
+
+    def set_status(self, member, status, reason=''):
+        return self.client.post(self.status_url(member), {'status': status, 'reason': reason}, content_type=JSON)
+
+    def login(self, email, password=PASSWORD):
+        return self.client.post('/api/auth/login/', {'email': email, 'password': password}, content_type=JSON)
+
+
+class ChangeStatusTests(StatusTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.founder)
+
+    def test_un_nouveau_membre_est_actif(self):
+        self.assertEqual(self.aminata_member.status, Member.Status.ACTIF)
+        self.assertTrue(self.aminata.is_active)
+
+    def test_suspension(self):
+        response = self.set_status(self.aminata_member, 'suspendu', 'Propos contraires au règlement.')
+        self.assertEqual(response.status_code, 200, response.content)
+        data = response.json()
+        self.assertEqual((data['status'], data['status_label']), ('suspendu', 'Suspendu'))
+        self.aminata.refresh_from_db()
+        self.assertFalse(self.aminata.is_active)
+        change = MemberStatusChange.objects.get()
+        self.assertEqual(
+            (change.member, change.from_status, change.to_status, change.reason, change.changed_by),
+            (self.aminata_member, 'actif', 'suspendu', 'Propos contraires au règlement.', self.founder),
+        )
+
+    def test_radiation_puis_reactivation(self):
+        self.set_status(self.aminata_member, 'radie', 'Fraude constatée.')
+        self.aminata.refresh_from_db()
+        self.assertFalse(self.aminata.is_active)
+        response = self.set_status(self.aminata_member, 'actif')
+        self.assertEqual(response.status_code, 200)
+        self.aminata.refresh_from_db()
+        self.assertTrue(self.aminata.is_active)
+        self.assertEqual(Member.objects.get(pk=self.aminata_member.pk).status, 'actif')
+
+    def test_motif_obligatoire_pour_suspendre_ou_radier(self):
+        for status, message in (('suspendu', 'Indiquez le motif de la suspension.'), ('radie', 'Indiquez le motif de la radiation.')):
+            for reason in ('', '   '):
+                response = self.set_status(self.aminata_member, status, reason)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['reason'], [message])
+        self.aminata.refresh_from_db()
+        self.assertTrue(self.aminata.is_active)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_motif_facultatif_pour_rendre_actif(self):
+        self.set_status(self.aminata_member, 'suspendu', 'Test')
+        self.assertEqual(self.set_status(self.aminata_member, 'actif').status_code, 200)
+
+    def test_statut_inconnu_ou_absent(self):
+        self.assertEqual(self.set_status(self.aminata_member, 'banni', 'x').status_code, 400)
+        response = self.client.post(self.status_url(self.aminata_member), {}, content_type=JSON)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['status'], ['Choisissez le nouveau statut.'])
+
+    def test_deja_dans_ce_statut(self):
+        response = self.set_status(self.aminata_member, 'actif')
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['code'], 'same_status')
+        self.assertIn('déjà « Actif »', response.json()['detail'])
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_un_fondateur_ne_change_pas_son_propre_statut(self):
+        response = self.set_status(self.founder_member, 'suspendu', 'Essai')
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['code'], 'own_status')
+        self.founder.refresh_from_db()
+        self.assertTrue(self.founder.is_active)
+
+    def test_un_coordonnateur_peut_etre_suspendu(self):
+        self.assertEqual(self.set_status(self.coordinator_member, 'suspendu', 'Absence prolongée.').status_code, 200)
+        self.coordinator.refresh_from_db()
+        self.assertFalse(self.coordinator.is_active)
+
+    def test_membre_inconnu(self):
+        self.assertEqual(self.client.post('/api/members/9999/status/', {'status': 'actif'}, content_type=JSON).status_code, 404)
+
+
+class CoordinatorStatusTests(StatusTestCase):
+    """Un coordonnateur gère les membres simples de sa zone, et seulement eux."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.coordinator)
+
+    def test_suspend_puis_reactive_un_membre_simple_de_sa_zone(self):
+        response = self.set_status(self.aminata_member, 'suspendu', 'Absences répétées.')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.aminata.refresh_from_db()
+        self.assertFalse(self.aminata.is_active)
+        change = MemberStatusChange.objects.get()
+        self.assertEqual((change.changed_by, change.reason), (self.coordinator, 'Absences répétées.'))
+        self.assertEqual(self.set_status(self.aminata_member, 'actif').status_code, 200)
+        self.aminata.refresh_from_db()
+        self.assertTrue(self.aminata.is_active)
+
+    def test_voit_l_historique_et_le_droit_d_agir_sur_la_fiche(self):
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
+        self.assertTrue(data['can_change_status'])
+        self.assertEqual(len(data['status_history']), 1)
+
+    def test_hors_de_sa_zone_404(self):
+        self.assertEqual(self.set_status(self.moussa_member, 'suspendu', 'x').status_code, 404)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_ne_touche_pas_aux_membres_du_bureau(self):
+        pikine_coordinator = User.objects.create_user(
+            'pikine@example.org', PASSWORD, role=User.Role.COORDONNATEUR, territory=self.pikine
+        )
+        member = Member.objects.create(user=pikine_coordinator, joined_on=date(2026, 4, 1))
+        response = self.set_status(member, 'suspendu', 'x')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('membres simples', response.json()['detail'])
+        data = self.client.get(f'/api/members/{member.public_id}/').json()
+        self.assertFalse(data['can_change_status'])
+        self.assertIsNone(data['status_history'])
+        pikine_coordinator.refresh_from_db()
+        self.assertTrue(pikine_coordinator.is_active)
+
+    def test_ne_change_pas_son_propre_statut(self):
+        self.assertEqual(self.set_status(self.coordinator_member, 'suspendu', 'x').status_code, 409)
+        data = self.client.get(f'/api/members/{self.coordinator_member.public_id}/').json()
+        self.assertFalse(data['can_change_status'])
+
+
+class FounderProtectionTests(StatusTestCase):
+    """Le compte d'un membre fondateur ne se révoque pas depuis la plateforme, même par un autre fondateur."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_founder = User.objects.create_user(
+            'cofondateur@example.org', PASSWORD, first_name='Aïssatou', last_name='Kane', role=User.Role.FONDATEUR
+        )
+        self.other_founder_member = Member.objects.create(user=self.other_founder, joined_on=date(2026, 3, 12))
+
+    def test_un_fondateur_ne_revoque_pas_un_autre_fondateur(self):
+        self.client.force_login(self.founder)
+        for status in ('suspendu', 'radie'):
+            response = self.set_status(self.other_founder_member, status, 'Désaccord.')
+            self.assertEqual(response.status_code, 403)
+            self.assertIn('ne peut être ni suspendu ni radié depuis la plateforme', response.json()['detail'])
+            self.assertIn('développeur', response.json()['detail'])
+        data = self.client.get(f'/api/members/{self.other_founder_member.public_id}/').json()
+        self.assertFalse(data['can_change_status'])
+        self.other_founder.refresh_from_db()
+        self.assertTrue(self.other_founder.is_active)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_un_fondateur_gere_toujours_coordonnateurs_et_membres(self):
+        self.client.force_login(self.founder)
+        for member in (self.coordinator_member, self.aminata_member):
+            self.assertTrue(self.client.get(f'/api/members/{member.public_id}/').json()['can_change_status'])
+
+    def test_le_developpeur_suspend_puis_reactive_un_fondateur(self):
+        call_command('statut_compte', 'COFONDATEUR@example.org', 'suspendu', motif='Demande écrite du bureau.')
+        self.other_founder.refresh_from_db()
+        self.assertFalse(self.other_founder.is_active)
+        change = MemberStatusChange.objects.get()
+        self.assertEqual((change.to_status, change.changed_by, change.reason), ('suspendu', None, 'Demande écrite du bureau.'))
+        self.assertEqual(AuditEntry.objects.get(action=AuditEntry.Action.STATUS_CHANGED).actor_name, 'Système')
+        call_command('statut_compte', 'cofondateur@example.org', 'actif')
+        self.other_founder.refresh_from_db()
+        self.assertTrue(self.other_founder.is_active)
+
+    def test_la_commande_refuse_sans_motif_ou_compte_inconnu(self):
+        with self.assertRaisesMessage(CommandError, 'motif'):
+            call_command('statut_compte', 'cofondateur@example.org', 'radie')
+        with self.assertRaisesMessage(CommandError, 'Aucun dossier'):
+            call_command('statut_compte', 'personne@example.org', 'suspendu', motif='x')
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_la_commande_refuse_une_base_reelle_sans_la_cle(self):
+        environ = {key: value for key, value in os.environ.items() if key != 'FIELD_ENCRYPTION_KEYS'}
+        environ['DATABASE_URL'] = 'postgres://tabaxi@127.0.0.1:5432/tabaxi'
+        with mock.patch.dict(os.environ, environ, clear=True):
+            with self.assertRaisesMessage(CommandError, 'FIELD_ENCRYPTION_KEYS'):
+                call_command('statut_compte', 'cofondateur@example.org', 'suspendu', motif='x')
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+
+class PublicIdTests(StatusTestCase):
+    """Les adresses d'une fiche utilisent un identifiant aléatoire, pas un numéro qui se suit."""
+
+    def test_seul_l_identifiant_public_ouvre_la_fiche(self):
+        self.client.force_login(self.founder)
+        rows = self.client.get('/api/members/').json()['results']
+        self.assertTrue(rows)
+        for row in rows:
+            uuid.UUID(row['id'])  # identifiant aléatoire, pas un entier
+        member = Member.objects.get(public_id=rows[0]['id'])
+        self.assertEqual(self.client.get(f"/api/members/{rows[0]['id']}/").status_code, 200)
+        # Changer le chiffre de l'adresse ne mène plus à aucune fiche.
+        for pk in (member.pk, member.pk + 1):
+            self.assertEqual(self.client.get(f'/api/members/{pk}/').status_code, 404)
+            self.assertEqual(self.set_status_url(f'/api/members/{pk}/status/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/members/{uuid.uuid4()}/').status_code, 404)
+
+    def set_status_url(self, url):
+        return self.client.post(url, {'status': 'suspendu', 'reason': 'x'}, content_type=JSON)
+
+
+class AccessControlTests(StatusTestCase):
+    def test_seul_le_bureau_change_un_statut(self):
+        self.client.force_login(self.aminata)
+        self.assertEqual(self.set_status(self.moussa_member, 'suspendu', 'x').status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.set_status(self.moussa_member, 'suspendu', 'x').status_code, 401)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_un_membre_simple_n_a_pas_acces_a_la_base(self):
+        self.client.force_login(self.aminata)
+        self.assertEqual(self.client.get('/api/members/').status_code, 403)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/').status_code, 403)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/photo/').status_code, 403)
+
+
+class LoginAfterStatusChangeTests(StatusTestCase):
+    def test_un_membre_suspendu_ne_peut_plus_se_connecter(self):
+        self.assertEqual(self.login('aminata@example.org').status_code, 200)
+        self.client.logout()
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        self.client.logout()
+
+        response = self.login('aminata@example.org')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'inactive_account')
+        self.assertIn('suspendu', response.json()['detail'])
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
+
+    def test_un_membre_radie_ne_peut_plus_se_connecter(self):
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'radie', 'Motif.')
+        self.client.logout()
+        response = self.login('aminata@example.org')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('radié', response.json()['detail'])
+
+    def test_un_mauvais_mot_de_passe_ne_revele_pas_le_statut(self):
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        self.client.logout()
+        response = self.login('aminata@example.org', 'mauvais-mot-de-passe')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['code'], 'invalid_credentials')
+
+    def test_la_session_ouverte_est_fermee_aussitot(self):
+        member_client = self.client_class()
+        member_client.force_login(self.aminata)
+        self.assertEqual(member_client.get('/api/auth/me/').status_code, 200)
+
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        self.assertEqual(member_client.get('/api/auth/me/').status_code, 401)
+
+        # Réactivé, le membre doit se reconnecter : l'ancienne session ne revient pas.
+        self.set_status(self.aminata_member, 'actif')
+        self.assertEqual(member_client.get('/api/auth/me/').status_code, 401)
+        self.assertEqual(self.login('aminata@example.org').status_code, 200)
+
+    def test_les_sessions_des_autres_comptes_restent_ouvertes(self):
+        other = self.client_class()
+        other.force_login(self.moussa)
+        before = Session.objects.count()
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        self.assertEqual(other.get('/api/auth/me/').status_code, 200)
+        self.assertGreaterEqual(Session.objects.count(), before)
+
+    def test_reactive_le_membre_se_reconnecte(self):
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'radie', 'Motif.')
+        self.set_status(self.aminata_member, 'actif')
+        self.client.logout()
+        self.assertEqual(self.login('aminata@example.org').status_code, 200)
+
+    def test_pas_de_lien_de_mot_de_passe_pour_un_compte_suspendu(self):
+        from django.core import mail
+
+        self.client.force_login(self.founder)
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        self.client.logout()
+        self.client.post('/api/auth/password/forgot/', {'email': 'aminata@example.org'}, content_type=JSON)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class HistoryTests(StatusTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.founder)
+
+    def test_l_historique_garde_tous_les_changements(self):
+        self.set_status(self.aminata_member, 'suspendu', 'Premier motif.')
+        self.set_status(self.aminata_member, 'actif', 'Levée de la suspension.')
+        self.set_status(self.aminata_member, 'radie', 'Second motif.')
+        history = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()['status_history']
+        self.assertEqual(
+            [(h['from_status'], h['to_status'], h['reason']) for h in history],
+            [
+                ('actif', 'radie', 'Second motif.'),
+                ('suspendu', 'actif', 'Levée de la suspension.'),
+                ('actif', 'suspendu', 'Premier motif.'),
+            ],
+        )
+        self.assertEqual(history[0]['changed_by'], {'id': self.founder.pk, 'first_name': 'Ibrahima', 'last_name': 'Sow'})
+        self.assertIn('changed_at', history[0])
+
+    def test_rien_n_est_efface(self):
+        number = self.aminata_member.number
+        self.set_status(self.aminata_member, 'radie', 'Motif.')
+        member = Member.objects.get(pk=self.aminata_member.pk)
+        self.assertEqual((member.number, member.address, member.user.email), (number, '1, rue du Marché', 'aminata@example.org'))
+
+    def test_l_historique_reste_reserve_a_qui_gere_le_compte(self):
+        # Un coordonnateur voit l'historique des membres simples de sa zone (il peut agir sur eux),
+        # pas celui des autres membres du bureau.
+        self.set_status(self.aminata_member, 'suspendu', 'Motif connu du coordonnateur.')
+        colleague = User.objects.create_user(
+            'pikine@example.org', PASSWORD, role=User.Role.COORDONNATEUR, territory=self.pikine
+        )
+        colleague_member = Member.objects.create(user=colleague, joined_on=date(2026, 4, 1))
+        self.set_status(colleague_member, 'suspendu', 'Motif confidentiel.')
+        self.client.force_login(self.coordinator)
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
+        self.assertEqual(data['status_history'][0]['reason'], 'Motif connu du coordonnateur.')
+        data = self.client.get(f'/api/members/{colleague_member.public_id}/').json()
+        self.assertEqual(data['status'], 'suspendu')
+        self.assertIsNone(data['status_history'])
+        self.assertNotIn('Motif confidentiel.', str(data))
+
+    def test_l_historique_ne_se_modifie_pas(self):
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        change = MemberStatusChange.objects.get()
+        change.reason = 'Réécrit'
+        with self.assertRaises(ImmutableRecordError):
+            change.save()
+        with self.assertRaises(ImmutableRecordError):
+            change.delete()
+        with self.assertRaises(ImmutableRecordError):
+            MemberStatusChange.objects.update(reason='Réécrit')
+        with self.assertRaises(ImmutableRecordError):
+            MemberStatusChange.objects.all().delete()
+        self.assertEqual(MemberStatusChange.objects.get().reason, 'Motif.')
+
+    def test_un_membre_avec_historique_ne_se_supprime_pas(self):
+        from django.db.models import ProtectedError
+
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        with self.assertRaises(ProtectedError):
+            Member.objects.get(pk=self.aminata_member.pk).delete()
+
+    def test_l_administration_ne_permet_ni_suppression_ni_changement_de_statut(self):
+        request = RequestFactory().get('/')
+        request.user = self.founder
+        admin = site._registry[Member]
+        self.assertFalse(admin.has_delete_permission(request, self.aminata_member))
+        self.assertIn('status', admin.readonly_fields)
+        user_admin = TabaxiUserAdmin(User, site)
+        self.assertIn('is_active', user_admin.get_readonly_fields(request, self.aminata))
+        orphan = User.objects.create_user('sans-dossier@example.org', PASSWORD)
+        self.assertNotIn('is_active', user_admin.get_readonly_fields(request, orphan))
+
+
+class MemberBaseTests(StatusTestCase):
+    url = '/api/members/'
+
+    def names(self, response):
+        return [f"{row['first_name']} {row['last_name']}" for row in response.json()['results']]
+
+    def test_un_fondateur_voit_tous_les_membres(self):
+        self.client.force_login(self.founder)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['count'], 2)
+        row = response.json()['results'][0]
+        self.assertEqual(
+            set(row),
+            {'id', 'number', 'first_name', 'last_name', 'email', 'role', 'role_label', 'territory', 'joined_on', 'status', 'status_label'},
+        )
+
+    def test_les_plus_recents_d_abord(self):
+        self.client.force_login(self.founder)
+        self.assertEqual(self.names(self.client.get(self.url)), ['Moussa Fall', 'Aminata Ndiaye'])
+        self.assertEqual(self.names(self.client.get(self.url, {'ordering': 'date'})), ['Aminata Ndiaye', 'Moussa Fall'])
+
+    def test_tri_par_nom_et_par_territoire(self):
+        self.client.force_login(self.founder)
+        self.assertEqual(self.names(self.client.get(self.url, {'ordering': 'name'})), ['Moussa Fall', 'Aminata Ndiaye'])
+        self.assertEqual(self.names(self.client.get(self.url, {'ordering': '-name'})), ['Aminata Ndiaye', 'Moussa Fall'])
+        self.assertEqual(self.names(self.client.get(self.url, {'ordering': 'place'})), ['Moussa Fall', 'Aminata Ndiaye'])
+        self.assertEqual(self.client.get(self.url, {'ordering': 'age'}).status_code, 400)
+
+    def test_un_coordonnateur_ne_voit_que_son_territoire(self):
+        self.client.force_login(self.coordinator)  # région de Dakar : Pikine, pas Mbour
+        self.assertEqual(self.names(self.client.get(self.url)), ['Aminata Ndiaye'])
+        self.assertEqual(self.client.get(f'/api/members/{self.aminata_member.public_id}/').status_code, 200)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/photo/').status_code, 404)
+
+    def test_filtre_par_statut(self):
+        self.client.force_login(self.founder)
+        self.set_status(self.moussa_member, 'suspendu', 'Motif.')
+        self.assertEqual(self.names(self.client.get(self.url, {'status': 'suspendu'})), ['Moussa Fall'])
+        self.assertEqual(self.names(self.client.get(self.url, {'status': 'actif'})), ['Aminata Ndiaye'])
+        self.assertEqual(self.client.get(self.url, {'status': 'banni'}).status_code, 400)
+
+    def test_recherche_par_nom_courriel_ou_numero(self):
+        self.client.force_login(self.founder)
+        self.assertEqual(self.names(self.client.get(self.url, {'search': 'aminata'})), ['Aminata Ndiaye'])
+        self.assertEqual(self.names(self.client.get(self.url, {'search': 'NDIAYE aminata'})), ['Aminata Ndiaye'])
+        self.assertEqual(self.names(self.client.get(self.url, {'search': 'moussa@example'})), ['Moussa Fall'])
+        self.assertEqual(self.names(self.client.get(self.url, {'search': self.moussa_member.number})), ['Moussa Fall'])
+        self.assertEqual(self.names(self.client.get(self.url, {'search': 'inconnu'})), [])
+
+    def test_filtre_par_role(self):
+        self.client.force_login(self.founder)
+        self.assertEqual(self.names(self.client.get(self.url, {'role': 'coordonnateur'})), ['Khady Ba', 'Mamadou Diop'])
+        self.assertEqual(self.client.get(self.url, {'role': 'roi'}).status_code, 400)
+
+    def test_pagination(self):
+        self.client.force_login(self.founder)
+        data = self.client.get(self.url, {'page_size': 1}).json()
+        self.assertEqual((data['count'], len(data['results'])), (2, 1))
+        self.assertIsNotNone(data['next'])
+
+    def test_personne_non_connectee(self):
+        self.assertEqual(self.client.get(self.url).status_code, 401)
+
+    def test_fiche_complete(self):
+        self.client.force_login(self.founder)
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
+        self.assertEqual(data['address'], '1, rue du Marché')
+        self.assertEqual(data['territory']['name'], 'Pikine')
+        self.assertEqual(data['status_history'], [])
+        self.assertIsNone(data['photo_url'])

@@ -21,3 +21,6 @@ Thumbs.db
 .vscode/
 .idea/
 ng.log
+
+# Liaison locale aux projets Vercel (créée par « vercel deploy »)
+.vercel/

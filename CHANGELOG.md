@@ -1,0 +1,70 @@
+# Journal des modifications
+
+Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le projet suivra le [versionnage sémantique](https://semver.org/lang/fr/) à partir de la première version publiée.
+
+## [Non publié]
+
+### Ajouté
+
+- Cahier des charges de la plateforme (version 1.0).
+- Squelette du backend Django : configuration en français, compte utilisateur par courriel avec rôles.
+- Squelette du frontend Angular.
+- Documentation du dépôt : guide de contribution, code de conduite, architecture, feuille de route, planning, backlog, glossaire, hypothèses.
+- Modèles d'issues et de Pull Request.
+- Labels, sprints et issues GitHub.
+- Backend : applications `core`, `territories`, `applications` et `members`, routes sous `/api/` et point de contrôle `/api/health/` (#12).
+- Backend : lecture du fichier `backend/.env` au démarrage (#12).
+- Backend : territoires emboîtés pays, région, commune, avec l'administration et les territoires de départ du Sénégal (#13).
+- Backend : API de connexion, de déconnexion et de l'utilisateur connecté ; refus des comptes désactivés ; courriel sans distinction de casse (#14).
+- Backend : liste publique des territoires actifs, en arbre pays > région > commune, pour le formulaire d'adhésion (#17).
+- Backend : demandes d'adhésion (statuts À examiner, Acceptée, Rejetée, Inscrite) et dépôt public avec validation, référence TAB-AAAA-NNNNN et une seule demande en cours par courriel (#16).
+- Backend : service d'envoi de courriels (console en développement, SMTP par variables d'environnement) qui détecte et remonte les échecs (#20).
+- Backend : examen des demandes réservé aux fondateurs (liste filtrable, lecture, refus avec motif obligatoire envoyé par courriel, auteur et date de chaque décision) (#21).
+- Backend : acceptation d'une demande avec envoi d'un lien personnel d'inscription (jeton aléatoire dont seule l'empreinte est stockée, valable 7 jours, usage unique) ; la demande n'est « Acceptée » que si le courriel est parti (#22).
+- Frontend : écran d'examen des demandes du bureau relié à `/api/applications/` (liste filtrable par statut, fiche, acceptation, refus avec motif obligatoire, erreur d'envoi du courriel affichée), réservé aux fondateurs, sans données fictives (#21).
+- Mot de passe oublié : `POST /api/auth/password/forgot/`, `reset/check/` et `reset/` (lien valable une heure, à usage unique, réponse identique que le compte existe ou non), écrans `/mot-de-passe-oublie` et `/nouveau-mot-de-passe` (#29).
+- Invitation d'un coordonnateur ou d'un fondateur par un fondateur : compte du bureau rattaché à un territoire, lien personnel valable 7 jours, page `/invitation` pour choisir son mot de passe ; aucun compte n'est créé si le courriel ne part pas.
+- Backend : blocage temporaire de la connexion après 5 échecs pour un compte ou 20 depuis une adresse (#32).
+- Backend : fermeture de la session du bureau après 30 minutes sans action ; chaque erreur de l'API porte un code stable (#31).
+- Backend : mots de passe en Argon2id, https obligatoire et cookies sécurisés en production, en-têtes de sécurité (CSP), refus de démarrer sans vraie clé secrète (#63).
+- Backend : chiffrement en base des données sensibles des demandes (motivation, motif de refus, note interne), avec changement de clé sans perte (#64).
+- Backend : rattachement des comptes à un territoire et règle d'accès par territoire (un coordonnateur voit son territoire et ceux qui en dépendent, un fondateur voit tout) (#36).
+- Backend : dossier de membre avec numéro TBX-AAAA-NNNNN attribué automatiquement, unique et jamais réutilisé (#34).
+- Backend : finalisation de l'inscription avec le lien personnel (mot de passe, adresse et téléphone chiffrés, photo nettoyée), création du compte membre et passage de la demande à « Inscrite » (#25).
+- Backend : mot de passe oublié (lien valable une heure, utilisable une fois) et changement du mot de passe une fois connecté (#29).
+- Backend : invitation d'un coordonnateur ou d'un fondateur par un fondateur, avec lien personnel pour choisir son mot de passe (#30).
+- Backend : profil du membre connecté (lecture des données de la carte, modification de l'adresse, du téléphone et de la photo ; nom et territoire réservés au bureau) (#33).
+- Frontend : « Mon profil » et « Ma carte numérique » relient `/api/members/me/` : nom, numéro, territoire, date d'adhésion et photo réels sur le tableau de bord et la carte (téléchargement en image compris), modification de l'adresse, du téléphone et de la photo, changement du mot de passe via `/api/auth/password/change/`, erreurs du serveur affichées en français ; plus aucune donnée de démonstration sur ces écrans (#33, #35).
+- Statut du membre (Actif, Suspendu, Radié) : un fondateur change le statut depuis la fiche du membre (`POST /api/members/<id>/status/`, motif obligatoire pour suspendre ou radier) ; un compte suspendu ou radié ne peut plus se connecter (message propre à chaque cas), ses sessions ouvertes sont fermées, et l'historique des changements (auteur, date, motif) est conservé sans pouvoir être modifié ni effacé ; les coordonnateurs et fondateurs invités ont aussi un dossier de membre (#40).
+- Backend : base des membres du bureau (`GET /api/members/`, fiche `GET /api/members/<id>/` et sa photo) limitée au territoire de la personne connectée, avec recherche par nom, filtre par statut, tri et pages.
+- Frontend : écran « Bases de membres » relié à l'API (liste, fiche, changement de statut, historique réservé aux fondateurs), sans données fictives ; la page « Demandes d'adhésion » affiche désormais ses erreurs en rouge.
+- Bases du bureau : filtres par territoire (le territoire et ceux qui en dépendent) et par période d'adhésion, recherche par nom, courriel ou numéro, base des coordonnateurs (`role=coordonnateur,fondateur`) avec les mêmes filtres, toutes limitées au territoire de la personne connectée ; chaque compte du bureau a son dossier de membre (fondateur créé par `createsuperuser`, comptes existants par migration) (#38, #39).
+- Frontend : « Bases de membres », « Coordonnateurs » et « Comptes d'accès » affichent les vraies données avec filtres par localité, fonction, statut et période, sans personnes fictives.
+- Journal des actions (`GET /api/audit/`, fondateurs) : acceptations et refus de demandes, changements de statut, invitations enregistrés automatiquement avec leur auteur, leur date et leur motif, dans la transaction de l'action ; les lignes ne se modifient ni ne s'effacent (code, routes, administration), leurs détails sont chiffrés en base, et le changement de clé de chiffrement les rechiffre sans en toucher le contenu (#42).
+- Frontend : écran « Journal des actions » relié à l'API (recherche, filtres par action, auteur et période, pages), réservé aux fondateurs, sans données fictives.
+- Les motifs de suspension et de radiation sont chiffrés en base, comme les motifs de refus.
+- Export Excel des listes (`GET /api/members/export/`, `/api/applications/export/`, `/api/audit/export/`) : le fichier contient exactement la liste filtrée, dans le périmètre de la personne connectée, sans adresse, téléphone ni motivation ; les textes sont écrits comme du texte (aucune formule exécutée) ; chaque export est noté dans le journal des actions avec ses filtres et son nombre de lignes (#43).
+- Frontend : bouton « Exporter en Excel » sous chaque liste du bureau, qui exporte la liste telle qu'elle est affichée.
+- Commande `python manage.py comptes_demo` : crée un compte de démonstration par rôle (fondateur, coordonnateur, membre), réservée au développement ; aucun mot de passe n'est stocké dans le dépôt.
+- Tableau de bord du bureau (`GET /api/dashboard/`) : membres actifs, coordonnateurs, demandes à examiner, répartition par territoire et adhésions des douze derniers mois, calculés dans le territoire de la personne connectée (un coordonnateur ne voit que le sien) avec les mêmes listes que les écrans, pour que les chiffres correspondent ; demandes en attente et dernières actions réservées aux fondateurs (#37).
+- Frontend : l'écran « Tableau de bord » lit ces chiffres, sans valeur d'exemple ni bouton de date factice.
+- Déploiement sur Vercel : `DATABASE_URL` (PostgreSQL) pris en charge, fichiers statiques de l'administration par WhiteNoise, préréglage Django de Vercel, migrations à chaque mise en ligne (`backend/vercel.json`), réécriture `/api` du site vers l'API (`frontend/vercel.json`), guide `docs/DEPLOIEMENT.md`.
+- Mise en ligne en production sur Vercel le 16 octobre 2026 : site `mouvement-tabaxi-app`, API `mouvement-tabaxi-api`, base PostgreSQL Neon `mouvement-tabaxi-db` ; en production, le serveur refuse de démarrer sans `DATABASE_URL` et écrit ses erreurs dans le journal de Vercel.
+- Programmes et activités : un coordonnateur crée et modifie les programmes de son territoire (nom, objectif, localité, responsable, dates, état Prévu, En cours, Terminé ou Annulé), un fondateur tous ; chaque programme a ses activités (titre, date, lieu, description) affichées par ordre de date, un compte rendu par activité qui peut mettre à jour l'état du programme, une liste de présences à cocher avec le total, et la liste de ses inscrits (avec export Excel noté dans le journal) ; un membre voit les programmes de son territoire et pas ceux des autres, s'inscrit et se désinscrit d'une activité tant qu'elle n'a pas commencé ; la localité d'un programme ne peut pas être supprimée (#44, #45, #46, #47, #48, #49).
+- Frontend : écrans « Programmes » du bureau (liste filtrable et exportable, fiche, formulaires, compte rendu, présences) et « Programmes & activités » du membre (onglets, recherche, inscription) reliés à l'API ; « Mon espace » affiche le vrai coordonnateur, les vrais chiffres et mes prochaines activités ; le tableau de bord compte les programmes en cours et liste les prochains.
+- Les pages du bureau et de l'espace membre se chargent à la demande, la page d'accueil pèse près de 30 % de moins ; les dates s'affichent en français.
+- Renvoi du lien d'inscription : sur la fiche d'une demande « Acceptée », un fondateur envoie un nouveau lien personnel (valable 7 jours) quand le précédent a expiré ou s'est perdu ; les anciens liens cessent de fonctionner et le renvoi est noté au journal. Une personne acceptée dont le lien avait expiré n'était plus jamais en mesure de devenir membre.
+- Plus aucun contenu inventé ni bouton sans effet : la page d'accueil ne montre plus d'actualités ni de programmes fictifs, la page Sécurité n'affiche plus de « session active » inventée, les boutons « Notifications » et la recherche du bureau, qui ne faisaient rien, sont retirés, la pastille du profil mène à « Mon profil », et les textes de la connexion, du mot de passe et de la carte disent ce que fait réellement l'application.
+- Préparation de l'hébergement du serveur Django sur Railway, sans le mettre en service : `backend/railway.json` (gunicorn, migrations avant chaque mise en service, contrôle de santé `/api/health/`), `backend/gunicorn.conf.py` (port lu dans `PORT`), Python 3.12 fixé, `gunicorn` figé ; sur Railway, le domaine public et l'hôte du contrôle de santé sont acceptés d'office et `/api/health/` répond en http ; `CSRF_TRUSTED_ORIGINS` réglable, avec l'origine de `FRONTEND_URL` toujours acceptée ; `check --deploy` signale un `FRONTEND_URL` local ou en http ; section Railway dans `docs/DEPLOIEMENT.md` (#52).
+- Documentation du rendu : `docs/DEMONSTRATION.md` (parcours de la demande à l'espace membre, statuts « À examiner », « Acceptée », « Rejetée », « Inscrite »), README à jour (état réel, lancement du backend puis du frontend, tests, comptes de démonstration), `docs/DEPLOIEMENT.md` à jour avec l'hébergement actuel ; un test parcourt la démonstration de bout en bout et d'autres vérifient que la documentation cite des statuts, commandes, adresses et pages qui existent (#24).
+- Photos réduites dans le navigateur avant l'envoi, à la finalisation de l'inscription et dans « Mon profil » : 800 pixels au plus de côté, en JPEG, sous 500 Ko, dans le bon sens ; une photo de téléphone de plusieurs mégaoctets passe ainsi sous la limite au lieu d'être refusée, et l'envoi est bien plus léger sur une connexion mobile. Une photo déjà légère part telle quelle (#27).
+- Gestion des territoires (`/bureau/territoires`) : un fondateur ajoute, renomme, rattache, désactive ou supprime un territoire ; un territoire qui contient des membres, des programmes, des demandes ou d'autres territoires ne peut pas être supprimé ; un coordonnateur consulte son périmètre sans le modifier. L'écran remplace les données d'exemple (#41).
+- Les coordonnateurs rendent actif, suspendent ou radient les membres simples de leur zone, avec le même motif obligatoire et le même historique que les fondateurs ; ils voient cet historique sur leurs fiches. Les comptes du bureau (coordonnateurs, fondateurs) restent gérés par les fondateurs seuls.
+- Adresses non devinables : un membre, une demande d'adhésion, un programme ou une activité se désigne, dans l'API comme dans les pages du site, par un identifiant aléatoire (UUID) au lieu d'un numéro qui se suit ; changer un chiffre de l'adresse ne mène plus à aucune fiche. Les fiches existantes reçoivent leur identifiant par migration (trois étapes, vérifiées sur PostgreSQL avec des données).
+- Administration Django fermée en ligne (`/admin/` n'existe qu'en développement, ou avec `DJANGO_ADMIN_ENABLED=1`).
+- Le compte d'un membre fondateur ne peut plus être suspendu ni radié depuis la plateforme, même par un autre fondateur ; sa fiche l'explique. Pour ce cas rare, le développeur dispose de `python manage.py statut_compte` (motif obligatoire, historique « par le développeur », journal « Système »).
+
+### Modifié
+
+- Backend : les limites d'envoi des formulaires publics (adhésion, inscription, mot de passe oublié) sont comptées dans un cache partagé en base (`tabaxi_cache`, créée par migration), commun à toutes les instances en ligne.
+- Backend : sans `DJANGO_DEBUG=1`, le serveur se comporte désormais comme en production. En local, copier `backend/.env.example` en `backend/.env` (#63).
