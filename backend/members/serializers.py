@@ -62,15 +62,21 @@ class RegistrationSerializer(serializers.Serializer):
 
 
 LOCKED_FIELDS = ('email', 'territory', 'number', 'joined_on')
-# Le nom se renseigne une fois, s'il manque (compte créé sans nom) ; ensuite seul le bureau le change.
-NAME_FIELDS = ('first_name', 'last_name')
+
+
+def photo_url(base, member):
+    """Adresse de la photo, propre à chaque photo : une nouvelle photo n'est jamais masquée par l'ancienne en cache."""
+    if not member.photo:
+        return None
+    version = member.photo.name.rsplit('/', 1)[-1].split('.', 1)[0]
+    return f'{base}?v={version}'
 
 
 class MemberProfileSerializer(serializers.ModelSerializer):
     """Profil et carte du membre connecté.
 
-    Le membre modifie son adresse, son téléphone et sa photo. Son nom, son courriel et son
-    territoire ne changent que par le bureau ; seul un nom encore vide peut être renseigné.
+    Le membre modifie son prénom, son nom, son adresse, son téléphone et sa photo. Son courriel
+    et son territoire ne changent que par le bureau.
     """
 
     first_name = serializers.CharField(source='user.first_name', required=False, max_length=150)
@@ -102,7 +108,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         return country.name if country else ''
 
     def get_photo_url(self, member):
-        return '/api/members/me/photo/' if member.photo else None
+        return photo_url('/api/members/me/photo/', member)
 
     def get_coordinator(self, member):
         """Coordonnateur le plus proche du membre : celui de son territoire, sinon de celui dont il dépend."""
@@ -128,8 +134,6 @@ class MemberProfileSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         locked = [name for name in LOCKED_FIELDS if name in self.initial_data]
-        user = self.instance.user if self.instance else None
-        locked += [name for name in NAME_FIELDS if name in self.initial_data and user and getattr(user, name)]
         if locked:
             raise serializers.ValidationError(
                 {name: ['Seul le bureau peut modifier cette information.'] for name in locked}
@@ -230,7 +234,7 @@ class MemberDetailSerializer(MemberListSerializer):
         return request is not None and can_change_status(request.user, member)
 
     def get_photo_url(self, member):
-        return f'/api/members/{member.public_id}/photo/' if member.photo else None
+        return photo_url(f'/api/members/{member.public_id}/photo/', member)
 
     def get_status_history(self, member):
         request = self.context.get('request')

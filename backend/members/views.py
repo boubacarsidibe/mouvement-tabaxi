@@ -83,7 +83,7 @@ class RegistrationView(APIView):
 
 
 class MyPhotoView(APIView):
-    """Photo de profil de la personne connectée (pour sa carte et son profil)."""
+    """Photo de profil de la personne connectée : affichage (GET) et retrait (DELETE)."""
 
     permission_classes = [IsAuthenticated]
 
@@ -94,6 +94,18 @@ class MyPhotoView(APIView):
         response = FileResponse(member.photo.open('rb'), content_type='image/jpeg')
         response['Cache-Control'] = 'private, max-age=300'
         return response
+
+    def delete(self, request):
+        """Retire la photo de profil : le fichier est effacé, la carte s'affiche sans photo."""
+        member = getattr(request.user, 'member', None)
+        if member is None:
+            raise Http404
+        if member.photo:
+            name = member.photo.name
+            member.photo = ''
+            member.save(update_fields=['photo'])
+            member.photo.storage.delete(name)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):

@@ -19,7 +19,7 @@ const PROFILE = {
   territory: TEST_MEMBER.territory,
   address: '18, rue de la Corniche',
   phone: '+221 77 456 78 90',
-  photo_url: '/api/members/me/photo/',
+  photo_url: '/api/members/me/photo/?v=a1b2',
 };
 
 describe('Profil et carte du membre', () => {
@@ -135,16 +135,66 @@ describe('Profil et carte du membre', () => {
     request.flush({ ...PROFILE, first_name: 'Boubacar', last_name: 'Sidibe', territory: null, locality: 'Sénégal' });
     await settle();
     expect(TestBed.inject(AuthService).displayName()).toBe('Boubacar Sidibe');
-    // Une fois renseignés, ils ne sont plus modifiables ici.
-    expect(root().querySelector('[name=first_name]')).toBeNull();
   });
 
-  it('ne propose pas de changer un nom déjà renseigné', async () => {
+  it('permet de changer un nom déjà renseigné', async () => {
     await open('profile');
     http.expectOne('/api/members/me/').flush(PROFILE);
     await settle();
-    expect(root().querySelector('[name=first_name]')).toBeNull();
-    expect(root().querySelector('[name=last_name]')).toBeNull();
+    const first = root().querySelector('[name=first_name]') as HTMLInputElement;
+    const last = root().querySelector('[name=last_name]') as HTMLInputElement;
+    expect([first.value, last.value, first.disabled]).toEqual(['Awa', 'Ndiaye', false]);
+    last.value = 'Fall';
+    root().querySelector('form')!.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+    const request = http.expectOne('/api/members/me/');
+    const body = request.request.body as FormData;
+    expect([body.get('first_name'), body.get('last_name')]).toEqual(['Awa', 'Fall']);
+    request.flush({ ...PROFILE, last_name: 'Fall' });
+    await settle();
+    expect(TestBed.inject(AuthService).displayName()).toBe('Awa Fall');
+  });
+
+  it('montre la nouvelle photo après chaque changement', async () => {
+    await open('profile');
+    http.expectOne('/api/members/me/').flush(PROFILE);
+    await settle();
+    const portrait = () => root().querySelector('.profile-identity img')?.getAttribute('src');
+    expect(portrait()).toBe('/api/members/me/photo/?v=a1b2');
+    const input = root().querySelector('[name=photo]') as HTMLInputElement;
+    for (const version of ['c3d4', 'e5f6']) {
+      const file = new File([new Uint8Array(1000)], `${version}.jpg`, { type: 'image/jpeg' });
+      photos.prepare.mockResolvedValue(file);
+      Object.defineProperty(input, 'files', { value: [file], configurable: true });
+      input.dispatchEvent(new Event('change'));
+      root().querySelector('form')!.dispatchEvent(new SubmitEvent('submit', { cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve));
+      const request = http.expectOne('/api/members/me/');
+      expect((request.request.body as FormData).get('photo')).toBe(file);
+      request.flush({ ...PROFILE, photo_url: `/api/members/me/photo/?v=${version}` });
+      await settle();
+      // L'adresse renvoyée par le serveur est propre à la photo : l'image affichée est la nouvelle.
+      expect(portrait()).toBe(`/api/members/me/photo/?v=${version}`);
+    }
+  });
+
+  it('retire la photo de profil après confirmation', async () => {
+    await open('profile');
+    http.expectOne('/api/members/me/').flush(PROFILE);
+    await settle();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const remove = () =>
+      [...root().querySelectorAll('button')].find((button) => button.textContent?.includes('Retirer la photo'))!;
+    remove().click();
+    http.expectNone('/api/members/me/photo/'); // annulé : rien n'est envoyé
+    remove().click();
+    const request = http.expectOne('/api/members/me/photo/');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+    expect(root().querySelector('.profile-identity img')).toBeNull();
+    expect(root().textContent).not.toContain('Retirer la photo');
+    expect(confirm).toHaveBeenCalledTimes(2);
+    confirm.mockRestore();
   });
 
   it('montre le pays sur la carte d’un compte de niveau national', async () => {

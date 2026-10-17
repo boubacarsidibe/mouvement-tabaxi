@@ -3239,6 +3239,10 @@ h3 {
   margin-bottom: 12px;
   color: #626b66;
 }
+.profile-identity .btn {
+  display: block;
+  margin-top: 12px;
+}
 .form-actions {
   display: flex;
   justify-content: flex-end;

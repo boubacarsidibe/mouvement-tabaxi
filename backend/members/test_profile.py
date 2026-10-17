@@ -1,18 +1,23 @@
 import shutil
 import tempfile
+from io import BytesIO
 from pathlib import Path
 
 from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
+from PIL import Image
 
 from accounts.models import User
 from territories.models import Territory
+
+from core.models import StoredFile
 
 from .models import Member
 from .test_registration import image_file
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix='tabaxi-profil-')
 URL = '/api/members/me/'
+URL_PHOTO = '/api/members/me/photo/'
 
 
 @override_settings(MEDIA_ROOT=MEDIA_ROOT)
@@ -60,14 +65,24 @@ class MemberProfileTests(TestCase):
         data = self.client.get(URL).json()
         self.assertEqual((data['address'], data['phone']), ('5, avenue Lamine-Guèye, Dakar', '+221 76 000 11 22'))
 
-    def test_nom_et_territoire_non_modifiables_par_le_membre(self):
+    def test_courriel_et_territoire_non_modifiables_par_le_membre(self):
         thies = Territory.objects.get(name='Thiès', kind=Territory.Kind.COMMUNE)
-        for field, value in (('first_name', 'Awa'), ('last_name', 'Fall'), ('territory', thies.pk), ('email', 'x@example.org')):
+        for field, value in (('territory', thies.pk), ('email', 'x@example.org')):
             response = self.patch({field: value})
             self.assertEqual(response.status_code, 400, field)
             self.assertEqual(response.json()[field], ['Seul le bureau peut modifier cette information.'])
         self.user.refresh_from_db()
-        self.assertEqual((self.user.first_name, self.user.last_name, self.user.territory), ('Aminata', 'Ndiaye', self.dakar))
+        self.assertEqual((self.user.email, self.user.territory), ('aminata@example.org', self.dakar))
+
+    def test_le_membre_modifie_son_nom(self):
+        response = self.patch({'first_name': ' Awa ', 'last_name': 'Fall'})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual((response.json()['first_name'], response.json()['last_name']), ('Awa', 'Fall'))
+        response = self.patch({'last_name': 'Fall Diop'})  # et le modifie encore plus tard
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual((self.user.first_name, self.user.last_name), ('Awa', 'Fall Diop'))
+        self.assertEqual(self.client.get('/api/auth/me/').json()['last_name'], 'Fall Diop')
 
     def test_numero_et_date_d_adhesion_non_modifiables(self):
         self.assertEqual(self.patch({'number': 'TBX-2020-00001'}).status_code, 400)
@@ -75,13 +90,47 @@ class MemberProfileTests(TestCase):
     def test_changement_de_photo(self):
         response = self.patch({'photo': image_file()}, multipart=True)
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json()['photo_url'], '/api/members/me/photo/')
+        first_url = response.json()['photo_url']
+        self.assertTrue(first_url.startswith('/api/members/me/photo/?v='))
         first = Member.objects.get(pk=self.member.pk).photo.name
-        self.patch({'photo': image_file('autre.png', 'PNG')}, multipart=True)
+        response = self.patch({'photo': image_file('autre.png', 'PNG')}, multipart=True)
+        self.assertEqual(response.status_code, 200, response.content)
         second = Member.objects.get(pk=self.member.pk).photo.name
         self.assertNotEqual(first, second)
         self.assertFalse((Path(MEDIA_ROOT) / first).exists())  # l'ancienne photo est effacée
-        self.assertEqual(self.client.get('/api/members/me/photo/').status_code, 200)
+        # Nouvelle adresse à chaque photo : le navigateur ne ressert pas l'ancienne depuis son cache.
+        self.assertNotEqual(response.json()['photo_url'], first_url)
+        self.assertEqual(self.client.get(response.json()['photo_url']).status_code, 200)
+
+    def test_photo_changee_plusieurs_fois_de_suite(self):
+        urls, names = set(), []
+        for index in range(4):
+            response = self.patch({'photo': image_file(f'photo-{index}.jpg', size=(500 + 10 * index, 400))}, multipart=True)
+            self.assertEqual(response.status_code, 200, response.content)
+            urls.add(response.json()['photo_url'])
+            names.append(Member.objects.get(pk=self.member.pk).photo.name)
+        self.assertEqual(len(urls), 4)
+        # Seule la dernière reste : les précédentes sont effacées une à une.
+        self.assertEqual([(Path(MEDIA_ROOT) / name).exists() for name in names], [False, False, False, True])
+        with Image.open(BytesIO(b''.join(self.client.get(URL_PHOTO).streaming_content))) as image:
+            self.assertEqual(image.size, (530, 400))  # c'est bien la dernière envoyée qui est servie
+
+    def test_retrait_de_la_photo(self):
+        self.patch({'photo': image_file()}, multipart=True)
+        name = Member.objects.get(pk=self.member.pk).photo.name
+        response = self.client.delete(URL_PHOTO)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse((Path(MEDIA_ROOT) / name).exists())
+        self.assertIsNone(self.client.get(URL).json()['photo_url'])
+        self.assertEqual(self.client.get(URL_PHOTO).status_code, 404)
+        self.assertEqual(self.client.delete(URL_PHOTO).status_code, 204)  # déjà retirée : rien à faire
+        # Une nouvelle photo peut ensuite être ajoutée.
+        self.assertEqual(self.patch({'photo': image_file()}, multipart=True).status_code, 200)
+        self.assertEqual(self.client.get(URL_PHOTO).status_code, 200)
+
+    def test_retrait_reserve_a_la_personne_connectee(self):
+        self.client.logout()
+        self.assertEqual(self.client.delete(URL_PHOTO).status_code, 401)
 
     def test_photo_invalide(self):
         response = self.patch({'photo': image_file('photo.gif', 'GIF')}, multipart=True)
@@ -117,7 +166,7 @@ class MemberProfileTests(TestCase):
 
 
 class NameAndLocalityTests(TestCase):
-    """Compte créé sans nom (premier fondateur) : le nom se renseigne une fois ; la carte montre le pays."""
+    """Compte créé sans nom (premier fondateur) : la personne renseigne son nom ; la carte montre le pays."""
 
     @classmethod
     def setUpTestData(cls):
@@ -139,11 +188,11 @@ class NameAndLocalityTests(TestCase):
         self.founder.refresh_from_db()
         self.assertEqual((self.founder.first_name, self.founder.last_name), ('Boubacar', 'Sidibe'))
 
-    def test_nom_renseigne_ensuite_verrouille(self):
+    def test_nom_renseigne_puis_modifie(self):
         self.patch({'first_name': 'Boubacar', 'last_name': 'Sidibe'})
-        response = self.patch({'first_name': 'Autre'})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['first_name'], ['Seul le bureau peut modifier cette information.'])
+        response = self.patch({'first_name': 'Bouba'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['first_name'], 'Bouba')
 
     def test_nom_vide_refuse(self):
         response = self.patch({'first_name': '   '})
@@ -158,3 +207,35 @@ class NameAndLocalityTests(TestCase):
         self.founder.territory = dakar
         self.founder.save()
         self.assertEqual(self.client.get(URL).json()['locality'], 'Dakar')
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'core.storage.DatabaseStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class PhotoInDatabaseTests(TestCase):
+    """Même parcours avec les photos gardées en base, comme en ligne (DJANGO_FILE_STORAGE=database)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('moussa@example.org', 'un-mot-de-passe-long', first_name='Moussa', last_name='Ba')
+        cls.member = Member.objects.create(user=cls.user, address='Thiès')
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def send(self, photo):
+        return self.client.patch(URL, encode_multipart(BOUNDARY, {'photo': photo}), content_type=MULTIPART_CONTENT)
+
+    def test_changer_puis_retirer_la_photo(self):
+        first = self.send(image_file())
+        self.assertEqual(first.status_code, 200, first.content)
+        second = self.send(image_file('autre.png', 'PNG', size=(400, 300)))
+        self.assertEqual(second.status_code, 200, second.content)
+        self.assertNotEqual(first.json()['photo_url'], second.json()['photo_url'])
+        self.assertEqual(StoredFile.objects.count(), 1)  # l'ancienne photo est effacée de la base
+        with Image.open(BytesIO(b''.join(self.client.get(second.json()['photo_url']).streaming_content))) as image:
+            self.assertEqual(image.size, (400, 300))  # c'est bien la nouvelle qui est servie
+        self.assertEqual(self.client.delete(URL_PHOTO).status_code, 204)
+        self.assertEqual(StoredFile.objects.count(), 0)
+        self.assertIsNone(self.client.get(URL).json()['photo_url'])
