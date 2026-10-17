@@ -261,6 +261,11 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                       aria-label="Choisir une photo"
                       (change)="photoChosen($event)"
                     />
+                    @if (me.photo_url) {
+                      <button class="btn btn-outline" type="button" (click)="removePhoto($event)" [disabled]="saving()">
+                        Retirer la photo
+                      </button>
+                    }
                     @if (preparingPhoto()) {
                       <small role="status">Préparation de la photo…</small>
                     }
@@ -270,38 +275,20 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   </div>
                 </section>
                 <div class="field-grid">
-                  @if (me.first_name) {
-                    <label
-                      >Prénom <input [value]="me.first_name" disabled /><small
-                        >Modifiable uniquement par le bureau.</small
-                      ></label
-                    >
-                  } @else {
-                    <label
-                      >Prénom <input name="first_name" required maxlength="150" autocomplete="given-name" /><small
-                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
-                      >
-                      @if (fieldErrors()['first_name']; as message) {
-                        <small class="field-error" role="alert">{{ message }}</small>
-                      }
-                    </label>
-                  }
-                  @if (me.last_name) {
-                    <label
-                      >Nom <input [value]="me.last_name" disabled /><small
-                        >Modifiable uniquement par le bureau.</small
-                      ></label
-                    >
-                  } @else {
-                    <label
-                      >Nom <input name="last_name" required maxlength="150" autocomplete="family-name" /><small
-                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
-                      >
-                      @if (fieldErrors()['last_name']; as message) {
-                        <small class="field-error" role="alert">{{ message }}</small>
-                      }
-                    </label>
-                  }
+                  <label
+                    >Prénom
+                    <input name="first_name" [value]="me.first_name" required maxlength="150" autocomplete="given-name" />
+                    @if (fieldErrors()['first_name']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </label>
+                  <label
+                    >Nom
+                    <input name="last_name" [value]="me.last_name" required maxlength="150" autocomplete="family-name" />
+                    @if (fieldErrors()['last_name']; as message) {
+                      <small class="field-error" role="alert">{{ message }}</small>
+                    }
+                  </label>
                 </div>
                 <label
                   >Adresse courriel <input type="email" [value]="me.email" disabled /><small
@@ -450,15 +437,13 @@ export class MemberPage {
   protected readonly fieldErrors = signal<Record<string, string>>({});
   protected readonly formError = signal('');
   protected readonly saving = signal(false);
-  /** Change à chaque nouvelle photo, pour que le navigateur recharge l'image. */
-  private readonly photoVersion = signal(0);
   /** Nouvelle photo choisie, réduite avant l'envoi ; null si elle est trop lourde. */
   private newPhoto: Promise<File | null> | null = null;
   protected readonly preparingPhoto = signal(false);
 
   protected readonly card = computed(() => {
     const me = this.profile();
-    return me ? cardData({ ...me, photo_url: me.photo_url && this.photoUrl(me) }) : null;
+    return me ? cardData(me) : null;
   });
   protected readonly joinedOn = computed(() => {
     const me = this.profile();
@@ -502,13 +487,9 @@ export class MemberPage {
   }
 
 
-  private photoUrl(me: MemberProfile): string {
-    return `${me.photo_url}?v=${this.photoVersion()}`;
-  }
-
+  /** L'adresse change avec chaque nouvelle photo : le navigateur ne montre jamais l'ancienne. */
   protected photoSrc(): string {
-    const me = this.profile();
-    return me?.photo_url ? this.photoUrl(me) : '';
+    return this.profile()?.photo_url ?? '';
   }
 
   private async loadProfile(): Promise<void> {
@@ -578,10 +559,8 @@ export class MemberPage {
     const data = new FormData();
     data.set('address', (form.elements.namedItem('address') as HTMLInputElement).value.trim());
     data.set('phone', (form.elements.namedItem('phone') as HTMLInputElement).value.trim());
-    // Prénom et nom ne sont proposés que s'ils manquent encore.
     for (const name of ['first_name', 'last_name']) {
-      const input = form.elements.namedItem(name) as HTMLInputElement | null;
-      if (input) data.set(name, input.value.trim());
+      data.set(name, (form.elements.namedItem(name) as HTMLInputElement).value.trim());
     }
     this.begin();
     if (this.newPhoto) {
@@ -600,14 +579,37 @@ export class MemberPage {
       if (user && (user.first_name !== saved.first_name || user.last_name !== saved.last_name)) {
         this.auth.signedIn({ ...user, first_name: saved.first_name, last_name: saved.last_name });
       }
-      this.newPhoto = null;
-      this.photoVersion.update((v) => v + 1);
+      this.forgetChosenPhoto(form);
       this.profileSaved.set(true);
     } catch (error) {
       this.fail(error);
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** Retire la photo de profil, après confirmation ; une autre peut être ajoutée ensuite. */
+  protected async removePhoto(event: Event): Promise<void> {
+    const form = (event.currentTarget as HTMLButtonElement).form;
+    if (!window.confirm('Retirer votre photo de profil ?')) return;
+    this.begin();
+    try {
+      await this.profiles.removePhoto();
+      this.profile.update((me) => me && { ...me, photo_url: null });
+      this.forgetChosenPhoto(form);
+      this.profileSaved.set(true);
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /** Vide le choix de fichier : la même photo, ou une autre, peut être choisie à nouveau. */
+  private forgetChosenPhoto(form: HTMLFormElement | null): void {
+    this.newPhoto = null;
+    const input = form?.elements.namedItem('photo') as HTMLInputElement | null;
+    if (input) input.value = '';
   }
 
   protected async savePassword(event: SubmitEvent): Promise<void> {

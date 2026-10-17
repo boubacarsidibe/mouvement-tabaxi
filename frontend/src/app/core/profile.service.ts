@@ -58,9 +58,13 @@ export class ProfileService {
     return firstValueFrom(this.http.get<MemberProfile>('/api/members/me/'));
   }
 
-  /** Adresse, téléphone, nom encore vide et, si choisie, nouvelle photo. */
+  /** Prénom, nom, adresse, téléphone et, si choisie, nouvelle photo. */
   save(form: FormData): Promise<MemberProfile> {
     return firstValueFrom(this.http.patch<MemberProfile>('/api/members/me/', form));
+  }
+
+  removePhoto(): Promise<void> {
+    return firstValueFrom(this.http.delete<void>('/api/members/me/photo/'));
   }
 
   changePassword(change: PasswordChange): Promise<{ detail: string }> {
