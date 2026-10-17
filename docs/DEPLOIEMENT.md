@@ -12,6 +12,8 @@ Aujourd'hui, tout tourne sur deux projets Vercel, avec une base Neon et un servi
 
 **Adresse stable du site : `https://tabaxi.vercel.app`.** C'est elle qui porte la dernière version en production et qu'on donne aux membres et pour le rendu. Les adresses `mouvement-tabaxi-app-git-…vercel.app` ne sont que des aperçus des PR.
 
+Chaque nouvelle fonctionnalité ou correction, une fois sa PR validée et fusionnée dans `main`, est remise en ligne sur `https://tabaxi.vercel.app` avant de poursuivre le travail. Le site en ligne suit ainsi toujours la dernière version de `main`. Après une mise en ligne, vérifier `https://tabaxi.vercel.app/api/health/` et le parcours touché par la PR.
+
 Le navigateur reste sur l'adresse du site : les cookies de session et la protection CSRF fonctionnent sans réglage de domaine.
 
 Vérification rapide : `https://tabaxi.vercel.app/api/health/` répond `{"status": "ready"}` quand l'API et la base répondent.
