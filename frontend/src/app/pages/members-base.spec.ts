@@ -132,7 +132,7 @@ describe('Base des membres', () => {
   it('propose les territoires du périmètre, les communes sous leur région', async () => {
     await open('/bureau/membres');
     const labels = Array.from(select('Filtrer par localité')!.options).map((o) => o.textContent);
-    expect(labels).toEqual(['Localité · Toutes', 'Sénégal', '  Dakar', '    Pikine']);
+    expect(labels).toEqual(['Toutes les localités', 'Sénégal', '  Dakar', '    Pikine']);
   });
 
   it('filtre par territoire', async () => {
@@ -482,7 +482,9 @@ describe('Fiche d’un membre', () => {
 
   it('ne propose aucun changement de statut à un coordonnateur', async () => {
     await open(TEST_COORDINATOR, { ...RECORD, status_history: null });
-    expect(root.textContent).toContain('Seuls les membres fondateurs');
+    // Aucun encadré « Gérer l'accès » : il ne servirait à rien ; la fiche prend toute la largeur.
+    expect(root.querySelector('.decision-panel')).toBeNull();
+    expect(root.querySelector('.member-detail-grid')?.classList).toContain('single');
     expect(button('Suspendre')).toBeUndefined();
     expect(button('Radier')).toBeUndefined();
     expect(root.textContent).not.toContain('Historique du statut');
@@ -490,7 +492,7 @@ describe('Fiche d’un membre', () => {
 
   it('ne laisse pas un fondateur changer son propre statut', async () => {
     await open(TEST_FOUNDER, { ...RECORD, email: TEST_FOUNDER.email });
-    expect(root.textContent).toContain('Vous ne pouvez pas changer votre propre statut.');
+    expect(root.querySelector('.decision-panel')).toBeNull();
     expect(button('Radier')).toBeUndefined();
   });
 

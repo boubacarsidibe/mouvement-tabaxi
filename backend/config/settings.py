@@ -299,6 +299,22 @@ WHITENOISE_USE_FINDERS = True
 # renvoie après contrôle d'accès. Le dossier est ignoré par Git.
 MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
+# Photos : en production, gardées en base, chiffrées (core/storage.py), pour ne jamais dépendre
+# d'un disque que l'hébergeur peut effacer (Vercel efface le sien entre deux appels).
+# DJANGO_FILE_STORAGE=filesystem (disque, MEDIA_ROOT) seulement avec un disque durable ;
+# en développement, le disque est utilisé par défaut.
+FILE_STORAGE = os.environ.get('DJANGO_FILE_STORAGE', '').strip().lower() or ('filesystem' if DEBUG else 'database')
+if FILE_STORAGE not in ('database', 'filesystem'):
+    raise ImproperlyConfigured("DJANGO_FILE_STORAGE doit valoir « database » ou « filesystem ».")
+STORAGES = {
+    'default': {
+        'BACKEND': 'core.storage.DatabaseStorage'
+        if FILE_STORAGE == 'database'
+        else 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -307,6 +323,20 @@ MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 MAILERS = {
     'default': mailer_from_env(os.environ),
 }
+
+# En production, un courriel « envoyé » dans la console n'arrive à personne : une demande serait
+# marquée « Acceptée » sans que la personne reçoive son lien. Un vrai service d'envoi est donc exigé
+# (voir docs/DEPLOIEMENT.md), sauf pour un aperçu de test déclaré (courriels dans les journaux).
+if (
+    not DEBUG
+    and not TESTING
+    and not os.environ.get('EMAIL_HOST', '').strip()
+    and not env_flag(os.environ.get('EMAIL_CONSOLE_IN_PRODUCTION', '0'))
+):
+    raise ImproperlyConfigured(
+        'EMAIL_HOST est obligatoire en production (par exemple smtp.gmail.com, voir docs/DEPLOIEMENT.md). '
+        'Pour un aperçu de test seulement, EMAIL_CONSOLE_IN_PRODUCTION=1 affiche les courriels dans les journaux.'
+    )
 
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
 

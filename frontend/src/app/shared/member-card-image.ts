@@ -5,6 +5,8 @@ export interface MemberCardData {
   locality: string;
   date: string;
   photo: string | null;
+  /** Rôle affiché à la place de « Membre adhérent » ; vide pour un membre. */
+  role?: string;
 }
 
 /**
@@ -15,6 +17,8 @@ const TEMPLATE = 'modele-carte.webp';
 const WIDTH = 1080;
 const HEIGHT = 720;
 const PHOTO = { x: 50, y: 213, width: 298, height: 325, radius: 22 };
+/** Intérieur du bandeau « MEMBRE ADHÉRENT » du modèle (sous « CARTE DE MEMBRE »). */
+const ROLE = { x: 470, y: 277, width: 474, height: 35, color: '#012915' };
 const FIELDS = [
   { y: 366, width: 561 },
   { y: 446, width: 561 },
@@ -58,6 +62,19 @@ export async function drawMemberCard(member: MemberCardData): Promise<Blob> {
       height,
     );
     context.restore();
+  }
+
+  if (member.role) {
+    context.fillStyle = ROLE.color;
+    context.beginPath();
+    context.roundRect(ROLE.x, ROLE.y, ROLE.width, ROLE.height, ROLE.height / 2);
+    context.fill();
+    context.fillStyle = '#fff';
+    context.font = '800 27px "Segoe UI", Arial, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(member.role.toUpperCase(), ROLE.x + ROLE.width / 2, ROLE.y + ROLE.height / 2 + 1, ROLE.width - 24);
+    context.textAlign = 'start';
   }
 
   const values = [member.name, member.number, member.locality, member.date];
