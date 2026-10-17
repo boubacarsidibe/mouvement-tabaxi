@@ -66,5 +66,6 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 
 ### Modifié
 
+- Documentation : l'adresse stable du site en ligne est `https://tabaxi.vercel.app` (déploiement, démonstration).
 - Backend : les limites d'envoi des formulaires publics (adhésion, inscription, mot de passe oublié) sont comptées dans un cache partagé en base (`tabaxi_cache`, créée par migration), commun à toutes les instances en ligne.
 - Backend : sans `DJANGO_DEBUG=1`, le serveur se comporte désormais comme en production. En local, copier `backend/.env.example` en `backend/.env` (#63).

@@ -50,7 +50,7 @@ En local, les courriels ne partent pas : ils s'affichent dans le terminal du bac
 
 ### En ligne
 
-Le site est sur `https://mouvement-tabaxi-app.vercel.app` (voir [DEPLOIEMENT.md](DEPLOIEMENT.md)). Il faut alors :
+Le site est sur `https://tabaxi.vercel.app`, l'adresse stable (voir [DEPLOIEMENT.md](DEPLOIEMENT.md)). Il faut alors :
 
 - un vrai compte fondateur (`comptes_demo` ne fonctionne qu'en développement) ;
 - pour la personne qui adhère, une adresse courriel que l'on peut consulter pendant la démonstration ;
