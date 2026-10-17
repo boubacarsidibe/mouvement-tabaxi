@@ -305,7 +305,7 @@ export class MemberActivityPage implements OnInit {
 
   async ngOnInit() {
     try {
-      this.activity.set(await this.programs.memberActivity(Number(this.route.snapshot.paramMap.get('id'))));
+      this.activity.set(await this.programs.memberActivity(this.route.snapshot.paramMap.get('id') ?? ''));
     } catch (error) {
       const problem = readProblem(error);
       this.error.set(

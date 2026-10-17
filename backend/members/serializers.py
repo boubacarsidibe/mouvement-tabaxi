@@ -170,6 +170,7 @@ class MemberProfileSerializer(serializers.ModelSerializer):
 class MemberListSerializer(serializers.ModelSerializer):
     """Une ligne de la base des membres, telle que le bureau la consulte."""
 
+    id = serializers.UUIDField(source='public_id', read_only=True)
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -229,7 +230,7 @@ class MemberDetailSerializer(MemberListSerializer):
         return request is not None and can_change_status(request.user, member)
 
     def get_photo_url(self, member):
-        return f'/api/members/{member.pk}/photo/' if member.photo else None
+        return f'/api/members/{member.public_id}/photo/' if member.photo else None
 
     def get_status_history(self, member):
         request = self.context.get('request')

@@ -62,7 +62,7 @@ class EncryptedFieldTests(TestCase):
     def test_api_renvoie_le_texte_en_clair_aux_fondateurs(self):
         application = make_application(self.podor, motivation=MOTIVATION)
         self.client.force_login(User.objects.create_user('f@example.org', 'un-mot-de-passe-long', role='fondateur'))
-        data = self.client.get(f'/api/applications/{application.pk}/').json()
+        data = self.client.get(f'/api/applications/{application.public_id}/').json()
         self.assertEqual(data['motivation'], MOTIVATION)
 
     def test_depot_public_chiffre_la_motivation(self):
@@ -131,9 +131,9 @@ class EncryptionMigrationTests(TransactionTestCase):
         )
         self.assertEqual(raw(old, 'motivation'), MOTIVATION)
 
-        self.migrate(self.after)
+        new_apps = self.migrate(self.after)
         self.assertTrue(raw(old, 'motivation').startswith('gAAAAA'))
-        self.assertEqual(Application.objects.get(pk=old.pk).motivation, MOTIVATION)
+        self.assertEqual(new_apps.get_model('applications', 'Application').objects.get(pk=old.pk).motivation, MOTIVATION)
 
         self.migrate(self.before)
         self.assertEqual(raw(old, 'motivation'), MOTIVATION)

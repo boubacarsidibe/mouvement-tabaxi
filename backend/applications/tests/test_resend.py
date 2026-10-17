@@ -28,7 +28,7 @@ class ResendLinkTestCase(AcceptTestCase):
 
     def resend(self, application=None):
         application = application or self.awa
-        return self.client.post(f'/api/applications/{application.pk}/resend-link/', content_type='application/json')
+        return self.client.post(f'/api/applications/{application.public_id}/resend-link/', content_type='application/json')
 
     def check(self, token):
         return self.client.post('/api/registration/check/', {'token': token}, content_type='application/json')
@@ -93,9 +93,9 @@ class ResendLinkTests(ResendLinkTestCase):
 
     def test_fin_de_validite_du_dernier_lien_dans_la_fiche(self):
         self.expire_links()
-        before = self.client.get(f'/api/applications/{self.awa.pk}/').json()['link_expires_at']
+        before = self.client.get(f'/api/applications/{self.awa.public_id}/').json()['link_expires_at']
         self.resend()
-        after = self.client.get(f'/api/applications/{self.awa.pk}/').json()['link_expires_at']
+        after = self.client.get(f'/api/applications/{self.awa.public_id}/').json()['link_expires_at']
         self.assertGreater(after, before)
         latest = RegistrationLink.objects.order_by('-created_at', '-pk').first()
         self.assertGreater(latest.expires_at, timezone.now() + timedelta(days=6))

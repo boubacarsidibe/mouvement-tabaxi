@@ -60,6 +60,8 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Photos réduites dans le navigateur avant l'envoi, à la finalisation de l'inscription et dans « Mon profil » : 800 pixels au plus de côté, en JPEG, sous 500 Ko, dans le bon sens ; une photo de téléphone de plusieurs mégaoctets passe ainsi sous la limite au lieu d'être refusée, et l'envoi est bien plus léger sur une connexion mobile. Une photo déjà légère part telle quelle (#27).
 - Gestion des territoires (`/bureau/territoires`) : un fondateur ajoute, renomme, rattache, désactive ou supprime un territoire ; un territoire qui contient des membres, des programmes, des demandes ou d'autres territoires ne peut pas être supprimé ; un coordonnateur consulte son périmètre sans le modifier. L'écran remplace les données d'exemple (#41).
 - Les coordonnateurs rendent actif, suspendent ou radient les membres simples de leur zone, avec le même motif obligatoire et le même historique que les fondateurs ; ils voient cet historique sur leurs fiches. Les comptes du bureau (coordonnateurs, fondateurs) restent gérés par les fondateurs seuls.
+- Adresses non devinables : un membre, une demande d'adhésion, un programme ou une activité se désigne, dans l'API comme dans les pages du site, par un identifiant aléatoire (UUID) au lieu d'un numéro qui se suit ; changer un chiffre de l'adresse ne mène plus à aucune fiche. Les fiches existantes reçoivent leur identifiant par migration (trois étapes, vérifiées sur PostgreSQL avec des données).
+- Administration Django fermée en ligne (`/admin/` n'existe qu'en développement, ou avec `DJANGO_ADMIN_ENABLED=1`).
 
 ### Modifié
 

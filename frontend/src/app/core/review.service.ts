@@ -8,7 +8,8 @@ export type ApplicationStatus = 'a_examiner' | 'acceptee' | 'rejetee' | 'inscrit
 
 /** Demande d'adhésion telle que les fondateurs l'examinent. */
 export interface ReviewedApplication {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   reference: string | null;
   first_name: string;
   last_name: string;
@@ -64,11 +65,11 @@ export class ReviewService {
     return params;
   }
 
-  get(id: number): Promise<ReviewedApplication> {
+  get(id: string): Promise<ReviewedApplication> {
     return firstValueFrom(this.http.get<ReviewedApplication>(`/api/applications/${id}/`));
   }
 
-  accept(id: number, internalNote: string): Promise<ReviewedApplication> {
+  accept(id: string, internalNote: string): Promise<ReviewedApplication> {
     return firstValueFrom(
       this.http.post<ReviewedApplication>(`/api/applications/${id}/accept/`, {
         internal_note: internalNote,
@@ -77,13 +78,13 @@ export class ReviewService {
   }
 
   /** Nouveau lien d'inscription pour une personne acceptée : les liens précédents cessent de fonctionner. */
-  resendLink(id: number): Promise<ReviewedApplication> {
+  resendLink(id: string): Promise<ReviewedApplication> {
     return firstValueFrom(
       this.http.post<ReviewedApplication>(`/api/applications/${id}/resend-link/`, {}),
     );
   }
 
-  reject(id: number, reason: string, internalNote: string): Promise<ReviewedApplication> {
+  reject(id: string, reason: string, internalNote: string): Promise<ReviewedApplication> {
     return firstValueFrom(
       this.http.post<ReviewedApplication>(`/api/applications/${id}/reject/`, {
         reason,

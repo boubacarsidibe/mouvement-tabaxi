@@ -9,7 +9,8 @@ export type MemberOrdering = 'name' | '-name' | 'place' | '-place' | 'date' | '-
 
 /** Une ligne de la base des membres. */
 export interface ListedMember {
-  id: number;
+  /** Identifiant public (aléatoire) : c'est lui qui figure dans les adresses. */
+  id: string;
   number: string;
   first_name: string;
   last_name: string;
@@ -94,11 +95,11 @@ export class MembersService {
     return params;
   }
 
-  get(id: number): Promise<MemberRecord> {
+  get(id: string): Promise<MemberRecord> {
     return firstValueFrom(this.http.get<MemberRecord>(`/api/members/${id}/`));
   }
 
-  changeStatus(id: number, status: MemberStatus, reason: string): Promise<MemberRecord> {
+  changeStatus(id: string, status: MemberStatus, reason: string): Promise<MemberRecord> {
     return firstValueFrom(
       this.http.post<MemberRecord>(`/api/members/${id}/status/`, { status, reason }),
     );

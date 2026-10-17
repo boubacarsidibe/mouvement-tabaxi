@@ -493,7 +493,7 @@ export class MemberDetail implements OnInit {
 
   async ngOnInit() {
     try {
-      this.member.set(await this.members.get(Number(this.route.snapshot.paramMap.get('id'))));
+      this.member.set(await this.members.get(this.route.snapshot.paramMap.get('id') ?? ''));
     } catch (error) {
       const problem = readProblem(error);
       this.error.set(

@@ -54,7 +54,7 @@ class RecordedActionsTests(AuditTestCase):
     def test_acceptation_d_une_demande(self):
         application = make_application(self.podor)
         self.client.force_login(self.founder)
-        self.assertEqual(self.post(f'/api/applications/{application.pk}/accept/').status_code, 200)
+        self.assertEqual(self.post(f'/api/applications/{application.public_id}/accept/').status_code, 200)
         entry = AuditEntry.objects.get()
         self.assertEqual(entry.action, 'demande_acceptee')
         self.assertEqual((entry.actor, entry.actor_name), (self.founder, 'Ibrahima Sow'))
@@ -64,7 +64,7 @@ class RecordedActionsTests(AuditTestCase):
     def test_refus_d_une_demande_avec_son_motif(self):
         application = make_application(self.podor)
         self.client.force_login(self.founder)
-        response = self.post(f'/api/applications/{application.pk}/reject/', {'reason': 'Dossier incomplet.'})
+        response = self.post(f'/api/applications/{application.public_id}/reject/', {'reason': 'Dossier incomplet.'})
         self.assertEqual(response.status_code, 200)
         entry = AuditEntry.objects.get()
         self.assertEqual(entry.action, 'demande_refusee')
@@ -76,20 +76,20 @@ class RecordedActionsTests(AuditTestCase):
         application = make_application(self.podor)
         self.client.force_login(self.founder)
         with self.assertLogs('core.mail', level='ERROR'):
-            self.assertEqual(self.post(f'/api/applications/{application.pk}/accept/').status_code, 503)
-            self.assertEqual(self.post(f'/api/applications/{application.pk}/reject/', {'reason': 'Motif.'}).status_code, 503)
+            self.assertEqual(self.post(f'/api/applications/{application.public_id}/accept/').status_code, 503)
+            self.assertEqual(self.post(f'/api/applications/{application.public_id}/reject/', {'reason': 'Motif.'}).status_code, 503)
         self.assertFalse(AuditEntry.objects.exists())
 
     def test_une_decision_refusee_n_est_pas_journalisee(self):
         application = make_application(self.podor)
         self.client.force_login(self.founder)
-        self.post(f'/api/applications/{application.pk}/accept/')
-        self.assertEqual(self.post(f'/api/applications/{application.pk}/accept/').status_code, 409)
+        self.post(f'/api/applications/{application.public_id}/accept/')
+        self.assertEqual(self.post(f'/api/applications/{application.public_id}/accept/').status_code, 409)
         self.assertEqual(AuditEntry.objects.count(), 1)
 
     def test_changement_de_statut(self):
         self.client.force_login(self.founder)
-        response = self.post(f'/api/members/{self.member.pk}/status/', {'status': 'suspendu', 'reason': 'Propos contraires.'})
+        response = self.post(f'/api/members/{self.member.public_id}/status/', {'status': 'suspendu', 'reason': 'Propos contraires.'})
         self.assertEqual(response.status_code, 200)
         entry = AuditEntry.objects.get()
         self.assertEqual(entry.action, 'statut_modifie')
@@ -104,8 +104,8 @@ class RecordedActionsTests(AuditTestCase):
 
     def test_un_changement_refuse_n_est_pas_journalise(self):
         self.client.force_login(self.founder)
-        self.assertEqual(self.post(f'/api/members/{self.member.pk}/status/', {'status': 'actif'}).status_code, 409)
-        self.assertEqual(self.post(f'/api/members/{self.member.pk}/status/', {'status': 'radie'}).status_code, 400)
+        self.assertEqual(self.post(f'/api/members/{self.member.public_id}/status/', {'status': 'actif'}).status_code, 409)
+        self.assertEqual(self.post(f'/api/members/{self.member.public_id}/status/', {'status': 'radie'}).status_code, 400)
         self.assertFalse(AuditEntry.objects.exists())
 
     def invite(self, **changes):
@@ -302,7 +302,7 @@ class EncryptionTests(AuditTestCase):
 
     def test_le_motif_d_un_changement_de_statut_est_chiffre(self):
         self.client.force_login(self.founder)
-        self.client.post(f'/api/members/{self.member.pk}/status/', {'status': 'suspendu', 'reason': self.SECRET}, content_type=JSON)
+        self.client.post(f'/api/members/{self.member.public_id}/status/', {'status': 'suspendu', 'reason': self.SECRET}, content_type=JSON)
         change = self.member.status_changes.get()
         self.assertTrue(raw('members_memberstatuschange', 'reason', change.pk).startswith('gAAAAA'))
         self.assertEqual(change.reason, self.SECRET)
@@ -325,7 +325,7 @@ class EncryptionTests(AuditTestCase):
         with override_settings(FIELD_ENCRYPTION_KEYS=[key_1]):
             entry = record(AuditEntry.Action.STATUS_CHANGED, actor=self.founder, subject='Aminata Ndiaye', reason=self.SECRET)
             self.client.force_login(self.founder)
-            self.client.post(f'/api/members/{self.member.pk}/status/', {'status': 'radie', 'reason': self.SECRET}, content_type=JSON)
+            self.client.post(f'/api/members/{self.member.public_id}/status/', {'status': 'radie', 'reason': self.SECRET}, content_type=JSON)
         with override_settings(FIELD_ENCRYPTION_KEYS=[key_2, key_1]):
             out = StringIO()
             call_command('rechiffrer', stdout=out)

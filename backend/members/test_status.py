@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from django.contrib.admin.sites import site
@@ -47,7 +48,7 @@ class StatusTestCase(TestCase):
         cache.clear()
 
     def status_url(self, member):
-        return f'/api/members/{member.pk}/status/'
+        return f'/api/members/{member.public_id}/status/'
 
     def set_status(self, member, status, reason=''):
         return self.client.post(self.status_url(member), {'status': status, 'reason': reason}, content_type=JSON)
@@ -151,7 +152,7 @@ class CoordinatorStatusTests(StatusTestCase):
 
     def test_voit_l_historique_et_le_droit_d_agir_sur_la_fiche(self):
         self.set_status(self.aminata_member, 'suspendu', 'Motif.')
-        data = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
         self.assertTrue(data['can_change_status'])
         self.assertEqual(len(data['status_history']), 1)
 
@@ -167,7 +168,7 @@ class CoordinatorStatusTests(StatusTestCase):
         response = self.set_status(member, 'suspendu', 'x')
         self.assertEqual(response.status_code, 403)
         self.assertIn('membres simples', response.json()['detail'])
-        data = self.client.get(f'/api/members/{member.pk}/').json()
+        data = self.client.get(f'/api/members/{member.public_id}/').json()
         self.assertFalse(data['can_change_status'])
         self.assertIsNone(data['status_history'])
         pikine_coordinator.refresh_from_db()
@@ -175,8 +176,29 @@ class CoordinatorStatusTests(StatusTestCase):
 
     def test_ne_change_pas_son_propre_statut(self):
         self.assertEqual(self.set_status(self.coordinator_member, 'suspendu', 'x').status_code, 409)
-        data = self.client.get(f'/api/members/{self.coordinator_member.pk}/').json()
+        data = self.client.get(f'/api/members/{self.coordinator_member.public_id}/').json()
         self.assertFalse(data['can_change_status'])
+
+
+class PublicIdTests(StatusTestCase):
+    """Les adresses d'une fiche utilisent un identifiant aléatoire, pas un numéro qui se suit."""
+
+    def test_seul_l_identifiant_public_ouvre_la_fiche(self):
+        self.client.force_login(self.founder)
+        rows = self.client.get('/api/members/').json()['results']
+        self.assertTrue(rows)
+        for row in rows:
+            uuid.UUID(row['id'])  # identifiant aléatoire, pas un entier
+        member = Member.objects.get(public_id=rows[0]['id'])
+        self.assertEqual(self.client.get(f"/api/members/{rows[0]['id']}/").status_code, 200)
+        # Changer le chiffre de l'adresse ne mène plus à aucune fiche.
+        for pk in (member.pk, member.pk + 1):
+            self.assertEqual(self.client.get(f'/api/members/{pk}/').status_code, 404)
+            self.assertEqual(self.set_status_url(f'/api/members/{pk}/status/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/members/{uuid.uuid4()}/').status_code, 404)
+
+    def set_status_url(self, url):
+        return self.client.post(url, {'status': 'suspendu', 'reason': 'x'}, content_type=JSON)
 
 
 class AccessControlTests(StatusTestCase):
@@ -190,8 +212,8 @@ class AccessControlTests(StatusTestCase):
     def test_un_membre_simple_n_a_pas_acces_a_la_base(self):
         self.client.force_login(self.aminata)
         self.assertEqual(self.client.get('/api/members/').status_code, 403)
-        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.pk}/').status_code, 403)
-        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.pk}/photo/').status_code, 403)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/').status_code, 403)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/photo/').status_code, 403)
 
 
 class LoginAfterStatusChangeTests(StatusTestCase):
@@ -273,7 +295,7 @@ class HistoryTests(StatusTestCase):
         self.set_status(self.aminata_member, 'suspendu', 'Premier motif.')
         self.set_status(self.aminata_member, 'actif', 'Levée de la suspension.')
         self.set_status(self.aminata_member, 'radie', 'Second motif.')
-        history = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()['status_history']
+        history = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()['status_history']
         self.assertEqual(
             [(h['from_status'], h['to_status'], h['reason']) for h in history],
             [
@@ -301,9 +323,9 @@ class HistoryTests(StatusTestCase):
         colleague_member = Member.objects.create(user=colleague, joined_on=date(2026, 4, 1))
         self.set_status(colleague_member, 'suspendu', 'Motif confidentiel.')
         self.client.force_login(self.coordinator)
-        data = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
         self.assertEqual(data['status_history'][0]['reason'], 'Motif connu du coordonnateur.')
-        data = self.client.get(f'/api/members/{colleague_member.pk}/').json()
+        data = self.client.get(f'/api/members/{colleague_member.public_id}/').json()
         self.assertEqual(data['status'], 'suspendu')
         self.assertIsNone(data['status_history'])
         self.assertNotIn('Motif confidentiel.', str(data))
@@ -373,9 +395,9 @@ class MemberBaseTests(StatusTestCase):
     def test_un_coordonnateur_ne_voit_que_son_territoire(self):
         self.client.force_login(self.coordinator)  # région de Dakar : Pikine, pas Mbour
         self.assertEqual(self.names(self.client.get(self.url)), ['Aminata Ndiaye'])
-        self.assertEqual(self.client.get(f'/api/members/{self.aminata_member.pk}/').status_code, 200)
-        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.pk}/').status_code, 404)
-        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.pk}/photo/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/members/{self.aminata_member.public_id}/').status_code, 200)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/members/{self.moussa_member.public_id}/photo/').status_code, 404)
 
     def test_filtre_par_statut(self):
         self.client.force_login(self.founder)
@@ -408,7 +430,7 @@ class MemberBaseTests(StatusTestCase):
 
     def test_fiche_complete(self):
         self.client.force_login(self.founder)
-        data = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()
+        data = self.client.get(f'/api/members/{self.aminata_member.public_id}/').json()
         self.assertEqual(data['address'], '1, rue du Marché')
         self.assertEqual(data['territory']['name'], 'Pikine')
         self.assertEqual(data['status_history'], [])

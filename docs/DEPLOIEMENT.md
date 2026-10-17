@@ -33,6 +33,8 @@ Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` ré
 | `EMAIL_HOST_PASSWORD` | mot de passe d'application Gmail (type « Secret » sur Vercel) |
 | `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <la même adresse Gmail>` |
 
+L'administration Django (`/admin/`) est fermée en ligne. Pour une intervention ponctuelle, ajouter `DJANGO_ADMIN_ENABLED=1`, redéployer, puis retirer la variable et redéployer.
+
 Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`. Si l'adresse du site change (domaine personnalisé), mettre à jour `CORS_ALLOWED_ORIGINS` et `FRONTEND_URL`.
 
 ## Courriels

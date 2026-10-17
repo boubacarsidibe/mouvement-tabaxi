@@ -174,6 +174,8 @@ class MemberDetailView(generics.RetrieveAPIView):
     """Fiche d'un membre. Hors du territoire de la personne connectée : 404."""
 
     permission_classes = [IsBureau]
+    lookup_field = 'public_id'
+    lookup_url_kwarg = 'pk'
     serializer_class = MemberDetailSerializer
 
     def get_queryset(self):
@@ -186,7 +188,7 @@ class MemberPhotoView(APIView):
     permission_classes = [IsBureau]
 
     def get(self, request, pk):
-        member = generics.get_object_or_404(scoped_members(request.user), pk=pk)
+        member = generics.get_object_or_404(scoped_members(request.user), public_id=pk)
         if not member.photo:
             raise Http404
         response = FileResponse(member.photo.open('rb'), content_type='image/jpeg')
@@ -204,7 +206,7 @@ class MemberStatusView(APIView):
     permission_classes = [IsBureau]
 
     def post(self, request, pk):
-        member = generics.get_object_or_404(scoped_members(request.user), pk=pk)
+        member = generics.get_object_or_404(scoped_members(request.user), public_id=pk)
         if member.user_id != request.user.pk and not can_change_status(request.user, member):
             return Response(
                 {'detail': 'Un coordonnateur ne change que le statut des membres simples de sa zone.'},

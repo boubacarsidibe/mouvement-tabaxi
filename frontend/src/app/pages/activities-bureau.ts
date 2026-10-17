@@ -96,8 +96,8 @@ export class ActivityForm implements OnInit {
   private readonly programs = inject(ProgramsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly programId = Number(this.route.snapshot.paramMap.get('programId')) || null;
-  private readonly activityId = Number(this.route.snapshot.paramMap.get('id')) || null;
+  private readonly programId = this.route.snapshot.paramMap.get('programId');
+  private readonly activityId = this.route.snapshot.paramMap.get('id');
   protected readonly editing = computed(() => this.activityId !== null);
   protected readonly program = signal<Pick<ProgramRecord, 'id' | 'name' | 'start_date' | 'end_date'> | null>(null);
   protected readonly backLink = computed(() =>
@@ -148,7 +148,7 @@ export class ActivityForm implements OnInit {
     try {
       const saved = this.activityId
         ? await this.programs.updateActivity(this.activityId, input)
-        : await this.programs.createActivity(this.programId as number, input);
+        : await this.programs.createActivity(this.programId as string, input);
       await this.router.navigate(['/bureau/activites', saved.id]);
     } catch (error) {
       const problem = readProblem(error);
@@ -279,7 +279,7 @@ export class ActivityForm implements OnInit {
 export class ActivityDetail implements OnInit {
   private readonly programs = inject(ProgramsService);
   private readonly route = inject(ActivatedRoute);
-  private readonly id = Number(this.route.snapshot.paramMap.get('id'));
+  private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly activity = signal<ProgramActivity | null>(null);
   protected readonly registrants = signal<Registrant[]>([]);
   protected readonly error = signal('');
@@ -366,7 +366,7 @@ export class ActivityReport implements OnInit {
   private readonly programs = inject(ProgramsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly id = Number(this.route.snapshot.paramMap.get('id'));
+  private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly statuses = PROGRAM_STATUSES;
   protected readonly activity = signal<ProgramActivity | null>(null);
   protected readonly report = signal('');
@@ -486,10 +486,10 @@ export class ActivityReport implements OnInit {
 export class ActivityAttendance implements OnInit {
   private readonly programs = inject(ProgramsService);
   private readonly route = inject(ActivatedRoute);
-  private readonly id = Number(this.route.snapshot.paramMap.get('id'));
+  private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly activity = signal<ProgramActivity | null>(null);
   protected readonly members = signal<AttendanceMember[]>([]);
-  protected readonly present = signal<Set<number>>(new Set());
+  protected readonly present = signal<Set<string>>(new Set());
   protected readonly search = signal('');
   protected readonly error = signal('');
   protected readonly saved = signal(false);
@@ -517,7 +517,7 @@ export class ActivityAttendance implements OnInit {
     this.present.set(new Set(sheet.members.filter((member) => member.present).map((member) => member.id)));
   }
 
-  protected toggle(id: number, checked: boolean) {
+  protected toggle(id: string, checked: boolean) {
     this.saved.set(false);
     const next = new Set(this.present());
     if (checked) next.add(id);

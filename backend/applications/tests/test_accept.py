@@ -35,7 +35,7 @@ class AcceptTestCase(TestCase):
 
     def accept(self, application=None, **payload):
         application = application or self.awa
-        return self.client.post(f'/api/applications/{application.pk}/accept/', payload, content_type='application/json')
+        return self.client.post(f'/api/applications/{application.public_id}/accept/', payload, content_type='application/json')
 
 
 class AcceptTests(AcceptTestCase):

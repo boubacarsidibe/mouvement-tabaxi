@@ -9,7 +9,7 @@ urlpatterns = [
     path('members/export/', views.MemberExportView.as_view(), name='member-export'),
     path('members/me/', views.MyProfileView.as_view(), name='my-profile'),
     path('members/me/photo/', views.MyPhotoView.as_view(), name='my-photo'),
-    path('members/<int:pk>/', views.MemberDetailView.as_view(), name='member-detail'),
-    path('members/<int:pk>/photo/', views.MemberPhotoView.as_view(), name='member-photo'),
-    path('members/<int:pk>/status/', views.MemberStatusView.as_view(), name='member-status'),
+    path('members/<uuid:pk>/', views.MemberDetailView.as_view(), name='member-detail'),
+    path('members/<uuid:pk>/photo/', views.MemberPhotoView.as_view(), name='member-photo'),
+    path('members/<uuid:pk>/status/', views.MemberStatusView.as_view(), name='member-status'),
 ]

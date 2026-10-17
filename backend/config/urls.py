@@ -1,5 +1,6 @@
 """Routes du projet : administration Django et API REST sous /api/."""
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -17,6 +18,8 @@ api_patterns = [
 ]
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('api/', include(api_patterns)),
 ]
+
+if settings.ADMIN_ENABLED:
+    urlpatterns.append(path('admin/', admin.site.urls))

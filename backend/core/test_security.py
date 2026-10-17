@@ -85,6 +85,12 @@ SHOW_SETTINGS = (
     '"hasher": s.PASSWORD_HASHERS[0]}))'
 )
 
+# L'administration Django n'a pas de route en ligne, sauf avec DJANGO_ADMIN_ENABLED=1.
+ADMIN_ROUTE = (
+    'from django.urls import get_resolver; '
+    'print("ouverte" if any(str(p.pattern) == "admin/" for p in get_resolver().url_patterns) else "fermée")'
+)
+
 # Le point de contrôle /api/health/ échappe à la redirection (contrôle de santé de Railway).
 REDIRECT = (
     'from django.test import Client; '
@@ -116,6 +122,13 @@ class ProductionConfigurationTests(SimpleTestCase):
         result = run_production('shell', '-c', REDIRECT)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip().splitlines()[-1], '301 https://tabaxi.example.org/api/auth/me/')
+
+    def test_administration_fermee_en_ligne_sauf_a_la_demande(self):
+        result = run_production('shell', '-c', ADMIN_ROUTE)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip().splitlines()[-1], 'fermée')
+        result = run_production('shell', '-c', ADMIN_ROUTE, DJANGO_ADMIN_ENABLED='1')
+        self.assertEqual(result.stdout.strip().splitlines()[-1], 'ouverte')
 
     def test_refus_de_demarrer_avec_la_cle_de_developpement(self):
         for key in ('cle-de-developpement-a-ne-jamais-utiliser-en-production', 'remplacer-par-une-longue-valeur-aleatoire', 'courte'):

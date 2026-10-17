@@ -135,6 +135,7 @@ Chaque liste du bureau a son export `.xlsx` : `GET /api/members/export/` (base d
 - Par défaut, une route exige une connexion ; les routes publiques le déclarent explicitement.
 - Messages d'erreur en français. Une erreur générale a toujours la forme `{"detail": "…", "code": "…"}` (`not_authenticated`, `permission_denied`, `not_found`, `session_expired`…, voir `core/exceptions.py`) ; une erreur de saisie liste les messages par champ (`{"email": ["Ce champ est obligatoire."]}`).
 - `401` : personne n'est connecté (le frontend renvoie vers la connexion). `403` : la personne connectée n'a pas le droit.
+- Identifiants dans les adresses : un membre, une demande, un programme ou une activité se désigne par son identifiant public, un UUID aléatoire (`public_id`, `core.fields.public_id_field`), jamais par sa clé primaire. Le champ `id` des réponses est cet identifiant, et `<id>` dans les routes ci-dessous aussi : changer un chiffre de l'adresse ne mène à aucune autre fiche (404). Les clés primaires (entiers) ne servent qu'en interne. Les territoires, publics, gardent leur numéro.
 
 ### Connexion et sécurité des requêtes
 
@@ -248,6 +249,9 @@ sequenceDiagram
 - Données sensibles chiffrées en base (`core.fields.EncryptedTextField`, Fernet : AES avec contrôle d'intégrité HMAC-SHA256) : motivation, motif de refus et note interne des demandes, motifs de suspension et de radiation, détails du journal des actions ; adresse et téléphone des membres dès qu'ils existeront. Une copie de la base ne suffit pas à les lire. On ne peut ni chercher ni trier sur ces champs.
 - Clés dans `FIELD_ENCRYPTION_KEYS` (obligatoire en production, jamais versionnée) : la première chiffre, toutes déchiffrent. Changement de clé : `NOUVELLE,ANCIENNE`, puis `python manage.py rechiffrer`, puis retrait de l'ancienne. **Perdre la clé, c'est perdre ces données** : elle doit être sauvegardée à part, hors du serveur et hors de la sauvegarde de la base.
 - Journal des actions importantes : voir « Journal des actions » ci-dessus ; lecture seule, réservé aux fondateurs, détails chiffrés.
+- Contrôle d'accès sur chaque fiche : la fiche est cherchée dans le périmètre de la personne connectée (`scoped_members`, `bureau_programs`, `bureau_activities`, `member_activities`, territoires visibles), si bien qu'une fiche hors périmètre répond 404, même avec un identifiant valable. Les identifiants envoyés dans une requête (localité d'un programme, responsable, présents à une activité) sont vérifiés de la même façon.
+- Identifiants publics aléatoires dans les adresses (voir « Conventions de l'API ») : on ne peut ni deviner une fiche ni compter les fiches en changeant un chiffre.
+- Administration Django (`/admin/`) : ouverte en développement seulement. En ligne, sa page de connexion n'aurait pas le blocage après plusieurs échecs ; elle n'existe que si `DJANGO_ADMIN_ENABLED=1`, le temps d'une intervention.
 - Aucune donnée de membre ni secret dans le dépôt.
 
 ## Décisions à prendre

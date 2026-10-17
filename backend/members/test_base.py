@@ -141,7 +141,7 @@ class SearchAndCombinationTests(BaseTestCase):
     def test_statut_et_territoire(self):
         self.client.force_login(self.founder)
         self.client.post(
-            f'/api/members/{self.cheikh.pk}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type='application/json'
+            f'/api/members/{self.cheikh.member.public_id}/status/', {'status': 'suspendu', 'reason': 'Motif.'}, content_type='application/json'
         )
         self.assertEqual(self.names(self.get(self.founder, territory=self.pikine.pk, status='suspendu')), ['Cheikh'])
         self.assertEqual(self.names(self.get(self.founder, territory=self.pikine.pk, status='actif')), ['Awa'])
@@ -249,7 +249,7 @@ class BureauFilesMigrationTests(TransactionTestCase):
         invited = old_user('invite@example.org', 'coordonnateur', '!inutilisable')
         simple = old_user('membre@example.org', 'membre', 'pbkdf2_sha256$1$sel$hash')
 
-        self.migrate(self.after)
+        Member = self.migrate(self.after).get_model('members', 'Member')
         founder_file = Member.objects.get(user_id=founder.pk)
         self.assertEqual(founder_file.joined_on, date(2026, 1, 5))
         self.assertRegex(founder_file.number, r'^TBX-2026-\d{5}$')

@@ -36,8 +36,8 @@ class AccessTests(ReviewTestCase):
     def urls(self):
         return [
             ('get', '/api/applications/'),
-            ('get', f'/api/applications/{self.awa.pk}/'),
-            ('post', f'/api/applications/{self.awa.pk}/reject/'),
+            ('get', f'/api/applications/{self.awa.public_id}/'),
+            ('post', f'/api/applications/{self.awa.public_id}/reject/'),
         ]
 
     def test_coordonnateur_non_fondateur_refuse(self):
@@ -61,7 +61,7 @@ class AccessTests(ReviewTestCase):
     def test_jeton_csrf_exige_pour_decider(self):
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.fondateur)
-        response = client.post(f'/api/applications/{self.awa.pk}/reject/', {'reason': 'Motif'}, content_type='application/json')
+        response = client.post(f'/api/applications/{self.awa.public_id}/reject/', {'reason': 'Motif'}, content_type='application/json')
         self.assertEqual(response.status_code, 403)
 
 
@@ -76,9 +76,9 @@ class ListTests(ReviewTestCase):
 
     def test_filtre_par_statut(self):
         data = self.client.get('/api/applications/', {'status': 'a_examiner'}).json()
-        self.assertEqual({a['id'] for a in data['results']}, {self.awa.pk, self.khady.pk})
+        self.assertEqual({a['id'] for a in data['results']}, {str(self.awa.public_id), str(self.khady.public_id)})
         data = self.client.get('/api/applications/', {'status': 'rejetee'}).json()
-        self.assertEqual([a['id'] for a in data['results']], [self.ibrahima.pk])
+        self.assertEqual([a['id'] for a in data['results']], [str(self.ibrahima.public_id)])
 
     def test_statut_inconnu(self):
         response = self.client.get('/api/applications/', {'status': 'nimporte'})
@@ -88,7 +88,7 @@ class ListTests(ReviewTestCase):
     def test_recherche(self):
         for term in ('khady', 'FALL', 'khady.fall@', self.khady.reference):
             data = self.client.get('/api/applications/', {'search': term}).json()
-            self.assertEqual([a['id'] for a in data['results']], [self.khady.pk], term)
+            self.assertEqual([a['id'] for a in data['results']], [str(self.khady.public_id)], term)
 
     def test_pagination(self):
         data = self.client.get('/api/applications/', {'page_size': 2}).json()
@@ -103,7 +103,7 @@ class ListTests(ReviewTestCase):
 
 class DetailTests(ReviewTestCase):
     def test_lecture_d_une_demande(self):
-        response = self.client.get(f'/api/applications/{self.awa.pk}/')
+        response = self.client.get(f'/api/applications/{self.awa.public_id}/')
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['reference'], self.awa.reference)
@@ -117,11 +117,16 @@ class DetailTests(ReviewTestCase):
     def test_demande_inconnue(self):
         self.assertEqual(self.client.get('/api/applications/999999/').status_code, 404)
 
+    def test_le_numero_interne_n_ouvre_pas_la_demande(self):
+        # Seul l'identifiant aléatoire de la demande l'ouvre ; son numéro interne ne mène à rien.
+        self.assertEqual(self.client.get(f'/api/applications/{self.awa.pk}/').status_code, 404)
+        self.assertEqual(self.client.post(f'/api/applications/{self.awa.pk}/reject/', {'reason': 'x'}, content_type='application/json').status_code, 404)
+
 
 class RejectTests(ReviewTestCase):
     def reject(self, application=None, **payload):
         application = application or self.awa
-        return self.client.post(f'/api/applications/{application.pk}/reject/', payload, content_type='application/json')
+        return self.client.post(f'/api/applications/{application.public_id}/reject/', payload, content_type='application/json')
 
     def test_refus_sans_motif_rejete(self):
         for payload in ({}, {'reason': ''}, {'reason': '   '}):
@@ -146,7 +151,7 @@ class RejectTests(ReviewTestCase):
         self.awa.refresh_from_db()
         self.assertEqual(self.awa.decided_by, self.fondateur)
         self.assertIsNotNone(self.awa.decided_at)
-        data = self.client.get(f'/api/applications/{self.awa.pk}/').json()
+        data = self.client.get(f'/api/applications/{self.awa.public_id}/').json()
         self.assertEqual(data['decided_by']['email'], 'fondateur@example.org')
         self.assertIsNotNone(data['decided_at'])
 
