@@ -394,6 +394,8 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
                     >{{ change.changed_at | date: 'dd/MM/yyyy à HH:mm' }}
                     @if (change.changed_by; as author) {
                       · par {{ author.first_name }} {{ author.last_name }}
+                    } @else {
+                      · par le développeur
                     }</small
                   >
                   @if (change.reason) {
@@ -404,6 +406,12 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
             } @empty {
               <p class="history-empty">Aucun changement de statut depuis l’adhésion.</p>
             }
+          }
+          @if (person.role === 'fondateur' && !isSelf()) {
+            <p class="info-note founder-note">
+              Le compte d’un membre fondateur ne peut être ni suspendu ni radié depuis la plateforme. Si c’est
+              vraiment nécessaire, le bureau le demande au développeur.
+            </p>
           }
         </article>
         @if (canManage()) {

@@ -1,13 +1,17 @@
+import os
 import uuid
 from datetime import date
+from unittest import mock
 
 from django.contrib.admin.sites import site
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
+from django.core.management import CommandError, call_command
 from django.test import RequestFactory, TestCase
 
 from accounts.admin import TabaxiUserAdmin
 from accounts.models import User
+from audit.models import AuditEntry
 from core.append_only import ImmutableRecordError
 from territories.models import Territory
 
@@ -178,6 +182,61 @@ class CoordinatorStatusTests(StatusTestCase):
         self.assertEqual(self.set_status(self.coordinator_member, 'suspendu', 'x').status_code, 409)
         data = self.client.get(f'/api/members/{self.coordinator_member.public_id}/').json()
         self.assertFalse(data['can_change_status'])
+
+
+class FounderProtectionTests(StatusTestCase):
+    """Le compte d'un membre fondateur ne se révoque pas depuis la plateforme, même par un autre fondateur."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_founder = User.objects.create_user(
+            'cofondateur@example.org', PASSWORD, first_name='Aïssatou', last_name='Kane', role=User.Role.FONDATEUR
+        )
+        self.other_founder_member = Member.objects.create(user=self.other_founder, joined_on=date(2026, 3, 12))
+
+    def test_un_fondateur_ne_revoque_pas_un_autre_fondateur(self):
+        self.client.force_login(self.founder)
+        for status in ('suspendu', 'radie'):
+            response = self.set_status(self.other_founder_member, status, 'Désaccord.')
+            self.assertEqual(response.status_code, 403)
+            self.assertIn('ne peut être ni suspendu ni radié depuis la plateforme', response.json()['detail'])
+            self.assertIn('développeur', response.json()['detail'])
+        data = self.client.get(f'/api/members/{self.other_founder_member.public_id}/').json()
+        self.assertFalse(data['can_change_status'])
+        self.other_founder.refresh_from_db()
+        self.assertTrue(self.other_founder.is_active)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_un_fondateur_gere_toujours_coordonnateurs_et_membres(self):
+        self.client.force_login(self.founder)
+        for member in (self.coordinator_member, self.aminata_member):
+            self.assertTrue(self.client.get(f'/api/members/{member.public_id}/').json()['can_change_status'])
+
+    def test_le_developpeur_suspend_puis_reactive_un_fondateur(self):
+        call_command('statut_compte', 'COFONDATEUR@example.org', 'suspendu', motif='Demande écrite du bureau.')
+        self.other_founder.refresh_from_db()
+        self.assertFalse(self.other_founder.is_active)
+        change = MemberStatusChange.objects.get()
+        self.assertEqual((change.to_status, change.changed_by, change.reason), ('suspendu', None, 'Demande écrite du bureau.'))
+        self.assertEqual(AuditEntry.objects.get(action=AuditEntry.Action.STATUS_CHANGED).actor_name, 'Système')
+        call_command('statut_compte', 'cofondateur@example.org', 'actif')
+        self.other_founder.refresh_from_db()
+        self.assertTrue(self.other_founder.is_active)
+
+    def test_la_commande_refuse_sans_motif_ou_compte_inconnu(self):
+        with self.assertRaisesMessage(CommandError, 'motif'):
+            call_command('statut_compte', 'cofondateur@example.org', 'radie')
+        with self.assertRaisesMessage(CommandError, 'Aucun dossier'):
+            call_command('statut_compte', 'personne@example.org', 'suspendu', motif='x')
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_la_commande_refuse_une_base_reelle_sans_la_cle(self):
+        environ = {key: value for key, value in os.environ.items() if key != 'FIELD_ENCRYPTION_KEYS'}
+        environ['DATABASE_URL'] = 'postgres://tabaxi@127.0.0.1:5432/tabaxi'
+        with mock.patch.dict(os.environ, environ, clear=True):
+            with self.assertRaisesMessage(CommandError, 'FIELD_ENCRYPTION_KEYS'):
+                call_command('statut_compte', 'cofondateur@example.org', 'suspendu', motif='x')
+        self.assertFalse(MemberStatusChange.objects.exists())
 
 
 class PublicIdTests(StatusTestCase):

@@ -33,6 +33,18 @@ Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` ré
 | `EMAIL_HOST_PASSWORD` | mot de passe d'application Gmail (type « Secret » sur Vercel) |
 | `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <la même adresse Gmail>` |
 
+### Suspendre ou radier le compte d'un membre fondateur (cas rare)
+
+La plateforme ne le permet à personne, pas même à un autre fondateur. Sur demande écrite du bureau, le développeur le fait depuis un poste, avec les variables de la production, dont la vraie `FIELD_ENCRYPTION_KEYS` (copie de sauvegarde) : sans elle, la commande refuse de démarrer, car le motif et le journal sont chiffrés.
+
+```bash
+cd backend
+python manage.py statut_compte prenom.nom@exemple.com suspendu --motif "Demande écrite du bureau du 12/11/2026"
+python manage.py statut_compte prenom.nom@exemple.com actif      # pour rendre l'accès
+```
+
+Statuts : `actif`, `suspendu`, `radie` (motif obligatoire pour les deux derniers). Le compte suspendu ou radié ne peut plus se connecter, ses sessions sont fermées, et le changement figure dans l'historique de sa fiche (« par le développeur ») et au journal des actions (« Système »).
+
 L'administration Django (`/admin/`) est fermée en ligne. Pour une intervention ponctuelle, ajouter `DJANGO_ADMIN_ENABLED=1`, redéployer, puis retirer la variable et redéployer.
 
 Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`. Si l'adresse du site change (domaine personnalisé), mettre à jour `CORS_ALLOWED_ORIGINS` et `FRONTEND_URL`.
