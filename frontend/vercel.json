@@ -5,7 +5,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/frontend/browser",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://mouvement-tabaxi-cye7.vercel.app/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://mouvement-tabaxi-api.vercel.app/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

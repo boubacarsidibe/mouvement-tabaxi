@@ -67,6 +67,8 @@ def run_production(*args, **env):
         'DJANGO_ALLOWED_HOSTS': 'tabaxi.example.org',
         'EMAIL_HOST': 'smtp.example.org',
         'FIELD_ENCRYPTION_KEYS': Fernet.generate_key().decode(),
+        # Adresse fictive : ces contrôles ne se connectent pas à la base.
+        'DATABASE_URL': 'postgres://tabaxi@127.0.0.1:5432/tabaxi',
         'PYTHONIOENCODING': 'utf-8',
         **env,
     }
@@ -124,6 +126,22 @@ class ProductionConfigurationTests(SimpleTestCase):
         result = run_production('check', FIELD_ENCRYPTION_KEYS='')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('FIELD_ENCRYPTION_KEYS est obligatoire en production', result.stderr)
+
+    def test_refus_de_demarrer_sans_service_d_envoi(self):
+        # Sans EMAIL_HOST, les courriels n'iraient que dans les journaux : personne ne recevrait ses liens.
+        result = run_production('check', EMAIL_HOST='')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('EMAIL_HOST est obligatoire en production', result.stderr)
+
+    def test_apercu_de_test_avec_courriels_dans_les_journaux(self):
+        result = run_production('check', EMAIL_HOST='', EMAIL_CONSOLE_IN_PRODUCTION='1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_refus_de_demarrer_sans_base_de_donnees(self):
+        # Sans DATABASE_URL, le serveur tournerait sur un fichier SQLite figé au déploiement.
+        result = run_production('check', DATABASE_URL='')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('DATABASE_URL est obligatoire en production', result.stderr)
 
     def test_production_par_defaut_sans_variable(self):
         if (BACKEND_DIR / '.env').exists():

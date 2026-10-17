@@ -95,8 +95,8 @@ export class RegistrationButton {
           (ngModelChange)="search.set($event)"
           (keydown.enter)="reload()"
       /></label>
-      <button type="button" (click)="reload()">Rechercher</button>
-      <button type="button" (click)="reset()">Réinitialiser</button>
+      <button type="button" (click)="reload()" aria-label="Rechercher"><ui-icon name="search" /><span>Rechercher</span></button>
+      <button type="button" (click)="reset()" aria-label="Réinitialiser"><ui-icon name="close" /><span>Réinitialiser</span></button>
     </div>
     @if (error()) {
       <p class="inline-error" role="alert">{{ error() }}</p>
@@ -239,9 +239,8 @@ export class MemberPrograms implements OnInit {
 /** Une activité du territoire du membre : le détail, et l'inscription ou la désinscription. */
 @Component({
   selector: 'app-member-activity',
-  imports: [RouterLink, DatePipe, UiIcon, RegistrationButton],
+  imports: [DatePipe, UiIcon, RegistrationButton],
   template: `
-    <a class="back-link" routerLink="/membre/programmes">← Retour aux programmes</a>
     @if (error()) {
       <p class="inline-error" role="alert">{{ error() }}</p>
     }
@@ -280,7 +279,6 @@ export class MemberPrograms implements OnInit {
           }
         </article>
         <aside class="panel registration-panel">
-          <p class="eyebrow">Votre participation</p>
           <h2>{{ item.registered ? 'Inscription confirmée' : 'Participez avec nous' }}</h2>
           <p>
             @if (item.registered && item.registration_open) {

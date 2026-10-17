@@ -184,10 +184,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 # En production, DATABASE_URL (PostgreSQL) ; sans elle, un fichier SQLite local.
+# En production, l'absence de DATABASE_URL est une erreur : le serveur tournerait sur un fichier
+# SQLite figé au déploiement (lecture seule sur l'hébergeur), et toute écriture échouerait.
+if not os.environ.get('DATABASE_URL') and not DEBUG and not TESTING:
+    raise ImproperlyConfigured(
+        'DATABASE_URL est obligatoire en production (base PostgreSQL). '
+        'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
+    )
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
 
     DATABASES = {'default': dj_database_url.parse(os.environ['DATABASE_URL'], conn_max_age=60)}
+    # Une connexion gardée peut avoir été coupée pendant la mise en veille de la base (Neon) :
+    # elle est vérifiée avant d'être réutilisée.
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    if DATABASES['default']['ENGINE'].endswith('postgresql'):
+        # Le répartiteur de connexions de Neon ne garde pas les requêtes préparées côté serveur
+        # d'une transaction à l'autre, ni les curseurs côté serveur.
+        DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
 else:
     DATABASES = {
         'default': {
@@ -267,6 +282,22 @@ WHITENOISE_USE_FINDERS = True
 # renvoie après contrôle d'accès. Le dossier est ignoré par Git.
 MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
+# Photos : en production, gardées en base, chiffrées (core/storage.py), pour ne jamais dépendre
+# d'un disque que l'hébergeur peut effacer (Vercel efface le sien entre deux appels).
+# DJANGO_FILE_STORAGE=filesystem (disque, MEDIA_ROOT) seulement avec un disque durable ;
+# en développement, le disque est utilisé par défaut.
+FILE_STORAGE = os.environ.get('DJANGO_FILE_STORAGE', '').strip().lower() or ('filesystem' if DEBUG else 'database')
+if FILE_STORAGE not in ('database', 'filesystem'):
+    raise ImproperlyConfigured("DJANGO_FILE_STORAGE doit valoir « database » ou « filesystem ».")
+STORAGES = {
+    'default': {
+        'BACKEND': 'core.storage.DatabaseStorage'
+        if FILE_STORAGE == 'database'
+        else 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -276,7 +307,31 @@ MAILERS = {
     'default': mailer_from_env(os.environ),
 }
 
+# En production, un courriel « envoyé » dans la console n'arrive à personne : une demande serait
+# marquée « Acceptée » sans que la personne reçoive son lien. Un vrai service d'envoi est donc exigé
+# (voir docs/DEPLOIEMENT.md), sauf pour un aperçu de test déclaré (courriels dans les journaux).
+if (
+    not DEBUG
+    and not TESTING
+    and not os.environ.get('EMAIL_HOST', '').strip()
+    and not env_flag(os.environ.get('EMAIL_CONSOLE_IN_PRODUCTION', '0'))
+):
+    raise ImproperlyConfigured(
+        'EMAIL_HOST est obligatoire en production (par exemple smtp.gmail.com, voir docs/DEPLOIEMENT.md). '
+        'Pour un aperçu de test seulement, EMAIL_CONSOLE_IN_PRODUCTION=1 affiche les courriels dans les journaux.'
+    )
+
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
 
 # Adresse publique du frontend, pour les liens personnels envoyés par courriel.
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+
+# Journaux : en production, les erreurs du serveur (500) sont écrites sur la sortie d'erreur,
+# lue par l'hébergeur. Sans ce réglage, Django ne les envoie qu'aux ADMINS par courriel.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'django': {'handlers': ['console'], 'level': 'ERROR' if not DEBUG else 'INFO'}},
+}

@@ -9,6 +9,7 @@ Le blocage dure jusqu'à ce que les échecs sortent de la fenêtre (``LOGIN_LOCK
 Une connexion réussie efface les échecs du compte.
 """
 
+import ipaddress
 import math
 from datetime import timedelta
 
@@ -21,6 +22,19 @@ from .models import LoginFailure
 RETENTION = timedelta(days=1)
 
 
+def _valid_ip(value):
+    """Adresse IP valide, sans port éventuel, ou None : la base n'accepte que de vraies adresses."""
+    value = (value or '').strip()
+    if value.startswith('[') and ']' in value:  # [IPv6]:port
+        value = value[1:value.index(']')]
+    elif value.count(':') == 1:  # IPv4:port
+        value = value.split(':', 1)[0]
+    try:
+        return str(ipaddress.ip_address(value))
+    except ValueError:
+        return None
+
+
 def client_ip(request):
     """Adresse du visiteur. Derrière un proxy de confiance, elle est lue dans X-Forwarded-For."""
     proxies = settings.LOGIN_TRUSTED_PROXIES
@@ -28,8 +42,8 @@ def client_ip(request):
     if proxies and forwarded:
         addresses = [a.strip() for a in forwarded.split(',') if a.strip()]
         if addresses:
-            return addresses[-min(proxies, len(addresses))]
-    return request.META.get('REMOTE_ADDR') or None
+            return _valid_ip(addresses[-min(proxies, len(addresses))])
+    return _valid_ip(request.META.get('REMOTE_ADDR'))
 
 
 def _window():

@@ -1,3 +1,6 @@
+/* Police du site : Source Sans 3, hébergée avec le site (aucun appel à un service extérieur). */
+@import '@fontsource-variable/source-sans-3';
+
 /*
  * Affichage agrandi sur ordinateur, jusqu'à 150 %, pour tous les comptes et sans réglage.
  * Un site ne peut pas imposer le zoom du navigateur : `zoom` met les écrans à la taille équivalente.
@@ -39,6 +42,222 @@
     --echelle: 1.5;
   }
 }
+/* Bandeau du rôle sur la carte (fondateur, coordonnateur), par-dessus « MEMBRE ADHÉRENT ». */
+.card-role {
+  position: absolute;
+  top: 38.47%;
+  left: 43.52%;
+  width: 43.89%;
+  height: 4.86%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #012915;
+  color: #fff;
+  font-size: 2.5cqw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Bureau : pas d'encadré « Mon coordonnateur », deux colonnes. */
+@media (min-width: 1181px) {
+  .member-grid.no-coordinator {
+    grid-template-columns: 1.65fr 1fr;
+  }
+}
+
+
+/* Bureau et espace membre sur téléphone et tablette : une barre compacte (logo + « Menu »)
+   qui ouvre la liste des pages, au lieu d'une rangée qui défile de côté. */
+.menu-toggle {
+  display: none;
+}
+@media (max-width: 900px) {
+  .side-nav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+  }
+  .side-logo {
+    margin: 0;
+  }
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .side-nav nav,
+  .side-nav .side-profile {
+    display: none;
+    width: 100%;
+  }
+  .side-nav.menu-open nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 10px;
+    overflow: visible;
+    padding: 0;
+  }
+  .side-nav.menu-open nav a {
+    min-width: 0;
+    min-height: 46px;
+    padding: 10px 12px;
+  }
+  .side-nav.menu-open .side-profile {
+    display: block;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Tableau de bord : une ligne de chiffres lisible, sans pictogrammes, et des barres simples. */
+.dashboard-scope {
+  margin: 0 0 14px;
+  color: #4d5a53;
+}
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+  border: 1px solid #dce5de;
+  border-radius: 10px;
+  background: #fff;
+}
+.dashboard-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 18px 22px;
+  border-left: 1px solid #e3ebe5;
+}
+.dashboard-summary > div:first-child {
+  border-left: 0;
+}
+.dashboard-summary strong {
+  color: var(--green-900);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.dashboard-summary span {
+  color: #1d2b23;
+  font-size: 17px;
+  font-weight: 600;
+}
+.dashboard-summary small {
+  color: #5b6760;
+  font-size: 15px;
+}
+.dashboard-summary small a {
+  color: var(--green-800);
+  font-weight: 600;
+}
+.dashboard-summary .to-do strong {
+  color: #a26a00;
+}
+.bar-chart {
+  height: 220px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.bar-chart .bar {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  align-items: end;
+  gap: 4px;
+}
+.bar-chart .bar i {
+  width: min(32px, 70%);
+  border-radius: 4px 4px 0 0;
+  background: #7fb79a;
+}
+.bar-chart .bar.current i {
+  background: var(--green-800);
+}
+.bar-chart .bar-value {
+  min-height: 18px;
+  color: #2b3a31;
+  font-size: 14px;
+  font-weight: 600;
+}
+.bar-chart .bar-month {
+  color: #5b6760;
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .dashboard-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-summary > div {
+    padding: 14px 16px;
+  }
+  .dashboard-summary > div:nth-child(3) {
+    border-left: 0;
+  }
+  .dashboard-summary > div:nth-child(n + 3) {
+    border-top: 1px solid #e3ebe5;
+  }
+  .dashboard-summary strong {
+    font-size: 28px;
+  }
+  .bar-chart {
+    height: 180px;
+    gap: 3px;
+  }
+  .bar-chart .bar-month {
+    font-size: 12px;
+  }
+}
+
+/* Contenu principal agrandi : moins de marges, la carte utile prend la place disponible. */
+.workspace-content {
+  font-size: 16px;
+}
+.narrow-workspace {
+  max-width: 1200px;
+}
+.admin-form {
+  max-width: 1100px;
+}
+.review-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.detail-list dd {
+  font-size: 16px;
+}
+/* Texte réservé aux lecteurs d'écran (titre de page déjà affiché dans la carte). */
+.sr-only {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 @media print {
   :root {
     zoom: 1;
@@ -61,7 +280,7 @@
   --page: #f2f6f1;
   --danger: #e54d55;
   --radius: 10px;
-  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  font-family: 'Source Sans 3 Variable', 'Segoe UI', Arial, sans-serif;
   color-scheme: light;
 }
 
@@ -76,8 +295,8 @@ body {
   min-width: 320px;
   background: var(--page);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 body,
@@ -173,7 +392,7 @@ small {
   border-radius: 99px;
   background: #edf0ee;
   color: #53625a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -317,7 +536,7 @@ small {
   gap: 12px;
   margin-bottom: 12px;
   color: #193328;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -401,7 +620,7 @@ small {
 }
 .role-card span {
   color: #3d4942;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -451,7 +670,7 @@ small {
 }
 .member-strip h2 {
   margin-bottom: 12px;
-  font-size: 14px;
+  font-size: 15px;
 }
 .member-faces {
   display: grid;
@@ -472,12 +691,12 @@ small {
   object-fit: cover;
 }
 .member-faces strong {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
 }
 .member-faces span {
   color: #536159;
-  font-size: 13px;
+  font-size: 14px;
 }
 .public-actions {
   max-width: 1180px;
@@ -573,11 +792,11 @@ small {
 .secure-link span {
   display: grid;
   color: #d8e9df;
-  font-size: 13px;
+  font-size: 14px;
 }
 .secure-link strong {
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
 }
 .join-benefits {
   position: relative;
@@ -604,11 +823,11 @@ small {
 .join-benefits span {
   display: grid;
   color: #cee2d7;
-  font-size: 13px;
+  font-size: 14px;
 }
 .join-benefits strong {
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
 }
 .join-line-art {
   width: 100%;
@@ -670,11 +889,11 @@ small {
   color: #fff;
 }
 .join-progress strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .join-progress small {
   color: #636a66;
-  font-size: 13px;
+  font-size: 14px;
 }
 .join-progress i {
   height: 2px;
@@ -711,7 +930,7 @@ small {
 .form-title p {
   margin: 2px 0 0;
   color: #626b66;
-  font-size: 13px;
+  font-size: 14px;
 }
 .field-grid {
   display: grid;
@@ -722,7 +941,7 @@ small {
   display: grid;
   gap: 6px;
   color: #202b25;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .join-form em {
@@ -775,7 +994,7 @@ small {
   color: var(--green-700);
 }
 .upload-field small {
-  font-size: 13px;
+  font-size: 14px;
 }
 .join-form .check-row {
   display: flex;
@@ -797,7 +1016,7 @@ small {
   border-radius: 6px;
   background: #eef6fb;
   color: #5f6c65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .form-privacy ui-icon {
   color: var(--green-700);
@@ -839,15 +1058,24 @@ small {
 
 /* Member and executive workspaces */
 .workspace-shell {
+  --largeur-menu: 238px;
   min-height: calc(100vh / var(--echelle));
   display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-columns: var(--largeur-menu) minmax(0, 1fr);
   background: #f1f5f0;
 }
+.workspace-area {
+  grid-column: 2;
+}
+/* Fixée en haut et en bas de la fenêtre : toute la hauteur, quel que soit le navigateur.
+   (Une hauteur en vh dépend de la façon dont chaque navigateur applique le zoom.) */
 .side-nav {
-  height: calc(100vh / var(--echelle));
-  position: sticky;
+  position: fixed;
   top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  width: var(--largeur-menu);
   display: flex;
   flex-direction: column;
   padding: 20px 14px 18px;
@@ -881,7 +1109,7 @@ small {
 .side-label {
   margin: 2px 8px 14px;
   color: #e6f4eb;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -900,7 +1128,7 @@ small {
   padding: 10px 12px;
   border-radius: 7px;
   color: #f2fbf6;
-  font-size: 13px;
+  font-size: 14px;
   transition:
     background 160ms ease,
     color 160ms ease;
@@ -941,18 +1169,18 @@ small {
   display: grid;
 }
 .side-profile strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .side-profile small {
   color: #bcd6c7;
-  font-size: 13px;
+  font-size: 14px;
 }
 .side-profile > a {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 7px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .side-profile > a ui-icon {
   width: 17px;
@@ -981,7 +1209,7 @@ small {
 }
 .side-user strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   text-overflow: ellipsis;
 }
 .workspace-area {
@@ -1023,7 +1251,7 @@ small {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
 }
 .icon-button,
 .profile-chip {
@@ -1056,7 +1284,7 @@ small {
   text-decoration: none;
   background: #ddf3e4;
   color: var(--green-800);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 .chevron {
@@ -1068,24 +1296,26 @@ small {
   margin: 0 auto;
   padding: 24px 28px 40px;
 }
+/* Titre de page : une simple ligne de texte, sans bandeau ni sous-titre. */
 .page-heading {
-  min-height: 60px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .page-heading h1 {
   margin: 0;
-  font-size: clamp(25px, calc(2.2vw / var(--echelle)), 34px);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  color: #34483e;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 .page-heading p {
   margin: 3px 0 0;
   color: #636b66;
-  font-size: 13px;
+  font-size: 14px;
 }
 .date-button {
   min-height: 42px;
@@ -1097,7 +1327,7 @@ small {
   border-radius: 7px;
   background: #fff;
   color: #435148;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   box-shadow: 0 5px 18px rgba(29, 57, 40, 0.06);
 }
@@ -1115,11 +1345,11 @@ small {
 }
 .panel-title h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 .panel-title a {
   color: var(--green-700);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -1179,7 +1409,7 @@ small {
   padding: 6px 12px;
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 99px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .welcome-banner em {
@@ -1226,7 +1456,7 @@ small {
 .stat-grid article p {
   margin: 0;
   color: #35473d;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
 }
 .stat-grid article p small {
@@ -1241,7 +1471,7 @@ small {
   border-radius: 99px;
   background: #d9f3df;
   color: #05652f;
-  font-size: 13px;
+  font-size: 14px;
 }
 .member-grid {
   display: grid;
@@ -1254,7 +1484,7 @@ small {
 }
 .member-grid h2 {
   margin-bottom: 14px;
-  font-size: 15px;
+  font-size: 16px;
 }
 .member-card-panel > a {
   height: 32px;
@@ -1266,7 +1496,7 @@ small {
   border-radius: 4px;
   background: #e5f6e9;
   color: var(--green-800);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .profile-panel > img,
@@ -1290,7 +1520,7 @@ small {
   display: grid;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .profile-panel dl dt {
   color: #646b67;
@@ -1311,7 +1541,7 @@ small {
 .coordinator-panel > p {
   margin: 2px 0 18px;
   color: #636b66;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 .coordinator-panel ul {
@@ -1321,7 +1551,7 @@ small {
   padding: 0;
   list-style: none;
   color: #53635a;
-  font-size: 13px;
+  font-size: 14px;
 }
 .coordinator-panel li {
   display: flex;
@@ -1336,7 +1566,7 @@ small {
 .coordinator-panel .btn {
   width: 100%;
   min-height: 36px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .activity-grid {
   display: grid;
@@ -1365,7 +1595,7 @@ small {
   color: #0aa657;
 }
 .mini-programs strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .mini-programs p {
   grid-column: 1 / -1;
@@ -1374,7 +1604,7 @@ small {
   gap: 6px;
   margin: 4px 0;
   color: #5f6c65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .mini-programs p ui-icon {
   width: 12px;
@@ -1388,7 +1618,7 @@ small {
   grid-column: 1 / -1;
   min-height: 32px;
   padding: 6px 8px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .news-panel {
   display: grid;
@@ -1412,11 +1642,11 @@ small {
   display: grid;
 }
 .news-row strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .news-row small {
   color: #636b67;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Member card : modèle officiel du mouvement (1080 x 720), informations placées dessus */
@@ -1500,7 +1730,7 @@ small {
   border-radius: 6px;
   background: #eef8ff;
   color: #536d7b;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -1514,7 +1744,7 @@ small {
 .tabs a {
   padding: 8px 12px 10px;
   color: #55645b;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1558,7 +1788,7 @@ small {
 .filter-bar select {
   height: 40px;
   min-height: 40px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .filter-bar button {
   height: 38px;
@@ -1566,7 +1796,7 @@ small {
   border-radius: 5px;
   background: #f7f8f7;
   color: #5e6c64;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1575,7 +1805,7 @@ small {
 .filter-bar input,
 .filter-bar select,
 .filter-bar button {
-  font-size: 14px;
+  font-size: 15px;
 }
 /* Barre de filtres des bases du bureau : recherche, localité, fonction, statut, période. */
 .filter-bar.filter-bar-wide {
@@ -1590,7 +1820,7 @@ small {
 }
 .filter-bar .date-filter span {
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
 }
 .filter-bar .date-filter input {
   flex: 1;
@@ -1632,12 +1862,12 @@ small {
 }
 .program-copy h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-copy p {
   margin: 1px 0 0;
   color: #606c65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-list article > p {
   display: flex;
@@ -1646,7 +1876,7 @@ small {
   gap: 5px;
   margin: 0;
   color: #45574d;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-list article > p ui-icon {
   width: 13px;
@@ -1660,7 +1890,7 @@ small {
 .program-list .btn {
   min-height: 34px;
   padding: 7px 14px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .admin-content {
@@ -1685,7 +1915,7 @@ small {
 .admin-stats article > div > small {
   display: block;
   color: #636b66;
-  font-size: 13px;
+  font-size: 14px;
 }
 .dashboard-grid {
   display: grid;
@@ -1706,7 +1936,7 @@ small {
   border: 1px solid #dde5df;
   border-radius: 5px;
   background: #fff;
-  font-size: 13px;
+  font-size: 14px;
 }
 .line-chart {
   width: 100%;
@@ -1736,7 +1966,7 @@ small {
 .chart-figure figcaption {
   margin-bottom: 10px;
   color: #606b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .chart-body {
   display: grid;
@@ -1750,7 +1980,7 @@ small {
   justify-content: space-between;
   margin: -8px 0;
   color: #606b65;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 16px;
   text-align: right;
 }
@@ -1765,12 +1995,12 @@ small {
   margin: 10px 0 0 42px;
   overflow: hidden;
   color: #606b65;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 .chart-period {
   color: #606b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 @media (max-width: 600px) {
   .chart-months span:nth-child(even) {
@@ -1804,12 +2034,12 @@ small {
 .recent-panel p {
   display: grid;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .recent-panel p small,
 .recent-panel time {
   color: #616a65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .small-panel {
   min-height: 90px;
@@ -1834,12 +2064,12 @@ small {
 }
 .small-panel > p span {
   display: grid;
-  font-size: 13px;
+  font-size: 14px;
 }
 .small-panel > p small,
 .small-panel > p time {
   color: #616b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .table-wrap {
@@ -1860,14 +2090,14 @@ td {
   padding: 8px 12px;
   border-bottom: 1px solid #e5ebe7;
   color: #536159;
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
 }
 th {
   height: 38px;
   background: #f8faf8;
   color: #405047;
-  font-size: 13px;
+  font-size: 14px;
   text-transform: none;
 }
 td strong {
@@ -1888,7 +2118,7 @@ table input {
   border: 0;
   background: transparent;
   color: var(--green-800);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .table-footer {
@@ -1897,7 +2127,7 @@ table input {
   justify-content: space-between;
   padding: 12px 14px;
   color: #606a65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .table-footer nav {
   display: flex;
@@ -1909,7 +2139,7 @@ table input {
   border: 1px solid #d8e1db;
   border-radius: 5px;
   background: #fff;
-  font-size: 13px;
+  font-size: 14px;
 }
 .table-footer nav button.active {
   border-color: var(--green-700);
@@ -1936,10 +2166,10 @@ table input {
   display: grid;
   flex: 1;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .security-alert strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .security-alert button {
   border: 0;
@@ -1968,17 +2198,17 @@ table input {
 }
 .admin-program-grid h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .admin-program-grid header p {
   margin: 2px 0 0;
   color: #616b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .admin-program-grid header button {
   border: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-city {
   display: flex;
@@ -1986,7 +2216,7 @@ table input {
   gap: 5px;
   margin: 8px 0;
   color: #57665d;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-city ui-icon {
   width: 12px;
@@ -2011,7 +2241,7 @@ table input {
   align-items: center;
   margin-top: 8px;
   color: #5d6c64;
-  font-size: 13px;
+  font-size: 14px;
 }
 .admin-program-grid footer > span:first-child {
   display: flex;
@@ -2127,7 +2357,7 @@ table input {
     right: 18px;
   }
   .workspace-shell {
-    grid-template-columns: 210px minmax(0, 1fr);
+    --largeur-menu: 210px;
   }
   .member-grid {
     grid-template-columns: 1.4fr 1fr;
@@ -2287,6 +2517,7 @@ table input {
     display: block;
   }
   .side-nav {
+    width: auto;
     height: auto;
     position: relative;
     padding: 10px 14px;
@@ -2383,12 +2614,12 @@ table input {
   }
   .header-login {
     padding-inline: 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
   .header-join {
     min-height: 38px;
     padding-inline: 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
   .public-header .header-login ui-icon {
     display: none;
@@ -2497,7 +2728,7 @@ button,
 input,
 select,
 textarea {
-  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  font-family: 'Source Sans 3 Variable', 'Segoe UI', Arial, sans-serif;
 }
 h1,
 h2,
@@ -2558,7 +2789,7 @@ h3 {
 .eyebrow {
   margin-bottom: 8px;
   color: var(--green-700);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -2568,7 +2799,7 @@ h3 {
   display: inline-flex;
   margin-bottom: 20px;
   color: var(--green-800);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
 }
 .back-link:hover {
@@ -2667,7 +2898,7 @@ h3 {
   top: 22px;
   right: 24px;
   color: #636b67;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.12em;
 }
 .editorial-programs ui-icon {
@@ -2706,7 +2937,7 @@ h3 {
 .news-feature time,
 .news-briefs time {
   color: var(--green-700);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2859,7 +3090,7 @@ h3 {
   gap: 8px;
   margin-bottom: 18px;
   color: #26372e;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
 }
 .input-with-icon {
@@ -2896,7 +3127,7 @@ h3 {
   gap: 16px;
   margin: -4px 0 24px;
   color: var(--green-700);
-  font-size: 13px;
+  font-size: 14px;
 }
 .form-inline .check-row {
   display: flex;
@@ -3147,7 +3378,7 @@ h3 {
   gap: 8px;
   align-items: center;
   color: var(--green-700);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -3268,7 +3499,7 @@ h3 {
 }
 .detail-list dt {
   color: #616b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .detail-list dd {
   margin: 4px 0 0;
@@ -3281,7 +3512,7 @@ h3 {
   background: #f4f7f3;
 }
 .motivation-box h3 {
-  font-size: 15px;
+  font-size: 16px;
 }
 .motivation-box p {
   margin-bottom: 0;
@@ -3390,7 +3621,7 @@ h3 {
 }
 .program-overview dt {
   color: #616b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-overview dd {
   margin: 3px 0 0;
@@ -3439,7 +3670,7 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: #616c65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .date-tile b {
   color: var(--green-800);
@@ -3655,7 +3886,7 @@ h3 {
   width: fit-content;
   margin-bottom: 42px;
   color: #d9ece1;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .enrollment-back:hover {
@@ -3711,7 +3942,7 @@ h3 {
 }
 .enrollment-visual figcaption span {
   color: #d6e7dc;
-  font-size: 13px;
+  font-size: 14px;
 }
 .enrollment-main {
   width: 100%;
@@ -3733,7 +3964,7 @@ h3 {
   justify-items: center;
   gap: 5px;
   color: #626b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .enrollment-steps b {
   width: 28px;
@@ -3743,7 +3974,7 @@ h3 {
   border: 1px solid #c8d3cb;
   border-radius: 50%;
   background: #fff;
-  font-size: 13px;
+  font-size: 14px;
 }
 .enrollment-steps i {
   height: 1px;
@@ -3801,14 +4032,14 @@ h3 {
 .enrollment-form-header p:last-child {
   margin: 0;
   color: #616c65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .enrollment-form > label,
 .enrollment-form .field-grid > label {
   display: block;
   margin-bottom: 17px;
   color: #26372e;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
 }
 .enrollment-form em {
@@ -3878,7 +4109,7 @@ h3 {
   align-items: start;
   margin: 4px 0 22px;
   color: #5e6c64;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
 }
@@ -3907,7 +4138,7 @@ h3 {
   align-items: center;
   margin: 0;
   color: #606b65;
-  font-size: 13px;
+  font-size: 14px;
 }
 .enrollment-form-footer p > span {
   display: grid;
@@ -3990,7 +4221,7 @@ h3 {
 }
 .confirmation-reference span {
   color: #7c6a39;
-  font-size: 13px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -4042,11 +4273,11 @@ h3 {
 .confirmation-aside li span {
   display: grid;
   color: #5f6c64;
-  font-size: 13px;
+  font-size: 14px;
 }
 .confirmation-aside li strong {
   color: #2b3d33;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 @media (max-width: 980px) {
@@ -4099,7 +4330,7 @@ h3 {
     font-size: 35px;
   }
   .enrollment-copy > p:last-of-type {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.55;
   }
   .enrollment-visual {
@@ -4355,7 +4586,7 @@ textarea {
     color: #606b65;
   }
   .responsive-table td:first-child strong {
-    font-size: 15px;
+    font-size: 16px;
   }
 }
 /* N° 13 : « Enregistrer en PDF » n'imprime que la carte. */
@@ -4437,7 +4668,7 @@ textarea[aria-invalid='true'] {
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   text-align: left;
 }
@@ -4486,7 +4717,7 @@ textarea[aria-invalid='true'] {
   border-radius: 6px;
   background: #fff;
   color: var(--green-800);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -4516,7 +4747,7 @@ textarea[aria-invalid='true'] {
   gap: 8px;
   margin: 0 0 14px;
   color: #435149;
-  font-size: 14px;
+  font-size: 15px;
 }
 .dashboard-scope ui-icon {
   width: 18px;
@@ -4537,7 +4768,7 @@ textarea[aria-invalid='true'] {
   grid-template-columns: 1fr auto;
   gap: 6px 12px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: 14px;
 }
 .territory-name {
   display: grid;
@@ -4580,7 +4811,7 @@ textarea[aria-invalid='true'] {
   background: none;
   color: #55645b;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -4620,7 +4851,7 @@ textarea[aria-invalid='true'] {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 14px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .program-meta ui-icon {
   width: 14px;
@@ -4724,4 +4955,229 @@ textarea[aria-invalid='true'] {
 }
 .small-panel > p.audit-empty {
   display: block;
+}
+
+/* Le contenu occupe toute la largeur disponible, sur toutes les pages du bureau et de l'espace membre. */
+.workspace-content,
+.narrow-workspace,
+.admin-form {
+  max-width: none;
+}
+.workspace-content {
+  margin: 0;
+}
+/* Chiffres en trois colonnes (espace membre, localités), y compris sur téléphone. */
+.dashboard-summary.member-stats,
+.dashboard-summary.territories-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .dashboard-summary.member-stats > div:nth-child(3),
+  .dashboard-summary.territories-summary > div:nth-child(3) {
+    border-top: 0;
+    border-left: 1px solid #e3ebe5;
+  }
+  .dashboard-summary.member-stats > div,
+  .dashboard-summary.territories-summary > div {
+    padding: 12px 10px;
+  }
+}
+/* Listes du tableau de bord sans pictogramme : le texte prend la première colonne. */
+.dashboard-grid .recent-panel > div:not(.panel-title),
+.dashboard-grid .small-panel > p {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+}
+/* Téléphone et tablette : ces règles passent après les anciennes règles de la barre latérale. */
+@media (max-width: 900px) {
+  .workspace-shell .side-nav nav,
+  .workspace-shell .side-nav .side-profile {
+    display: none;
+  }
+  .workspace-shell .side-nav.menu-open nav {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+  .workspace-shell .side-nav.menu-open .side-profile {
+    display: block;
+  }
+  .workspace-shell .side-nav {
+    flex-direction: row;
+  }
+  .workspace-shell .side-logo {
+    width: 112px;
+    height: auto;
+    margin: 0;
+  }
+  .workspace-shell .page-heading {
+    align-items: flex-start;
+  }
+}
+
+/* Barres de recherche et de filtres des listes : toujours une seule ligne sur ordinateur et
+   tablette, les champs se resserrent ; sur téléphone, recherche et boutons-icônes, puis les filtres. */
+.filter-bar:not(.attendance-tools) {
+  min-height: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px;
+}
+.filter-bar:not(.attendance-tools) > label {
+  flex: 2 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+}
+.filter-bar:not(.attendance-tools) > label input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+}
+.filter-bar:not(.attendance-tools) > select,
+.filter-bar:not(.attendance-tools) > .date-filter {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  text-overflow: ellipsis;
+}
+.filter-bar:not(.attendance-tools) > button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-size: 16px;
+}
+.filter-bar:not(.attendance-tools) > button ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.filter-bar:not(.attendance-tools) > button:first-of-type {
+  background: var(--green-800);
+  color: #fff;
+}
+.filter-bar:not(.attendance-tools) > button:first-of-type + button {
+  border: 1px solid #cfd9d2;
+  background: #fff;
+  color: #34483e;
+}
+@media (max-width: 1100px) {
+  .filter-bar:not(.attendance-tools) > button {
+    padding: 0 12px;
+  }
+  .filter-bar:not(.attendance-tools) > button span {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .filter-bar:not(.attendance-tools) {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+  .filter-bar:not(.attendance-tools) > label {
+    flex: 1 1 calc(100% - 108px);
+    order: 0;
+  }
+  .filter-bar:not(.attendance-tools) > button {
+    order: 1;
+  }
+  .filter-bar:not(.attendance-tools) > select,
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    order: 2;
+    flex: 1 1 0;
+    padding-left: 8px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 600px) {
+  /* La période (deux dates) a besoin de sa propre ligne sur téléphone. */
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    flex-basis: 100%;
+  }
+}
+/* Champs lisibles même resserrés : largeur minimale pour les listes et la période ;
+   la barre ne passe à la ligne que si la place manque vraiment. */
+@media (min-width: 601px) {
+  .filter-bar:not(.attendance-tools) {
+    flex-wrap: wrap;
+  }
+  .filter-bar:not(.attendance-tools) > label {
+    min-width: 180px;
+  }
+  .filter-bar:not(.attendance-tools) > select {
+    min-width: 130px;
+  }
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    flex: 1.8 1 0;
+    min-width: 250px;
+  }
+}
+/* Téléphone : barre de filtres basse, trois lignes au plus (recherche et boutons,
+   listes, période sur une seule ligne). */
+@media (max-width: 600px) {
+  .filter-bar:not(.attendance-tools) {
+    gap: 5px;
+    padding: 6px;
+  }
+  .filter-bar:not(.attendance-tools) > label,
+  .filter-bar:not(.attendance-tools) > select,
+  .filter-bar:not(.attendance-tools) > .date-filter,
+  .filter-bar:not(.attendance-tools) > button {
+    height: 38px;
+    min-height: 38px;
+  }
+  .filter-bar:not(.attendance-tools) > label input {
+    min-height: 36px;
+    font-size: 14px;
+  }
+  .filter-bar:not(.attendance-tools) > button {
+    padding: 0 10px;
+  }
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    flex: 1 1 calc(50% - 3px);
+    gap: 4px;
+    padding: 0 4px 0 8px;
+  }
+  .filter-bar .date-filter .date-word {
+    display: none;
+  }
+  .filter-bar .date-filter input {
+    font-size: 13px;
+  }
+}
+@media (max-width: 600px) {
+  /* Deux listes côte à côte, puis les deux dates côte à côte. */
+  .filter-bar:not(.attendance-tools) > select {
+    flex: 1 1 calc(50% - 3px);
+  }
+  .filter-bar:not(.attendance-tools) > .date-filter {
+    order: 3;
+  }
+}
+
+/* Menu latéral : avec un zoom fort ou une fenêtre basse, il défile au lieu de couper
+   les derniers liens (« Mon espace membre », « Se déconnecter »). */
+@media (min-width: 901px) {
+  .workspace-shell .side-nav {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-shell .side-nav.menu-open {
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
