@@ -2179,7 +2179,7 @@ table input {
     padding: 0;
   }
   .public-frame {
-    min-height: calc(100vh / var(--echelle));
+    min-height: 0;
     border-radius: 0;
   }
   .public-header {
@@ -2205,22 +2205,28 @@ table input {
     display: inline-flex;
     padding: 9px 12px;
   }
+  /* Sur téléphone et tablette, l'image passe sous le texte, en pleine largeur,
+     au lieu d'être écrasée derrière lui. */
   .public-hero {
     min-height: auto;
-    padding: 40px 24px 24px;
+    grid-template-areas:
+      'copy'
+      'art';
+    padding: 40px 24px 0;
   }
   .public-hero::after {
-    background: linear-gradient(
-      180deg,
-      #fff 0%,
-      rgba(255, 255, 255, 0.9) 34%,
-      rgba(255, 255, 255, 0.05) 72%
-    );
+    display: none;
   }
   .public-hero-art {
-    height: 100%;
-    top: 0;
+    width: calc(100% + 48px);
+    height: clamp(260px, calc(68vw / var(--echelle)), 460px);
+    position: relative;
+    inset: auto;
+    grid-area: art;
+    margin: 0 -24px;
     object-position: 60% bottom;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 22%);
   }
   .public-hero-copy {
     width: auto;
@@ -2388,11 +2394,11 @@ table input {
   }
   .public-hero {
     min-height: auto;
-    padding: 32px 16px 18px;
+    padding: 32px 16px 0;
   }
   .public-hero-art {
-    top: 0;
-    height: 100%;
+    width: calc(100% + 32px);
+    margin-inline: -16px;
   }
   .member-strip {
     overflow: hidden;
@@ -2578,7 +2584,8 @@ h3 {
 }
 .public-story {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1.25fr) minmax(300px, 0.8fr);
+  /* Une seule colonne : la section ne contient plus que son texte. */
+  grid-template-columns: minmax(0, 760px);
   gap: 52px;
   align-items: start;
   border-top: 1px solid var(--line);
@@ -3462,7 +3469,6 @@ h3 {
 }
 
 @media (max-width: 1050px) {
-  .public-story,
   .public-news {
     grid-template-columns: 1fr 1fr;
   }
@@ -3569,8 +3575,16 @@ h3 {
     align-items: stretch;
     flex-direction: column;
   }
+  /* Liens côte à côte, sur deux lignes au besoin, au lieu d'une colonne très espacée. */
+  .public-footer {
+    gap: 16px;
+    padding-block: 32px 24px;
+  }
   .public-footer nav {
-    display: grid;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 24px;
   }
   .auth-story h1,
   .status-main h1,
