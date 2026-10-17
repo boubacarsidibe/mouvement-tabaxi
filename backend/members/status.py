@@ -11,6 +11,7 @@ l'historique ne se contredisent jamais :
 
 from django.db import transaction
 
+from accounts.models import User
 from accounts.sessions import close_sessions
 from audit.models import AuditEntry
 from audit.services import person_name, record
@@ -25,6 +26,19 @@ class StatusChangeRefused(Exception):
         self.code = code
         self.detail = detail
         super().__init__(detail)
+
+
+def can_change_status(actor, member):
+    """Qui peut changer le statut de ce membre, déjà pris dans le périmètre de ``actor``.
+
+    Un fondateur gère tous les comptes ; un coordonnateur, les membres simples de sa zone
+    (pas les autres membres du bureau). Personne ne change son propre statut.
+    """
+    if member.user_id == actor.pk:
+        return False
+    if actor.is_founder:
+        return True
+    return actor.is_bureau and member.user.role == User.Role.MEMBRE
 
 
 def change_status(member, new_status, *, by, reason=''):

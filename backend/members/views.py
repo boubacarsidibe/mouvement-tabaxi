@@ -8,7 +8,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.models import User
-from accounts.permissions import IsBureau, IsFounder
+from accounts.permissions import IsBureau
 from accounts.serializers import UserSerializer
 from audit.exports import export_list
 
@@ -22,7 +22,7 @@ from .serializers import (
     RegistrationSerializer,
     StatusChangeSerializer,
 )
-from .status import StatusChangeRefused, change_status
+from .status import StatusChangeRefused, can_change_status, change_status
 
 
 def link_problem_response(problem):
@@ -195,12 +195,21 @@ class MemberPhotoView(APIView):
 
 
 class MemberStatusView(APIView):
-    """Un fondateur rend actif, suspend ou radie un membre ; le compte suit, l'historique est conservé."""
+    """Rendre actif, suspendre ou radier un membre ; le compte suit, l'historique est conservé.
 
-    permission_classes = [IsFounder]
+    Un fondateur le fait pour tout compte ; un coordonnateur, pour les membres simples de sa
+    zone. Hors de la zone : 404, comme pour la fiche.
+    """
+
+    permission_classes = [IsBureau]
 
     def post(self, request, pk):
         member = generics.get_object_or_404(scoped_members(request.user), pk=pk)
+        if member.user_id != request.user.pk and not can_change_status(request.user, member):
+            return Response(
+                {'detail': 'Un coordonnateur ne change que le statut des membres simples de sa zone.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = StatusChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:

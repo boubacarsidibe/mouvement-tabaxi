@@ -332,7 +332,7 @@ const REASON_REQUIRED: Partial<Record<MemberStatus, string>> = {
   radie: 'Indiquez le motif de la radiation.',
 };
 
-/** Fiche d'un membre : coordonnées, statut du compte, et pour les fondateurs le changement de statut. */
+/** Fiche d'un membre : coordonnées, statut du compte et, pour qui en a le droit, le changement de statut. */
 @Component({
   selector: 'app-member-detail',
   imports: [FormsModule, DatePipe],
@@ -488,8 +488,8 @@ export class MemberDetail implements OnInit {
   protected readonly isSelf = computed(
     () => !!this.member() && this.member()?.email === this.auth.user()?.email,
   );
-  /** L'encadré « Gérer l'accès » n'est utile qu'à un fondateur, sur la fiche d'une autre personne. */
-  protected readonly canManage = computed(() => this.auth.isFounder() && !this.isSelf());
+  /** « Gérer l'accès » : le serveur dit qui peut agir (fondateur, ou coordonnateur pour un membre simple de sa zone). */
+  protected readonly canManage = computed(() => !!this.member()?.can_change_status && !this.isSelf());
 
   async ngOnInit() {
     try {

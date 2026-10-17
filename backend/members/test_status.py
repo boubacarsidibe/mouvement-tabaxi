@@ -131,10 +131,56 @@ class ChangeStatusTests(StatusTestCase):
         self.assertEqual(self.client.post('/api/members/9999/status/', {'status': 'actif'}, content_type=JSON).status_code, 404)
 
 
-class AccessControlTests(StatusTestCase):
-    def test_seuls_les_fondateurs_changent_un_statut(self):
+class CoordinatorStatusTests(StatusTestCase):
+    """Un coordonnateur gère les membres simples de sa zone, et seulement eux."""
+
+    def setUp(self):
+        super().setUp()
         self.client.force_login(self.coordinator)
-        self.assertEqual(self.set_status(self.aminata_member, 'suspendu', 'x').status_code, 403)
+
+    def test_suspend_puis_reactive_un_membre_simple_de_sa_zone(self):
+        response = self.set_status(self.aminata_member, 'suspendu', 'Absences répétées.')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.aminata.refresh_from_db()
+        self.assertFalse(self.aminata.is_active)
+        change = MemberStatusChange.objects.get()
+        self.assertEqual((change.changed_by, change.reason), (self.coordinator, 'Absences répétées.'))
+        self.assertEqual(self.set_status(self.aminata_member, 'actif').status_code, 200)
+        self.aminata.refresh_from_db()
+        self.assertTrue(self.aminata.is_active)
+
+    def test_voit_l_historique_et_le_droit_d_agir_sur_la_fiche(self):
+        self.set_status(self.aminata_member, 'suspendu', 'Motif.')
+        data = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()
+        self.assertTrue(data['can_change_status'])
+        self.assertEqual(len(data['status_history']), 1)
+
+    def test_hors_de_sa_zone_404(self):
+        self.assertEqual(self.set_status(self.moussa_member, 'suspendu', 'x').status_code, 404)
+        self.assertFalse(MemberStatusChange.objects.exists())
+
+    def test_ne_touche_pas_aux_membres_du_bureau(self):
+        pikine_coordinator = User.objects.create_user(
+            'pikine@example.org', PASSWORD, role=User.Role.COORDONNATEUR, territory=self.pikine
+        )
+        member = Member.objects.create(user=pikine_coordinator, joined_on=date(2026, 4, 1))
+        response = self.set_status(member, 'suspendu', 'x')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('membres simples', response.json()['detail'])
+        data = self.client.get(f'/api/members/{member.pk}/').json()
+        self.assertFalse(data['can_change_status'])
+        self.assertIsNone(data['status_history'])
+        pikine_coordinator.refresh_from_db()
+        self.assertTrue(pikine_coordinator.is_active)
+
+    def test_ne_change_pas_son_propre_statut(self):
+        self.assertEqual(self.set_status(self.coordinator_member, 'suspendu', 'x').status_code, 409)
+        data = self.client.get(f'/api/members/{self.coordinator_member.pk}/').json()
+        self.assertFalse(data['can_change_status'])
+
+
+class AccessControlTests(StatusTestCase):
+    def test_seul_le_bureau_change_un_statut(self):
         self.client.force_login(self.aminata)
         self.assertEqual(self.set_status(self.moussa_member, 'suspendu', 'x').status_code, 403)
         self.client.logout()
@@ -245,10 +291,19 @@ class HistoryTests(StatusTestCase):
         member = Member.objects.get(pk=self.aminata_member.pk)
         self.assertEqual((member.number, member.address, member.user.email), (number, '1, rue du Marché', 'aminata@example.org'))
 
-    def test_un_fondateur_seul_voit_l_historique(self):
-        self.set_status(self.aminata_member, 'suspendu', 'Motif confidentiel.')
+    def test_l_historique_reste_reserve_a_qui_gere_le_compte(self):
+        # Un coordonnateur voit l'historique des membres simples de sa zone (il peut agir sur eux),
+        # pas celui des autres membres du bureau.
+        self.set_status(self.aminata_member, 'suspendu', 'Motif connu du coordonnateur.')
+        colleague = User.objects.create_user(
+            'pikine@example.org', PASSWORD, role=User.Role.COORDONNATEUR, territory=self.pikine
+        )
+        colleague_member = Member.objects.create(user=colleague, joined_on=date(2026, 4, 1))
+        self.set_status(colleague_member, 'suspendu', 'Motif confidentiel.')
         self.client.force_login(self.coordinator)
         data = self.client.get(f'/api/members/{self.aminata_member.pk}/').json()
+        self.assertEqual(data['status_history'][0]['reason'], 'Motif connu du coordonnateur.')
+        data = self.client.get(f'/api/members/{colleague_member.pk}/').json()
         self.assertEqual(data['status'], 'suspendu')
         self.assertIsNone(data['status_history'])
         self.assertNotIn('Motif confidentiel.', str(data))

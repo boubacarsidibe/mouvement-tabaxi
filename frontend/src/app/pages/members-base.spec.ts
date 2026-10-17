@@ -27,6 +27,7 @@ const RECORD = {
   address: '18, rue de la Corniche',
   photo_url: null,
   status_history: [] as unknown[],
+  can_change_status: true,
 };
 const PAGE = (results: unknown[]) => ({ count: results.length, next: null, previous: null, results });
 
@@ -480,8 +481,23 @@ describe('Fiche d’un membre', () => {
     expect(root.textContent).not.toContain('le compte ne peut plus se connecter');
   });
 
-  it('ne propose aucun changement de statut à un coordonnateur', async () => {
-    await open(TEST_COORDINATOR, { ...RECORD, status_history: null });
+  it('un coordonnateur suspend un membre simple de sa zone', async () => {
+    await open(TEST_COORDINATOR);
+    button('Suspendre')!.click();
+    await settle();
+    const reason = root.querySelector('textarea') as HTMLTextAreaElement;
+    reason.value = 'Absences répétées.';
+    reason.dispatchEvent(new Event('input'));
+    button('Confirmer la suspension')!.click();
+    const request = http.expectOne('/api/members/12/status/');
+    expect(request.request.body).toEqual({ status: 'suspendu', reason: 'Absences répétées.' });
+    request.flush({ ...RECORD, status: 'suspendu', status_label: 'Suspendu' });
+    await settle();
+    expect(root.textContent).toContain('le compte ne peut plus se connecter');
+  });
+
+  it('ne propose aucun changement de statut sur la fiche d’un autre membre du bureau', async () => {
+    await open(TEST_COORDINATOR, { ...RECORD, role: 'coordonnateur', status_history: null, can_change_status: false });
     // Aucun encadré « Gérer l'accès » : il ne servirait à rien ; la fiche prend toute la largeur.
     expect(root.querySelector('.decision-panel')).toBeNull();
     expect(root.querySelector('.member-detail-grid')?.classList).toContain('single');
@@ -491,7 +507,7 @@ describe('Fiche d’un membre', () => {
   });
 
   it('ne laisse pas un fondateur changer son propre statut', async () => {
-    await open(TEST_FOUNDER, { ...RECORD, email: TEST_FOUNDER.email });
+    await open(TEST_FOUNDER, { ...RECORD, email: TEST_FOUNDER.email, can_change_status: false });
     expect(root.querySelector('.decision-panel')).toBeNull();
     expect(button('Radier')).toBeUndefined();
   });

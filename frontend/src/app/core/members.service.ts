@@ -34,12 +34,14 @@ export interface StatusChange {
   changed_at: string;
 }
 
-/** Fiche d'un membre. L'historique des statuts n'est envoyé qu'aux fondateurs (`null` sinon). */
+/** Fiche d'un membre. L'historique des statuts n'est envoyé qu'à qui peut changer ce statut (`null` sinon). */
 export interface MemberRecord extends ListedMember {
   phone: string;
   address: string;
   photo_url: string | null;
   status_history: StatusChange[] | null;
+  /** Fondateur : tout compte ; coordonnateur : les membres simples de sa zone ; jamais son propre compte. */
+  can_change_status: boolean;
 }
 
 export interface MemberPage {
