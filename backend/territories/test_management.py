@@ -29,6 +29,7 @@ class TerritoryManagementTests(ScopeTestCase):
         self.assertEqual(data['name'], 'Thiaroye sur Mer')
         self.assertEqual(data['path'], 'Sénégal › Dakar › Thiaroye sur Mer')
         self.assertEqual((data['members_count'], data['programs_count'], data['children_count']), (0, 0, 0))
+        self.assertTrue(data['deletable'])
         self.assertTrue(Territory.objects.filter(name='Thiaroye sur Mer', parent=self.region_dakar).exists())
 
     def test_hierarchie_respectee_a_l_ajout(self):
@@ -106,9 +107,35 @@ class TerritoryManagementTests(ScopeTestCase):
     def test_liste_avec_le_contenu_de_chaque_territoire(self):
         data = {t['id']: t for t in self.client.get(URL).json()}
         pikine = data[self.pikine.pk]
-        # Le coordonnateur de Pikine et le membre simple y sont rattachés.
-        self.assertEqual(pikine['members_count'], 2)
+        # Le membre simple et le coordonnateur de Pikine y sont rattachés, comptés à part.
+        self.assertEqual((pikine['members_count'], pikine['coordinators_count']), (1, 1))
+        self.assertFalse(pikine['deletable'])
         self.assertGreater(data[self.region_dakar.pk]['children_count'], 0)
+
+    def test_compte_sans_multiplier_les_lignes(self):
+        """Plusieurs membres, programmes et demandes sur un même territoire : chacun compté une fois."""
+        commune = Territory.objects.create(name='Peuplée', kind='commune', parent=self.region_thies)
+        for index in range(3):
+            User.objects.create_user(f'm{index}@example.org', PASSWORD, role=User.Role.MEMBRE, territory=commune)
+            make_application(commune, email=f'candidat{index}@example.org')
+        for index in range(2):
+            Program.objects.create(
+                name=f'Programme {index}', objective='Objectif', territory=commune,
+                start_date=datetime.date(2026, 11, 1), end_date=datetime.date(2026, 11, 30),
+            )
+        row = self.client.get(f'{URL}{commune.pk}/').json()
+        self.assertEqual(
+            (row['members_count'], row['coordinators_count'], row['programs_count'], row['applications_count']),
+            (3, 0, 2, 3),
+        )
+        self.assertFalse(row['deletable'])
+
+    def test_territoire_d_un_coordonnateur_non_supprimable(self):
+        commune = Territory.objects.create(name='Coordonnée', kind='commune', parent=self.region_thies)
+        User.objects.create_user('coord@example.org', PASSWORD, role=User.Role.COORDONNATEUR, territory=commune)
+        response = self.client.delete(f'{URL}{commune.pk}/')
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('des coordonnateurs y sont rattachés', response.json()['detail'])
 
 
 class TerritoryManagementRightsTests(ScopeTestCase):

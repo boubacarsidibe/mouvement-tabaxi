@@ -23,11 +23,15 @@ export interface ManagedTerritory {
   is_active: boolean;
 }
 
-/** Territoire du bureau avec ce qu'il contient : un territoire non vide ne se supprime pas. */
+/** Territoire du bureau avec ce qui y est rattaché directement : un territoire non vide ne se supprime pas. */
 export interface TerritoryUsage extends ManagedTerritory {
   members_count: number;
+  coordinators_count: number;
   programs_count: number;
+  applications_count: number;
   children_count: number;
+  /** Rien ni personne ne s'y rattache : le serveur accepte de le supprimer. */
+  deletable: boolean;
 }
 
 /** Ce qu'un fondateur envoie pour ajouter, renommer, rattacher ou désactiver un territoire. */

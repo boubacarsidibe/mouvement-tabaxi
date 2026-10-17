@@ -35,12 +35,30 @@ class ManagedTerritorySerializer(TerritorySummarySerializer):
 class TerritoryUsageSerializer(ManagedTerritorySerializer):
     """Territoire du bureau avec ce qu'il contient : ce qui décide s'il peut être supprimé."""
 
-    members_count = serializers.IntegerField(read_only=True, help_text='Comptes rattachés à ce territoire.')
+    members_count = serializers.IntegerField(read_only=True, help_text='Membres rattachés à ce territoire.')
+    coordinators_count = serializers.IntegerField(read_only=True, help_text='Membres du bureau rattachés.')
     programs_count = serializers.IntegerField(read_only=True)
+    applications_count = serializers.IntegerField(read_only=True, help_text="Demandes d'adhésion qui le visent.")
     children_count = serializers.IntegerField(read_only=True, help_text='Territoires qui y sont rattachés.')
+    deletable = serializers.SerializerMethodField(help_text='Vide : rien ni personne ne s’y rattache.')
 
     class Meta(ManagedTerritorySerializer.Meta):
-        fields = ManagedTerritorySerializer.Meta.fields + ('members_count', 'programs_count', 'children_count')
+        fields = ManagedTerritorySerializer.Meta.fields + (
+            'members_count',
+            'coordinators_count',
+            'programs_count',
+            'applications_count',
+            'children_count',
+            'deletable',
+        )
+
+    def get_deletable(self, territory):
+        return not any(
+            getattr(territory, name)
+            for name in (
+                'members_count', 'coordinators_count', 'programs_count', 'applications_count', 'children_count'
+            )
+        )
 
 
 class TerritoryWriteSerializer(serializers.ModelSerializer):

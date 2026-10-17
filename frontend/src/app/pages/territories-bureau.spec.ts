@@ -9,19 +9,25 @@ import { TerritoryUsage } from '../core/territories.service';
 import { TerritoriesManager } from './territories-bureau';
 
 const URL = '/api/territories/managed/';
-const usage = (item: Partial<TerritoryUsage> & Pick<TerritoryUsage, 'id' | 'name' | 'kind' | 'path'>): TerritoryUsage => ({
-  kind_label: { pays: 'Pays', region: 'Région', commune: 'Commune' }[item.kind],
-  parent: null,
-  is_active: true,
-  members_count: 0,
-  programs_count: 0,
-  children_count: 0,
-  ...item,
-});
+const usage = (item: Partial<TerritoryUsage> & Pick<TerritoryUsage, 'id' | 'name' | 'kind' | 'path'>): TerritoryUsage => {
+  const row = {
+    kind_label: { pays: 'Pays', region: 'Région', commune: 'Commune' }[item.kind],
+    parent: null,
+    is_active: true,
+    members_count: 0,
+    coordinators_count: 0,
+    programs_count: 0,
+    applications_count: 0,
+    children_count: 0,
+    ...item,
+  };
+  const empty = !(row.members_count || row.coordinators_count || row.programs_count || row.applications_count || row.children_count);
+  return { deletable: empty, ...row };
+};
 const LIST = [
   usage({ id: 1, name: 'Sénégal', kind: 'pays', path: 'Sénégal', children_count: 2 }),
   usage({ id: 2, name: 'Dakar', kind: 'region', path: 'Sénégal › Dakar', parent: 1, children_count: 1 }),
-  usage({ id: 3, name: 'Pikine', kind: 'commune', path: 'Sénégal › Dakar › Pikine', parent: 2, members_count: 4 }),
+  usage({ id: 3, name: 'Pikine', kind: 'commune', path: 'Sénégal › Dakar › Pikine', parent: 2, members_count: 4, coordinators_count: 1 }),
   usage({ id: 4, name: 'Thiès', kind: 'region', path: 'Sénégal › Thiès', parent: 1 }),
 ];
 
@@ -63,7 +69,7 @@ describe('Gestion des territoires', () => {
       (b) => b.getAttribute('aria-label') === label || b.textContent?.trim() === label,
     ) as HTMLButtonElement;
   function fill(name: string, value: string) {
-    const field = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLSelectElement;
+    const field = root.querySelector(`[name="${name}"], [aria-label="${name}"]`) as HTMLInputElement | HTMLSelectElement;
     field.value = value;
     field.dispatchEvent(new Event(field.tagName === 'SELECT' ? 'change' : 'input'));
   }
@@ -76,15 +82,22 @@ describe('Gestion des territoires', () => {
     await open();
     const text = root.textContent ?? '';
     expect(text).toContain('Sénégal › Dakar › Pikine');
-    expect(text).toContain('4 territoire(s)');
+    expect(text).toContain('4 localités');
     expect(text).not.toMatch(/Ziguinchor|1 248|Localités couvertes/);
     const pikine = Array.from(root.querySelectorAll('tbody tr')).find((row) => row.textContent?.includes('Pikine'))!;
     expect(pikine.querySelector('[data-label="Membres"]')?.textContent?.trim()).toBe('4');
+    expect(pikine.querySelector('[data-label="Coordonnateurs"]')?.textContent?.trim()).toBe('1');
+    const summary = Array.from(root.querySelectorAll('.dashboard-summary > div')).map((cell) =>
+      Array.from(cell.children)
+        .map((part) => part.textContent?.trim())
+        .join(' '),
+    );
+    expect(summary).toEqual(['2 régions', '1 commune', '1 coordonnateur', '4 membres']);
   });
 
   it('un fondateur ajoute une commune rattachée à une région', async () => {
     await open();
-    button('Ajouter un territoire').click();
+    button('Ajouter une localité').click();
     await settle();
     fill('name', 'Thiaroye');
     fill('kind', 'commune');
@@ -99,12 +112,12 @@ describe('Gestion des territoires', () => {
     await settle();
     http.expectOne(URL).flush(LIST);
     await settle();
-    expect(root.textContent).toContain('Thiaroye a été ajouté.');
+    expect(root.textContent).toContain('Localité ajoutée : Thiaroye.');
   });
 
   it('refuse d’envoyer une commune sans région', async () => {
     await open();
-    button('Ajouter un territoire').click();
+    button('Ajouter une localité').click();
     await settle();
     fill('name', 'Isolée');
     await submit();
@@ -131,7 +144,7 @@ describe('Gestion des territoires', () => {
 
   it('affiche le refus du serveur sur le bon champ', async () => {
     await open();
-    button('Ajouter un territoire').click();
+    button('Ajouter une localité').click();
     await settle();
     fill('name', 'Pikine');
     fill('parent', '2');
@@ -146,7 +159,7 @@ describe('Gestion des territoires', () => {
   it('un territoire contenant des membres ne peut pas être supprimé', async () => {
     await open();
     expect(button('Supprimer Pikine').disabled).toBe(true);
-    expect(button('Supprimer Pikine').title).toContain('désactivez-le plutôt');
+    expect(button('Supprimer Pikine').title).toContain('désactivez-la plutôt');
     expect(button('Supprimer Dakar').disabled).toBe(true);
     expect(button('Supprimer Thiès').disabled).toBe(false);
   });
@@ -173,13 +186,28 @@ describe('Gestion des territoires', () => {
     await settle();
     http.expectOne(URL).flush(LIST.filter((item) => item.id !== 4));
     await settle();
-    expect(root.textContent).toContain('Thiès a été supprimé.');
+    expect(root.textContent).toContain('Localité supprimée : Thiès.');
+  });
+
+  it('filtre la liste par nom, sans tenir compte des accents, et par type', async () => {
+    await open();
+    const names = () => Array.from(root.querySelectorAll('tbody tr strong')).map((cell) => cell.textContent?.trim());
+    fill('Rechercher une localité', 'thies');
+    await settle();
+    expect(names()).toEqual(['Thiès']);
+    button('Réinitialiser').click();
+    await settle();
+    expect(names()).toHaveLength(4);
+    fill('Filtrer par type', 'region');
+    await settle();
+    expect(names()).toEqual(['Dakar', 'Thiès']);
+    expect(root.textContent).toContain('2 localités');
   });
 
   it('un coordonnateur consulte son périmètre sans pouvoir le modifier', async () => {
     await open(TEST_COORDINATOR, LIST.slice(2));
     expect(root.textContent).toContain('Pikine');
-    expect(button('Ajouter un territoire')).toBeUndefined();
+    expect(button('Ajouter une localité')).toBeUndefined();
     expect(button('Modifier Pikine')).toBeUndefined();
     expect(button('Supprimer Pikine')).toBeUndefined();
   });

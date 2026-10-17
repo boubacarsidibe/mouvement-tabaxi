@@ -1,12 +1,16 @@
 import unicodedata
 
-from django.db.models import Count, ProtectedError
+from django.db.models import Count, IntegerField, OuterRef, ProtectedError, Subquery
+from django.db.models.functions import Coalesce
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission
 from rest_framework.response import Response
 
+from accounts.models import User
 from accounts.permissions import IsBureau
+from applications.models import Application
+from programs.models import Program
 
 from .models import Territory
 from .scope import visible_territories
@@ -55,12 +59,33 @@ def territory_tree(request):
     return Response(active_tree())
 
 
+BUREAU_ROLES = (User.Role.COORDONNATEUR, User.Role.FONDATEUR)
+
+
+def count_of(model, field, **filters):
+    """Nombre de lignes de ``model`` rattachées au territoire, en sous-requête.
+
+    Des ``Count`` joints multiplieraient les lignes (membres × programmes × demandes)
+    sur un territoire très peuplé ; chaque sous-requête compte une seule table.
+    """
+    rows = (
+        model.objects.filter(**{field: OuterRef('pk')}, **filters)
+        .order_by()
+        .values(field)
+        .annotate(total=Count('pk'))
+        .values('total')
+    )
+    return Coalesce(Subquery(rows, output_field=IntegerField()), 0)
+
+
 def with_usage(queryset):
-    """Territoires avec le nombre de comptes, de programmes et de territoires qui y sont rattachés."""
+    """Territoires avec ce qui y est rattaché directement : membres, coordonnateurs, programmes, demandes, territoires."""
     return queryset.annotate(
-        members_count=Count('users', distinct=True),
-        programs_count=Count('programs', distinct=True),
-        children_count=Count('children', distinct=True),
+        members_count=count_of(User, 'territory', role=User.Role.MEMBRE),
+        coordinators_count=count_of(User, 'territory', role__in=BUREAU_ROLES),
+        programs_count=count_of(Program, 'territory'),
+        applications_count=count_of(Application, 'territory'),
+        children_count=count_of(Territory, 'parent'),
     )
 
 
@@ -80,8 +105,10 @@ def deletion_obstacle(territory):
     reasons = []
     if territory.children.exists():
         reasons.append("il contient d'autres territoires")
-    if territory.users.exists():
+    if territory.users.filter(role=User.Role.MEMBRE).exists():
         reasons.append('des membres y sont rattachés')
+    if territory.users.filter(role__in=BUREAU_ROLES).exists():
+        reasons.append('des coordonnateurs y sont rattachés')
     if territory.programs.exists():
         reasons.append('des programmes y sont rattachés')
     if territory.applications.exists():

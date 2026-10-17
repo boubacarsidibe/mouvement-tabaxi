@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { readProblem } from '../core/api-problem';
 import { AuthService } from '../core/auth.service';
@@ -7,97 +7,95 @@ import { UiIcon } from '../shared/ui-icon';
 
 type Kind = ManagedTerritory['kind'];
 
-const KINDS: { value: Kind; label: string }[] = [
-  { value: 'pays', label: 'Pays' },
-  { value: 'region', label: 'Région' },
-  { value: 'commune', label: 'Commune' },
+const KINDS: { value: Kind; label: string; plural: string }[] = [
+  { value: 'pays', label: 'Pays', plural: 'Pays' },
+  { value: 'region', label: 'Région', plural: 'Régions' },
+  { value: 'commune', label: 'Commune', plural: 'Communes' },
 ];
 /** Type du territoire auquel chaque type se rattache : une commune à une région, une région à un pays. */
 const PARENT_KIND: Record<Kind, Kind | null> = { pays: null, region: 'pays', commune: 'region' };
 
-/** Gestion des territoires (D7) : les fondateurs ajoutent, renomment, rattachent, désactivent ou suppriment. */
+/** Comparaison sans accents ni majuscules : « thies » trouve « Thiès ». */
+function folded(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** Gestion des localités (D7) : les fondateurs ajoutent, renomment, rattachent, désactivent ou suppriment. */
 @Component({
   selector: 'app-territories-manager',
   imports: [FormsModule, UiIcon],
   template: `
-    <section class="territory-summary stat-grid">
-      <article>
-        <ui-icon name="location" /><strong>{{ count('pays') }}</strong>
-        <p>Pays</p>
-      </article>
-      <article>
-        <ui-icon name="location" /><strong>{{ count('region') }}</strong>
-        <p>Régions</p>
-      </article>
-      <article>
-        <ui-icon name="location" /><strong>{{ count('commune') }}</strong>
-        <p>Communes</p>
-      </article>
+    <section class="dashboard-summary" aria-label="Totaux">
+      <div>
+        <strong>{{ count('region') }}</strong>
+        <span>{{ count('region') > 1 ? 'régions' : 'région' }}</span>
+      </div>
+      <div>
+        <strong>{{ count('commune') }}</strong>
+        <span>{{ count('commune') > 1 ? 'communes' : 'commune' }}</span>
+      </div>
+      <div>
+        <strong>{{ totals().coordinators }}</strong>
+        <span>{{ totals().coordinators > 1 ? 'coordonnateurs' : 'coordonnateur' }}</span>
+      </div>
+      <div>
+        <strong>{{ totals().members }}</strong>
+        <span>{{ totals().members > 1 ? 'membres' : 'membre' }}</span>
+      </div>
     </section>
 
-    @if (canEdit()) {
-      @if (formOpen()) {
-        <form class="workspace-form panel admin-form" (submit)="save($event)" novalidate>
-          <h2>{{ editing() ? 'Modifier ' + editing()!.name : 'Ajouter un territoire' }}</h2>
-          @if (formError()) {
-            <p class="inline-error" role="alert">{{ formError() }}</p>
-          }
-          <div class="field-grid">
-            <label
-              >Nom
-              <input name="name" maxlength="100" [ngModel]="name()" (ngModelChange)="name.set($event)" />
-              @if (fieldErrors()['name']; as message) {
-                <small class="field-error" role="alert">{{ message }}</small>
+    @if (formOpen()) {
+      <form #territoryForm class="workspace-form panel admin-form territory-form" (submit)="save($event)" novalidate>
+        <h2>{{ editing() ? 'Modifier ' + editing()!.name : 'Ajouter une localité' }}</h2>
+        @if (formError()) {
+          <p class="inline-error" role="alert">{{ formError() }}</p>
+        }
+        <div class="field-grid">
+          <label
+            >Nom
+            <input name="name" maxlength="100" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+            @if (fieldErrors()['name']; as message) {
+              <small class="field-error" role="alert">{{ message }}</small>
+            }
+          </label>
+          <label
+            >Type
+            <select name="kind" [ngModel]="kind()" (ngModelChange)="chooseKind($event)">
+              @for (item of kinds; track item.value) {
+                <option [value]="item.value">{{ item.label }}</option>
               }
-            </label>
-            <label
-              >Type
-              <select name="kind" [ngModel]="kind()" (ngModelChange)="chooseKind($event)">
-                @for (item of kinds; track item.value) {
-                  <option [value]="item.value">{{ item.label }}</option>
-                }
-              </select>
-              @if (fieldErrors()['kind']; as message) {
-                <small class="field-error" role="alert">{{ message }}</small>
+            </select>
+            @if (fieldErrors()['kind']; as message) {
+              <small class="field-error" role="alert">{{ message }}</small>
+            }
+          </label>
+        </div>
+        @if (parentKind()) {
+          <label
+            >Rattachée à
+            <select name="parent" [ngModel]="parent()" (ngModelChange)="parent.set($event)">
+              <option value="">Choisir {{ parentKind() === 'pays' ? 'un pays' : 'une région' }}</option>
+              @for (option of parentOptions(); track option.id) {
+                <option [value]="option.id">{{ option.path }}</option>
               }
-            </label>
-          </div>
-          @if (parentKind()) {
-            <label
-              >Rattaché à
-              <select name="parent" [ngModel]="parent()" (ngModelChange)="parent.set($event)">
-                <option value="">Choisir {{ parentKind() === 'pays' ? 'un pays' : 'une région' }}</option>
-                @for (option of parentOptions(); track option.id) {
-                  <option [value]="option.id">{{ option.path }}</option>
-                }
-              </select>
-              @if (fieldErrors()['parent']; as message) {
-                <small class="field-error" role="alert">{{ message }}</small>
-              }
-            </label>
-          }
-          <label class="enrollment-consent"
-            ><input
-              type="checkbox"
-              name="is_active"
-              [ngModel]="active()"
-              (ngModelChange)="active.set($event)"
-            /><span>Proposé dans les formulaires (actif)</span></label
-          >
-          <div class="form-actions">
-            <button class="btn btn-outline" type="button" (click)="closeForm()">Annuler</button>
-            <button class="btn btn-green" type="submit" [disabled]="busy()">
-              {{ editing() ? 'Enregistrer' : 'Ajouter' }}
-            </button>
-          </div>
-        </form>
-      } @else {
-        <p>
-          <button class="btn btn-green" type="button" (click)="openForm(null)">
-            <ui-icon name="plus" />Ajouter un territoire
+            </select>
+            @if (fieldErrors()['parent']; as message) {
+              <small class="field-error" role="alert">{{ message }}</small>
+            }
+          </label>
+        }
+        <label class="enrollment-consent"
+          ><input type="checkbox" name="is_active" [ngModel]="active()" (ngModelChange)="active.set($event)" /><span
+            >Proposée dans les formulaires (active)</span
+          ></label
+        >
+        <div class="form-actions">
+          <button class="btn btn-outline" type="button" (click)="closeForm()">Annuler</button>
+          <button class="btn btn-green" type="submit" [disabled]="busy()">
+            {{ editing() ? 'Enregistrer' : 'Ajouter' }}
           </button>
-        </p>
-      }
+        </div>
+      </form>
     }
 
     @if (error()) {
@@ -107,36 +105,70 @@ const PARENT_KIND: Record<Kind, Kind | null> = { pays: null, region: 'pays', com
       <p class="inline-success" role="status">{{ notice() }}</p>
     }
 
+    <div class="filter-bar">
+      <label
+        ><input
+          aria-label="Rechercher une localité"
+          placeholder="Rechercher une localité…"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+      /></label>
+      <select aria-label="Filtrer par type" [ngModel]="kindFilter()" (ngModelChange)="kindFilter.set($event)">
+        <option value="">Tous les types</option>
+        @for (item of kinds; track item.value) {
+          <option [value]="item.value">{{ item.plural }}</option>
+        }
+      </select>
+      <select aria-label="Filtrer par état" [ngModel]="stateFilter()" (ngModelChange)="stateFilter.set($event)">
+        <option value="">Tous les états</option>
+        <option value="active">Actives</option>
+        <option value="inactive">Inactives</option>
+      </select>
+      @if (canEdit()) {
+        <button type="button" aria-label="Ajouter une localité" (click)="openForm(null)">
+          <ui-icon name="plus" /><span>Ajouter une localité</span>
+        </button>
+      }
+      <button class="filter-reset" type="button" aria-label="Réinitialiser" (click)="resetFilters()">
+        <ui-icon name="close" /><span>Réinitialiser</span>
+      </button>
+    </div>
+
     <div class="table-wrap responsive-table">
       <table>
         <thead>
           <tr>
-            <th>Territoire</th>
+            <th>Localité</th>
             <th>Type</th>
+            <th>Coordonnateurs</th>
             <th>Membres</th>
             <th>Programmes</th>
             <th>État</th>
             @if (canEdit()) {
-              <th>Actions</th>
+              <th><span class="sr-only">Actions</span></th>
             }
           </tr>
         </thead>
         <tbody>
-          @for (item of territories(); track item.id) {
+          @for (item of shown(); track item.id) {
             <tr>
               <td>
-                <strong>{{ item.name }}</strong><br /><small>{{ item.path }}</small>
+                <strong>{{ item.name }}</strong>
+                @if (item.path !== item.name) {
+                  <br /><small>{{ item.path }}</small>
+                }
               </td>
               <td data-label="Type">{{ item.kind_label }}</td>
+              <td data-label="Coordonnateurs">{{ item.coordinators_count }}</td>
               <td data-label="Membres">{{ item.members_count }}</td>
               <td data-label="Programmes">{{ item.programs_count }}</td>
               <td data-label="État">
                 <span class="badge" [class.success]="item.is_active" [class.warning]="!item.is_active">{{
-                  item.is_active ? 'Actif' : 'Inactif'
+                  item.is_active ? 'Active' : 'Inactive'
                 }}</span>
               </td>
               @if (canEdit()) {
-                <td>
+                <td class="row-actions">
                   <button
                     class="row-action"
                     type="button"
@@ -148,8 +180,8 @@ const PARENT_KIND: Record<Kind, Kind | null> = { pays: null, region: 'pays', com
                     class="row-action"
                     type="button"
                     [attr.aria-label]="'Supprimer ' + item.name"
-                    [disabled]="!removable(item)"
-                    [title]="removable(item) ? '' : 'Ce territoire n’est pas vide : désactivez-le plutôt.'"
+                    [disabled]="!item.deletable"
+                    [title]="item.deletable ? '' : 'Cette localité n’est pas vide : désactivez-la plutôt.'"
                     (click)="remove(item)"
                   >
                     Supprimer
@@ -160,14 +192,16 @@ const PARENT_KIND: Record<Kind, Kind | null> = { pays: null, region: 'pays', com
           }
         </tbody>
       </table>
-      @if (!loading() && !territories().length) {
-        <p class="audit-empty">Aucun territoire dans votre périmètre.</p>
+      @if (!loading() && !shown().length) {
+        <p class="audit-empty">
+          {{ territories().length ? 'Aucune localité ne correspond à ces filtres.' : 'Aucune localité dans votre périmètre.' }}
+        </p>
       }
       <footer class="table-footer">
         @if (loading()) {
           <span>Chargement…</span>
         } @else {
-          <span>{{ territories().length }} territoire(s)</span>
+          <span>{{ shown().length }} {{ shown().length > 1 ? 'localités' : 'localité' }}</span>
         }
       </footer>
     </div>
@@ -176,6 +210,8 @@ const PARENT_KIND: Record<Kind, Kind | null> = { pays: null, region: 'pays', com
 export class TerritoriesManager implements OnInit {
   private readonly service = inject(TerritoryService);
   private readonly auth = inject(AuthService);
+  private readonly injector = inject(Injector);
+  private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('territoryForm');
   protected readonly kinds = KINDS;
   protected readonly canEdit = this.auth.isFounder;
 
@@ -183,6 +219,10 @@ export class TerritoriesManager implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal('');
+
+  protected readonly search = signal('');
+  protected readonly kindFilter = signal<Kind | ''>('');
+  protected readonly stateFilter = signal<'' | 'active' | 'inactive'>('');
 
   protected readonly formOpen = signal(false);
   protected readonly editing = signal<TerritoryUsage | null>(null);
@@ -199,6 +239,27 @@ export class TerritoriesManager implements OnInit {
     this.territories().filter((item) => item.kind === this.parentKind() && item.id !== this.editing()?.id),
   );
 
+  /** Effectifs du périmètre : chaque personne est rattachée à une seule localité, la somme ne compte personne deux fois. */
+  protected readonly totals = computed(() => {
+    const rows = this.territories();
+    return {
+      members: rows.reduce((sum, row) => sum + row.members_count, 0),
+      coordinators: rows.reduce((sum, row) => sum + row.coordinators_count, 0),
+    };
+  });
+
+  protected readonly shown = computed(() => {
+    const words = folded(this.search().trim());
+    const kind = this.kindFilter();
+    const state = this.stateFilter();
+    return this.territories().filter(
+      (item) =>
+        (!words || folded(item.path).includes(words)) &&
+        (!kind || item.kind === kind) &&
+        (!state || item.is_active === (state === 'active')),
+    );
+  });
+
   ngOnInit(): void {
     void this.load();
   }
@@ -207,8 +268,10 @@ export class TerritoriesManager implements OnInit {
     return this.territories().filter((item) => item.kind === kind).length;
   }
 
-  protected removable(item: TerritoryUsage): boolean {
-    return !item.members_count && !item.programs_count && !item.children_count;
+  protected resetFilters(): void {
+    this.search.set('');
+    this.kindFilter.set('');
+    this.stateFilter.set('');
   }
 
   protected openForm(item: TerritoryUsage | null): void {
@@ -221,6 +284,10 @@ export class TerritoriesManager implements OnInit {
     this.fieldErrors.set({});
     this.notice.set('');
     this.formOpen.set(true);
+    // Le formulaire s'ouvre en haut de la liste : on l'amène à l'écran, même depuis la dernière ligne.
+    afterNextRender(() => this.formElement()?.nativeElement.scrollIntoView?.({ block: 'start', behavior: 'smooth' }), {
+      injector: this.injector,
+    });
   }
 
   protected closeForm(): void {
@@ -244,7 +311,7 @@ export class TerritoriesManager implements OnInit {
       is_active: this.active(),
     };
     const fields: Record<string, string> = {};
-    if (!input.name) fields['name'] = 'Indiquez le nom du territoire.';
+    if (!input.name) fields['name'] = 'Indiquez le nom de la localité.';
     if (this.parentKind() && input.parent === null)
       fields['parent'] = this.parentKind() === 'pays' ? 'Choisissez un pays.' : 'Choisissez une région.';
     this.fieldErrors.set(fields);
@@ -258,7 +325,7 @@ export class TerritoriesManager implements OnInit {
     try {
       const saved = current ? await this.service.update(current.id, input) : await this.service.create(input);
       this.closeForm();
-      this.notice.set(current ? `${saved.name} a été enregistré.` : `${saved.name} a été ajouté.`);
+      this.notice.set(current ? `Modifications enregistrées pour ${saved.name}.` : `Localité ajoutée : ${saved.name}.`);
       await this.load();
     } catch (error) {
       const problem = readProblem(error);
@@ -275,7 +342,7 @@ export class TerritoriesManager implements OnInit {
     this.notice.set('');
     try {
       await this.service.remove(item.id);
-      this.notice.set(`${item.name} a été supprimé.`);
+      this.notice.set(`Localité supprimée : ${item.name}.`);
       await this.load();
     } catch (error) {
       this.error.set(readProblem(error).message);
