@@ -27,4 +27,26 @@ describe('Page d’accueil', () => {
     expect(links()).toContain('/adherer');
     expect(links()).toContain('/connexion');
   });
+
+  it('n’affiche ni actualités ni programmes inventés', () => {
+    const text = page.textContent ?? '';
+    for (const invented of [
+      'Saint-Louis accueille',
+      'arbres plantés à Ziguinchor',
+      'écoles de Thiès',
+      'Brigades citoyennes',
+      'Éducation civique',
+      'Autonomie des femmes',
+      'Actualités',
+    ]) {
+      expect(text).not.toContain(invented);
+    }
+    expect(page.querySelector('#actualites')).toBeNull();
+    expect(links().some((href) => href.includes('#actualites'))).toBe(false);
+  });
+
+  it('le lien « Découvrir les programmes » mène à une section qui existe', () => {
+    expect(links()).toContain('/#programmes');
+    expect(page.querySelector('#programmes')).not.toBeNull();
+  });
 });

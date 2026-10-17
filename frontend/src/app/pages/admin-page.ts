@@ -64,16 +64,9 @@ import { RequestDetail, RequestsList } from './requests-review';
 
       <section class="workspace-area">
         <header class="workspace-topbar">
-          <label class="top-search"
-            ><ui-icon name="search" /><input
-              aria-label="Rechercher dans la plateforme"
-              placeholder="Rechercher dans la plateforme…"
-          /></label>
-          <button class="icon-button" aria-label="Notifications">
-            <ui-icon name="bell" /><i></i>
-          </button>
-          <button class="profile-chip" aria-label="Menu du profil">{{ auth.initials() }}</button
-          ><span class="chevron" aria-hidden="true">⌄</span>
+          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
+            auth.initials()
+          }}</a>
         </header>
 
         <div class="workspace-content admin-content">

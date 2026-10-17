@@ -1053,6 +1053,7 @@ small {
   width: 34px;
   height: 34px;
   border-radius: 50%;
+  text-decoration: none;
   background: #ddf3e4;
   color: var(--green-800);
   font-size: 13px;

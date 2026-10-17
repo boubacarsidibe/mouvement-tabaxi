@@ -120,4 +120,11 @@ describe('Page de connexion', () => {
       'Réessayez dans 15 minutes',
     );
   });
+
+  it('n’évoque pas d’identifiants transmis : la personne a choisi son mot de passe', async () => {
+    await open();
+    const text = (harness.routeNativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('identifiants transmis');
+    expect(text).toContain('mot de passe que vous avez choisi');
+  });
 });

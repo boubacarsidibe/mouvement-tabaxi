@@ -53,6 +53,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 - Frontend : écrans « Programmes » du bureau (liste filtrable et exportable, fiche, formulaires, compte rendu, présences) et « Programmes & activités » du membre (onglets, recherche, inscription) reliés à l'API ; « Mon espace » affiche le vrai coordonnateur, les vrais chiffres et mes prochaines activités ; le tableau de bord compte les programmes en cours et liste les prochains.
 - Les pages du bureau et de l'espace membre se chargent à la demande, la page d'accueil pèse près de 30 % de moins ; les dates s'affichent en français.
 - Renvoi du lien d'inscription : sur la fiche d'une demande « Acceptée », un fondateur envoie un nouveau lien personnel (valable 7 jours) quand le précédent a expiré ou s'est perdu ; les anciens liens cessent de fonctionner et le renvoi est noté au journal. Une personne acceptée dont le lien avait expiré n'était plus jamais en mesure de devenir membre.
+- Plus aucun contenu inventé ni bouton sans effet : la page d'accueil ne montre plus d'actualités ni de programmes fictifs, la page Sécurité n'affiche plus de « session active » inventée, les boutons « Notifications » et la recherche du bureau, qui ne faisaient rien, sont retirés, la pastille du profil mène à « Mon profil », et les textes de la connexion, du mot de passe et de la carte disent ce que fait réellement l'application.
 
 ### Modifié
 
