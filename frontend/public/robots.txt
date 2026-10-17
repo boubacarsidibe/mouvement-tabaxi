@@ -1,0 +1,14 @@
+# Mouvement TABAXI : seules les pages publiques sont proposées aux moteurs de recherche.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /membre
+Disallow: /bureau
+Disallow: /finaliser
+Disallow: /invitation
+Disallow: /nouveau-mot-de-passe
+Disallow: /mot-de-passe-oublie
+Disallow: /connexion
+Disallow: /adherer/confirmation
+
+Sitemap: https://mouvement-tabaxi-app.vercel.app/sitemap.xml

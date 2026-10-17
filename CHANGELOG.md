@@ -6,6 +6,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Le 
 
 ### Ajouté
 
+- Frontend : référencement du site (titres et descriptions des pages publiques, lien canonique, Open Graph, fiche de l'organisation pour Google, `robots.txt`, `sitemap.xml`) ; espaces membre et bureau exclus des moteurs de recherche. Voir `docs/REFERENCEMENT.md`.
 - Cahier des charges de la plateforme (version 1.0).
 - Squelette du backend Django : configuration en français, compte utilisateur par courriel avec rôles.
 - Squelette du frontend Angular.
