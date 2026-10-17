@@ -34,12 +34,32 @@ function bureau(path: string, view: string, title: string, foundersOnly = false)
 }
 
 export const routes: Routes = [
-  { path: '', component: PublicPage, title: 'TABAXI — La voix de nos territoires' },
+  {
+    path: '',
+    component: PublicPage,
+    title: 'Mouvement TABAXI — Mouvement citoyen au Sénégal',
+    data: {
+      seo: {
+        index: true,
+        description:
+          'Le Mouvement TABAXI rassemble des citoyens engagés au Sénégal pour des communautés ' +
+          'plus fortes et solidaires. Découvrez ses programmes et rejoignez-le.',
+      },
+    },
+  },
   {
     path: 'adherer',
     component: JoinPage,
-    data: { mode: 'request' },
-    title: 'Demande d’adhésion — TABAXI',
+    data: {
+      mode: 'request',
+      seo: {
+        index: true,
+        description:
+          'Rejoignez le Mouvement TABAXI : déposez votre demande d’adhésion en quelques minutes, ' +
+          'le bureau vous répond par courriel.',
+      },
+    },
+    title: 'Adhérer au Mouvement TABAXI — Demande d’adhésion',
   },
   { path: 'finaliser', component: FinalizePage, title: 'Finaliser mon adhésion — TABAXI' },
   { path: 'adherer/confirmation', component: RequestStatusPage, title: 'Demande reçue — TABAXI' },
@@ -56,9 +76,25 @@ export const routes: Routes = [
     data: { mode: 'forgot' },
     title: 'Mot de passe oublié — TABAXI',
   },
-  { path: 'nouveau-mot-de-passe', component: ResetPasswordPage, title: 'Nouveau mot de passe — TABAXI' },
+  {
+    path: 'nouveau-mot-de-passe',
+    component: ResetPasswordPage,
+    title: 'Nouveau mot de passe — TABAXI',
+  },
   { path: 'invitation', component: InvitationPage, title: 'Invitation au bureau — TABAXI' },
-  { path: 'confidentialite', component: PrivacyPage, title: 'Confidentialité — TABAXI' },
+  {
+    path: 'confidentialite',
+    component: PrivacyPage,
+    title: 'Confidentialité — Mouvement TABAXI',
+    data: {
+      seo: {
+        index: true,
+        description:
+          'Comment le Mouvement TABAXI protège les données personnelles de ses membres et de ' +
+          'celles et ceux qui demandent à adhérer.',
+      },
+    },
+  },
 
   member('membre', 'home', 'Mon espace — TABAXI'),
   member('membre/programmes', 'programs', 'Programmes — TABAXI'),
@@ -76,7 +112,11 @@ export const routes: Routes = [
   bureau('bureau/programmes/nouveau', 'program-new', 'Nouveau programme — TABAXI'),
   bureau('bureau/programmes/:id', 'program-detail', 'Fiche du programme — TABAXI'),
   bureau('bureau/programmes/:id/modifier', 'program-edit', 'Modifier le programme — TABAXI'),
-  bureau('bureau/programmes/:programId/activites/nouvelle', 'activity-new', 'Planifier une activité — TABAXI'),
+  bureau(
+    'bureau/programmes/:programId/activites/nouvelle',
+    'activity-new',
+    'Planifier une activité — TABAXI',
+  ),
   bureau('bureau/activites/:id', 'activity-detail', 'Fiche de l’activité — TABAXI'),
   bureau('bureau/activites/:id/modifier', 'activity-edit', 'Modifier l’activité — TABAXI'),
   bureau('bureau/activites/:id/compte-rendu', 'report', 'Compte rendu — TABAXI'),

@@ -2,13 +2,54 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TABAXI — Agir ici, construire ensemble</title>
+    <title>Mouvement TABAXI — Mouvement citoyen au Sénégal</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Référencement : valeurs de la page d'accueil. SeoService les met à jour à chaque page
+         et met les espaces membre et bureau en « noindex ». -->
     <meta
       name="description"
-      content="Rejoignez le Mouvement TABAXI et participez aux initiatives citoyennes de votre territoire."
+      content="Le Mouvement TABAXI rassemble des citoyens engagés au Sénégal pour des communautés plus fortes et solidaires. Découvrez ses programmes et rejoignez-le."
     />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://mouvement-tabaxi-app.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_SN" />
+    <meta property="og:site_name" content="Mouvement TABAXI" />
+    <meta property="og:title" content="Mouvement TABAXI — Mouvement citoyen au Sénégal" />
+    <meta
+      property="og:description"
+      content="Le Mouvement TABAXI rassemble des citoyens engagés au Sénégal pour des communautés plus fortes et solidaires. Découvrez ses programmes et rejoignez-le."
+    />
+    <meta property="og:url" content="https://mouvement-tabaxi-app.vercel.app/" />
+    <meta property="og:image" content="https://mouvement-tabaxi-app.vercel.app/hero-tabaxi.jpg" />
+    <meta property="og:image:width" content="1800" />
+    <meta property="og:image:height" content="675" />
+    <meta
+      property="og:image:alt"
+      content="Citoyens réunis face à Dakar et aux territoires du Sénégal"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mouvement TABAXI — Mouvement citoyen au Sénégal" />
+    <meta
+      name="twitter:description"
+      content="Le Mouvement TABAXI rassemble des citoyens engagés au Sénégal pour des communautés plus fortes et solidaires. Découvrez ses programmes et rejoignez-le."
+    />
+    <meta name="twitter:image" content="https://mouvement-tabaxi-app.vercel.app/hero-tabaxi.jpg" />
+    <!-- Fiche de l'organisation pour Google (données structurées, non exécutées par le navigateur). -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Mouvement TABAXI",
+        "alternateName": "TABAXI",
+        "description": "Mouvement citoyen au Sénégal qui rassemble des citoyens engagés pour des communautés plus fortes et solidaires.",
+        "url": "https://mouvement-tabaxi-app.vercel.app/",
+        "logo": "https://mouvement-tabaxi-app.vercel.app/logo-tabaxi-transparent.png",
+        "email": "contact@tabaxi.org",
+        "areaServed": { "@type": "Country", "name": "Sénégal" }
+      }
+    </script>
     <meta name="theme-color" content="#0a4b35" />
     <!-- Emblème TABAXI (l'Afrique, l'étoile et les bandes du logo). « ?v=2 » force les navigateurs
          à oublier l'ancienne icône Angular gardée en cache. -->
