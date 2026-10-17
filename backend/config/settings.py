@@ -19,7 +19,7 @@ from django.utils.csp import CSP
 
 from core.crypto import dev_key_from_secret
 
-from .env import env_flag, load_env_file, mailer_from_env
+from .env import env_flag, env_list, load_env_file, mailer_from_env, origin_of, origins_from_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +43,13 @@ if not DEBUG and not TESTING and (SECRET_KEY in DEV_SECRET_KEYS or len(SECRET_KE
         'En local, mettre DJANGO_DEBUG=1 dans backend/.env.'
     )
 
-ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h]
+ALLOWED_HOSTS = env_list(os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1'))
+# Sur Railway, le domaine public du service et l'hôte du contrôle de santé (appelé avant
+# chaque mise en service) sont ajoutés d'eux-mêmes : un oubli bloquerait le déploiement.
+if os.environ.get('RAILWAY_ENVIRONMENT_NAME'):
+    for host in (os.environ.get('RAILWAY_PUBLIC_DOMAIN', ''), 'healthcheck.railway.app'):
+        if host and host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
 
 # Clés de chiffrement des données sensibles en base (voir core/crypto.py), séparées par des
 # virgules : la première chiffre, toutes déchiffrent. Obligatoires en production ; en local
@@ -81,9 +87,17 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
-CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200').split(',') if o]
+# Adresse publique du frontend, pour les liens personnels envoyés par courriel.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+CORS_ALLOWED_ORIGINS = origins_from_env(os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200'))
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+# Sites autorisés à envoyer des formulaires (connexion, demandes…). Par défaut, les origines
+# CORS ; l'origine de FRONTEND_URL y est toujours ajoutée, car le site appelle l'API depuis
+# sa propre adresse (réécriture /api de Vercel).
+CSRF_TRUSTED_ORIGINS = origins_from_env(os.environ.get('CSRF_TRUSTED_ORIGINS') or ','.join(CORS_ALLOWED_ORIGINS))
+if origin_of(FRONTEND_URL) not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(origin_of(FRONTEND_URL))
 
 # Noms attendus par défaut par le client HTTP d'Angular : il lit le cookie XSRF-TOKEN
 # et renvoie sa valeur dans l'en-tête X-XSRF-TOKEN pour chaque requête qui modifie.
@@ -149,6 +163,9 @@ if not DEBUG and not TESTING:
     # En production, tout passe par https : redirection, HSTS, cookies jamais envoyés en clair.
     # (Les tests parlent en http ; cette configuration est vérifiée par « check --deploy ».)
     SECURE_SSL_REDIRECT = env_flag(os.environ.get('SECURE_SSL_REDIRECT', '1'))
+    # Sauf le point de contrôle : Railway l'appelle en http, directement sur le port du
+    # serveur, et n'accepte qu'une réponse 2xx (une redirection bloquerait la mise en service).
+    SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
     SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', str(365 * 24 * 3600)))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag(os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', '1'))
     # L'inscription à la liste « preload » des navigateurs est quasi définitive : décision à prendre
@@ -322,9 +339,6 @@ if (
     )
 
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Mouvement TABAXI <ne-pas-repondre@localhost>')
-
-# Adresse publique du frontend, pour les liens personnels envoyés par courriel.
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
 
 
 # Journaux : en production, les erreurs du serveur (500) sont écrites sur la sortie d'erreur,
