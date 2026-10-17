@@ -4,13 +4,15 @@ Aujourd'hui, tout tourne sur deux projets Vercel, avec une base Neon et un servi
 
 | Élément | Où | Détail |
 |---|---|---|
-| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend` | `frontend/vercel.json` renvoie `/api/…` vers l'API et les autres pages vers `index.html` |
-| API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django | `backend/vercel.json` applique les migrations à chaque mise en ligne |
+| Site Angular | projet `mouvement-tabaxi-app`, dossier racine `frontend`, `https://mouvement-tabaxi-app.vercel.app` | `frontend/vercel.json` renvoie `/api/…` vers `https://mouvement-tabaxi-api.vercel.app/api/$1` et les autres pages vers `index.html` |
+| API Django | projet `mouvement-tabaxi-api`, dossier racine `backend`, préréglage Django, `https://mouvement-tabaxi-api.vercel.app` | `backend/vercel.json` applique les migrations à chaque mise en ligne (`python manage.py migrate --noinput`) |
 | Base de données | Neon `mouvement-tabaxi-db`, reliée au projet de l'API | fournit `DATABASE_URL` |
 | Photos de profil | dans la base, chiffrées | par défaut en production (le disque de Vercel est effacé entre deux appels) |
 | Courriels | Gmail du mouvement, par SMTP | obligatoire en production |
 
 Le navigateur reste sur l'adresse du site : les cookies de session et la protection CSRF fonctionnent sans réglage de domaine.
+
+Vérification rapide : `https://mouvement-tabaxi-app.vercel.app/api/health/` répond `{"status": "ready"}` quand l'API et la base répondent.
 
 ## Variables de l'API (Production)
 
@@ -21,6 +23,7 @@ Le navigateur reste sur l'adresse du site : les cookies de session et la protect
 | `DATABASE_URL` | fournie par Neon (obligatoire : sans elle, l'API refuse de démarrer) |
 | `DJANGO_ALLOWED_HOSTS` | domaine de l'API, par exemple `mouvement-tabaxi-api.vercel.app` |
 | `CORS_ALLOWED_ORIGINS` | adresse https du site (sert aussi à la protection CSRF) |
+| `CSRF_TRUSTED_ORIGINS` | facultatif ; par défaut les origines CORS, plus l'origine de `FRONTEND_URL` |
 | `FRONTEND_URL` | adresse https du site (liens envoyés par courriel) |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
 | `LOGIN_TRUSTED_PROXIES` | `1` |
@@ -30,7 +33,7 @@ Le navigateur reste sur l'adresse du site : les cookies de session et la protect
 | `EMAIL_HOST_PASSWORD` | mot de passe d'application Gmail (type « Secret » sur Vercel) |
 | `DEFAULT_FROM_EMAIL` | `Mouvement TABAXI <la même adresse Gmail>` |
 
-Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`.
+Une variable modifiée ne s'applique qu'au déploiement suivant : relancer `vercel deploy --prod` depuis `backend/`. Si l'adresse du site change (domaine personnalisé), mettre à jour `CORS_ALLOWED_ORIGINS` et `FRONTEND_URL`.
 
 ## Courriels
 
@@ -56,7 +59,7 @@ cd backend && vercel deploy --prod      # API (projet mouvement-tabaxi-api) : mi
 cd .. && vercel deploy --prod           # site (projet mouvement-tabaxi-app), depuis la racine du dépôt
 ```
 
-Premier compte fondateur : `python manage.py createsuperuser` depuis un poste, avec `DATABASE_URL` de Neon et `DJANGO_DEBUG=1` (le fichier téléchargé par `vercel env pull` contient des valeurs masquées `[SENSITIVE]` à retirer).
+Premier compte fondateur : `python manage.py createsuperuser` depuis un poste, avec `DATABASE_URL` de Neon et `DJANGO_DEBUG=1` (le fichier téléchargé par `vercel env pull` contient des valeurs masquées `[SENSITIVE]` à retirer). Les autres membres du bureau s'invitent ensuite depuis la plateforme (« Comptes d'accès »).
 
 ## Limites connues
 
