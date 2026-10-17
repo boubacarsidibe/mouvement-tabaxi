@@ -5065,6 +5065,25 @@ textarea[aria-invalid='true'] {
   }
 }
 
+/* Menu latéral : avec un zoom fort ou une fenêtre basse, il défile au lieu de couper
+   les derniers liens (« Mon espace membre », « Se déconnecter »). */
+@media (min-width: 901px) {
+  .workspace-shell .side-nav {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-shell .side-nav.menu-open {
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* Localités : « Réinitialiser » reste un bouton secondaire, même seul dans la barre. */
 .filter-bar:not(.attendance-tools) > button.filter-reset {
   border: 1px solid #cfd9d2;
