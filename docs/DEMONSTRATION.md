@@ -54,9 +54,9 @@ Le site est sur `https://mouvement-tabaxi-app.vercel.app` (voir [DEPLOIEMENT.md]
 
 - un vrai compte fondateur (`comptes_demo` ne fonctionne qu'en développement) ;
 - pour la personne qui adhère, une adresse courriel que l'on peut consulter pendant la démonstration ;
-- un service d'envoi configuré (`EMAIL_HOST`). Sans lui, le courriel n'est écrit que dans le journal de Vercel.
+- un service d'envoi configuré (`EMAIL_HOST`). Sans lui, l'API refuse de démarrer en production.
 
-Les photos envoyées en ligne ne sont pas conservées durablement (limite de Vercel, voir [DEPLOIEMENT.md](DEPLOIEMENT.md)).
+Les photos envoyées en ligne sont gardées dans la base, chiffrées (voir [DEPLOIEMENT.md](DEPLOIEMENT.md)).
 
 ## Parcours
 
@@ -100,7 +100,7 @@ La demande est maintenant **Inscrite**. Rouvrir le même lien affiche qu'il a d�
 
 1. **Mon espace** : accueil au nom de la personne, sa localité et sa carte de membre avec le numéro `TBX-2026-NNNNN`.
 2. **Ma carte numérique** (`/membre/carte`) : la carte avec la photo, et **Télécharger en image**.
-3. **Mon profil** (`/membre/profil`) : modifier l'adresse, le téléphone ou la photo. Le nom et la localité sont réservés au bureau.
+3. **Mon profil** (`/membre/profil`) : modifier l'adresse, le téléphone ou la photo. Le prénom et le nom se saisissent une fois s'ils manquent ; ensuite, comme la localité, ils sont réservés au bureau.
 
 Retour dans la fenêtre du fondateur : la demande apparaît « Inscrite » dans **Demandes d'adhésion**, et la personne figure dans **Bases de membres** (`/bureau/membres`).
 

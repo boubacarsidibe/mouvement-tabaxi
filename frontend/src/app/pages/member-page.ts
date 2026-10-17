@@ -16,10 +16,18 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
   imports: [RouterLink, UiIcon, MemberCard, DatePipe, MemberPrograms, MemberActivityPage],
   template: `
     <main class="workspace-shell">
-      <aside class="side-nav">
+      <aside class="side-nav" [class.menu-open]="menuOpen()" (click)="closeMenuOnLink($event)">
         <a class="side-logo" routerLink="/"
           ><img src="logo-tabaxi-sidebar.png" alt="Mouvement TABAXI"
         /></a>
+        <button
+          class="menu-toggle"
+          type="button"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
+        >
+          {{ menuOpen() ? 'Fermer' : 'Menu' }}
+        </button>
         <p class="side-label">Espace membre</p>
         <nav aria-label="Espace membre">
           <a routerLink="/membre" [class.active]="view === 'home'"
@@ -56,61 +64,30 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
       </aside>
 
       <section class="workspace-area">
-        <header class="workspace-topbar">
-          <label class="top-search"
-            ><ui-icon name="search" /><input
-              aria-label="Rechercher un programme"
-              placeholder="Rechercher un programme…"
-              (keydown.enter)="searchPrograms($event)"
-          /></label>
-          <a class="profile-chip" routerLink="/membre/profil" aria-label="Mon profil" title="Mon profil">{{
-            auth.initials()
-          }}</a>
-        </header>
 
         @if (view === 'home') {
           <div class="workspace-content member-home">
             <header class="page-heading">
-              <div>
-                <h1>Mon espace</h1>
-                <p>Bienvenue dans votre espace membre du Mouvement TABAXI</p>
-              </div>
+              <h1>Mon espace</h1>
             </header>
-            <section class="welcome-banner">
-              <img src="hero-tabaxi.jpg" alt="" />
+            <section class="dashboard-summary member-stats" aria-label="Mes chiffres">
               <div>
-                <h2>Bienvenue, {{ auth.user()?.first_name }}</h2>
-                <p>Ensemble pour une citoyenneté active<br />et un avenir meilleur.</p>
-                @if (auth.user()?.territory; as territory) {
-                  <strong><ui-icon name="location" /> {{ territory.name }}</strong>
-                }
+                <strong>{{ homeStats().programs }}</strong>
+                <span>Programmes</span>
+                <small>en cours et à venir dans mon territoire</small>
               </div>
-              <em>Notre engagement<br />pour des communautés<br />plus fortes</em>
+              <div>
+                <strong>{{ homeStats().activities }}</strong>
+                <span>Activités à venir</span>
+                <small>ouvertes aux inscriptions</small>
+              </div>
+              <div>
+                <strong>{{ homeStats().registered }}</strong>
+                <span>Mes inscriptions</span>
+                <small>à des activités à venir</small>
+              </div>
             </section>
-            <section class="stat-grid member-stats" aria-label="Mes chiffres">
-              <article>
-                <span class="stat-icon"><ui-icon name="calendar" /></span>
-                <div>
-                  <strong>{{ homeStats().programs }}</strong>
-                  <p>Programmes<small>en cours et à venir dans mon territoire</small></p>
-                </div>
-              </article>
-              <article>
-                <span class="stat-icon"><ui-icon name="leaf" /></span>
-                <div>
-                  <strong>{{ homeStats().activities }}</strong>
-                  <p>Activités à venir<small>ouvertes aux inscriptions</small></p>
-                </div>
-              </article>
-              <article>
-                <span class="stat-icon"><ui-icon name="users" /></span>
-                <div>
-                  <strong>{{ homeStats().registered }}</strong>
-                  <p>Mes inscriptions<small>à des activités à venir</small></p>
-                </div>
-              </article>
-            </section>
-            <section class="member-grid">
+            <section class="member-grid" [class.no-coordinator]="auth.user()?.is_bureau">
               <article class="panel member-card-panel">
                 <h2>Votre carte de membre</h2>
                 @if (card(); as data) {
@@ -120,6 +97,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     [locality]="data.locality"
                     [date]="data.date"
                     [photo]="data.photo"
+                    [role]="data.role ?? ''"
                   /><a routerLink="/membre/carte">Voir ma carte numérique <span>→</span></a>
                 } @else {
                   <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
@@ -141,7 +119,13 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     <dt>N° d’adhérent</dt>
                     <dd>{{ me.number }}</dd>
                     <dt>Localité</dt>
-                    <dd>{{ me.territory?.name }}</dd>
+                    <dd>{{ me.locality || me.territory?.name }}</dd>
+                    <dt>Courriel</dt>
+                    <dd>{{ me.email }}</dd>
+                    @if (me.phone) {
+                      <dt>Téléphone</dt>
+                      <dd>{{ me.phone }}</dd>
+                    }
                     <dt>Rôle</dt>
                     <dd>{{ me.role_label }}</dd>
                     <dt>Date d’adhésion</dt>
@@ -153,6 +137,8 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   </p>
                 }
               </article>
+              <!-- Coordonnateurs et fondateurs n'ont pas de coordonnateur au-dessus d'eux. -->
+              @if (!auth.user()?.is_bureau) {
               <article class="panel coordinator-panel">
                 <h2>Mon coordonnateur</h2>
                 @if (profile(); as me) {
@@ -173,6 +159,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   <p class="info-note">Chargement…</p>
                 }
               </article>
+              }
             </section>
             <section class="activity-grid member-upcoming">
               <article class="panel upcoming-panel">
@@ -210,10 +197,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'programs') {
           <div class="workspace-content">
             <header class="page-heading">
-              <div>
-                <h1>Programmes & activités</h1>
-                <p>Les programmes de votre territoire et leurs activités : inscrivez-vous à celles qui vous intéressent.</p>
-              </div>
+              <h1>Programmes & activités</h1>
             </header>
             <app-member-programs />
           </div>
@@ -222,10 +206,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'card') {
           <div class="workspace-content card-view">
             <header class="page-heading">
-              <div>
-                <h1>Ma carte numérique</h1>
-                <p>Votre carte de membre officielle du Mouvement TABAXI</p>
-              </div>
+              <h1>Ma carte numérique</h1>
             </header>
             @if (card(); as data) {
               <app-member-card
@@ -235,6 +216,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                 [locality]="data.locality"
                 [date]="data.date"
                 [photo]="data.photo"
+                [role]="data.role ?? ''"
               />
             } @else {
               <p class="info-note" [class.inline-error]="profileError()" [attr.role]="profileError() ? 'alert' : null">
@@ -261,11 +243,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'profile') {
           <div class="workspace-content narrow-workspace">
             <header class="page-heading">
-              <div>
-                <p class="eyebrow">Informations personnelles</p>
-                <h1>Mon profil</h1>
-                <p>Mettez à jour vos coordonnées et votre photo.</p>
-              </div>
+              <h1>Mon profil</h1>
             </header>
             @if (profile(); as me) {
               <form class="workspace-form panel" (submit)="saveProfile($event)">
@@ -292,16 +270,38 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                   </div>
                 </section>
                 <div class="field-grid">
-                  <label
-                    >Prénom <input [value]="me.first_name" disabled /><small
-                      >Modifiable uniquement par le bureau.</small
-                    ></label
-                  >
-                  <label
-                    >Nom <input [value]="me.last_name" disabled /><small
-                      >Modifiable uniquement par le bureau.</small
-                    ></label
-                  >
+                  @if (me.first_name) {
+                    <label
+                      >Prénom <input [value]="me.first_name" disabled /><small
+                        >Modifiable uniquement par le bureau.</small
+                      ></label
+                    >
+                  } @else {
+                    <label
+                      >Prénom <input name="first_name" required maxlength="150" autocomplete="given-name" /><small
+                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
+                      >
+                      @if (fieldErrors()['first_name']; as message) {
+                        <small class="field-error" role="alert">{{ message }}</small>
+                      }
+                    </label>
+                  }
+                  @if (me.last_name) {
+                    <label
+                      >Nom <input [value]="me.last_name" disabled /><small
+                        >Modifiable uniquement par le bureau.</small
+                      ></label
+                    >
+                  } @else {
+                    <label
+                      >Nom <input name="last_name" required maxlength="150" autocomplete="family-name" /><small
+                        >À renseigner une fois ; ensuite, seul le bureau peut le changer.</small
+                      >
+                      @if (fieldErrors()['last_name']; as message) {
+                        <small class="field-error" role="alert">{{ message }}</small>
+                      }
+                    </label>
+                  }
                 </div>
                 <label
                   >Adresse courriel <input type="email" [value]="me.email" disabled /><small
@@ -323,7 +323,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
                     }
                   </label>
                   <label
-                    >Territoire <input [value]="me.territory?.name ?? ''" disabled /><small
+                    >Territoire <input [value]="me.locality || me.territory?.name || ''" disabled /><small
                       >Rattaché par le bureau.</small
                     ></label
                   >
@@ -358,11 +358,7 @@ import { MemberActivityPage, MemberPrograms } from './member-programs';
         @if (view === 'security') {
           <div class="workspace-content narrow-workspace">
             <header class="page-heading">
-              <div>
-                <p class="eyebrow">Compte</p>
-                <h1>Sécurité du compte</h1>
-                <p>Changez votre mot de passe.</p>
-              </div>
+              <h1>Sécurité du compte</h1>
             </header>
             <section class="settings-stack">
               <form class="workspace-form panel" (submit)="savePassword($event)">
@@ -431,6 +427,13 @@ export class MemberPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
+  /** Téléphone et tablette : liste des pages ouverte ou fermée. */
+  protected readonly menuOpen = signal(false);
+
+  /** Un lien du menu a été choisi : on referme la liste. */
+  protected closeMenuOnLink(event: Event): void {
+    if ((event.target as HTMLElement).closest('a')) this.menuOpen.set(false);
+  }
   protected readonly view = this.route.snapshot.data['view'] as
     'home' | 'programs' | 'card' | 'profile' | 'activity' | 'security';
   private readonly profiles = inject(ProfileService);
@@ -498,11 +501,6 @@ export class MemberPage {
     }
   }
 
-  /** La recherche du haut de l'écran ouvre la page des programmes avec ce texte. */
-  protected searchPrograms(event: Event): void {
-    const value = (event.target as HTMLInputElement).value.trim();
-    void this.router.navigate(['/membre/programmes'], { queryParams: value ? { q: value } : {} });
-  }
 
   private photoUrl(me: MemberProfile): string {
     return `${me.photo_url}?v=${this.photoVersion()}`;
@@ -580,6 +578,11 @@ export class MemberPage {
     const data = new FormData();
     data.set('address', (form.elements.namedItem('address') as HTMLInputElement).value.trim());
     data.set('phone', (form.elements.namedItem('phone') as HTMLInputElement).value.trim());
+    // Prénom et nom ne sont proposés que s'ils manquent encore.
+    for (const name of ['first_name', 'last_name']) {
+      const input = form.elements.namedItem(name) as HTMLInputElement | null;
+      if (input) data.set(name, input.value.trim());
+    }
     this.begin();
     if (this.newPhoto) {
       const photo = await this.newPhoto;
@@ -591,7 +594,12 @@ export class MemberPage {
       data.set('photo', photo);
     }
     try {
-      this.profile.set(await this.profiles.save(data));
+      const saved = await this.profiles.save(data);
+      this.profile.set(saved);
+      const user = this.auth.user();
+      if (user && (user.first_name !== saved.first_name || user.last_name !== saved.last_name)) {
+        this.auth.signedIn({ ...user, first_name: saved.first_name, last_name: saved.last_name });
+      }
       this.newPhoto = null;
       this.photoVersion.update((v) => v + 1);
       this.profileSaved.set(true);

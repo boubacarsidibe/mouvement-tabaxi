@@ -114,3 +114,47 @@ class MemberProfileTests(TestCase):
         far.is_active = False
         far.save()
         self.assertIsNone(self.client.get(URL).json()['coordinator'])
+
+
+class NameAndLocalityTests(TestCase):
+    """Compte créé sans nom (premier fondateur) : le nom se renseigne une fois ; la carte montre le pays."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.founder = User.objects.create_user(
+            'fondateur@example.org', 'un-mot-de-passe-long', role=User.Role.FONDATEUR
+        )
+        cls.member = Member.objects.create(user=cls.founder)
+
+    def setUp(self):
+        self.client.force_login(self.founder)
+
+    def patch(self, data):
+        return self.client.patch(URL, data, content_type='application/json')
+
+    def test_nom_vide_renseigne_par_la_personne(self):
+        response = self.patch({'first_name': ' Boubacar ', 'last_name': 'Sidibe'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual((response.json()['first_name'], response.json()['last_name']), ('Boubacar', 'Sidibe'))
+        self.founder.refresh_from_db()
+        self.assertEqual((self.founder.first_name, self.founder.last_name), ('Boubacar', 'Sidibe'))
+
+    def test_nom_renseigne_ensuite_verrouille(self):
+        self.patch({'first_name': 'Boubacar', 'last_name': 'Sidibe'})
+        response = self.patch({'first_name': 'Autre'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['first_name'], ['Seul le bureau peut modifier cette information.'])
+
+    def test_nom_vide_refuse(self):
+        response = self.patch({'first_name': '   '})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('first_name', response.json())
+
+    def test_localite_du_pays_sans_territoire(self):
+        self.assertEqual(self.client.get(URL).json()['locality'], 'Sénégal')
+
+    def test_localite_du_territoire(self):
+        dakar = Territory.objects.get(name='Dakar', kind=Territory.Kind.COMMUNE)
+        self.founder.territory = dakar
+        self.founder.save()
+        self.assertEqual(self.client.get(URL).json()['locality'], 'Dakar')
