@@ -16,7 +16,7 @@ Créer une base PostgreSQL (Neon ou Supabase, via la Marketplace de Vercel) et c
 | `DJANGO_SECRET_KEY` | longue valeur aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(64))"`) |
 | `FIELD_ENCRYPTION_KEYS` | clé Fernet (voir `backend/.env.example`), à sauvegarder hors de Vercel |
 | `DATABASE_URL` | adresse PostgreSQL |
-| `DJANGO_ALLOWED_HOSTS` | domaine du projet backend, par exemple `mouvement-tabaxi-api.vercel.app` |
+| `DJANGO_ALLOWED_HOSTS` | domaine du projet backend, par exemple `mouvement-tabaxi-cye7.vercel.app` |
 | `CORS_ALLOWED_ORIGINS` | adresse https du frontend |
 | `FRONTEND_URL` | adresse https du frontend (liens des courriels) |
 | `DJANGO_BEHIND_HTTPS_PROXY` | `1` |
@@ -29,8 +29,9 @@ Créer une base PostgreSQL (Neon ou Supabase, via la Marketplace de Vercel) et c
 ## 3. Projet frontend (Angular)
 
 - **Root Directory : `frontend`** ; `frontend/vercel.json` règle la compilation (`dist/frontend/browser`) et renvoie toutes les pages vers `index.html`.
-- Pour relier l'API, ajouter dans `frontend/vercel.json`, avant la règle existante :
-  `{ "source": "/api/:path*", "destination": "https://<projet-backend>.vercel.app/api/:path*" }`.
+- `frontend/vercel.json` renvoie `/api/…` vers le projet du serveur, `mouvement-tabaxi-cye7` :
+  `{ "source": "/api/(.*)", "destination": "https://mouvement-tabaxi-cye7.vercel.app/api/$1" }`, placé avant la règle de `index.html`.
+- Côté serveur, `CORS_ALLOWED_ORIGINS` doit contenir l'adresse exacte du site (par exemple `https://mouvement-tabaxi-app-git-….vercel.app`) : elle sert aussi à la protection CSRF des formulaires.
   Le navigateur reste ainsi sur un seul domaine : les cookies de session et la protection CSRF fonctionnent sans réglage.
 
 ## Limites à connaître
